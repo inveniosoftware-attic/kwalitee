@@ -30,7 +30,8 @@ import requests
 from flask import (Flask, request, jsonify, send_from_directory, url_for,
                    render_template)
 
-app = Flask(__name__, template_folder='templates', static_folder='static')
+app = Flask(__name__, template_folder='templates', static_folder='static',
+            instance_relative_config=True)
 
 # Load default configuration
 app.config.from_object('invenio_kwalitee.config')
@@ -113,7 +114,11 @@ def check_messages(url):
 
 @app.route('/status/<commit_sha>')
 def status(commit_sha):
-    return send_from_directory(app.instance_path, 'status_{sha}.txt'.format(sha=commit_sha))
+    with app.open_instance_resource(
+            'status_{sha}.txt'.format(sha=commit_sha), 'r') as f:
+        status = f.read()
+    status = status if len(status) > 0 else commit_sha + ': Everything OK'
+    return render_template('status.html', status=status)
 
 
 @app.route('/', methods=['GET'])
@@ -122,7 +127,7 @@ def index():
     test = operator.methodcaller('startswith', 'status_')
     files = map(lambda x: x[7:-4], filter(test, sorted(
         os.listdir(app.instance_path), key=key, reverse=True)))
-    return render_template('page.html', files=files)
+    return render_template('index.html', files=files)
 
 
 @app.route('/payload', methods=['POST'])
