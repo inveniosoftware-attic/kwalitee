@@ -65,3 +65,5 @@ COMPONENTS = [
 HEADERS = {'Content-type': 'application/json'}
 
 TRUSTED_DEVELOPERS = []
+
+REPO_URL = 'https://github.com/inveniosoftware/invenio/'

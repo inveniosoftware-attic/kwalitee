@@ -27,9 +27,10 @@ import os
 import re
 import requests
 
-from flask import Flask, request, jsonify, send_from_directory, url_for
+from flask import (Flask, request, jsonify, send_from_directory, url_for,
+                   render_template)
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates', static_folder='static')
 
 # Load default configuration
 app.config.from_object('invenio_kwalitee.config')
@@ -115,7 +116,15 @@ def status(commit_sha):
     return send_from_directory(app.instance_path, 'status_{sha}.txt'.format(sha=commit_sha))
 
 
-@app.route('/', methods=['POST'])
+@app.route('/', methods=['GET'])
+def index():
+    key = lambda x: os.path.getctime(os.path.join(app.instance_path, x))
+    test = operator.methodcaller('startswith', 'status_')
+    files = map(lambda x: x[7:-4], filter(test, sorted(
+        os.listdir(app.instance_path), key=key, reverse=True)))
+    return render_template('page.html', files=files)
+
+
 @app.route('/payload', methods=['POST'])
 def payload():
     errors = []
