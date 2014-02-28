@@ -72,9 +72,9 @@ def check_signatures(lines):
     if len(matching) == 0:
         errors.append('Signature missing')
     elif len(matching) <= 2:
-        pattern = re.compile('|'.join(map(re.escape,
-                                          app.config['TRUSTED_DEVELOPERS'])))
-        if len(map(pattern.match, matching)) == 0:
+        pattern = re.compile('|'.join(map(lambda x: '.*' + re.escape(x) + '.*',
+            app.config['TRUSTED_DEVELOPERS'])))
+        if len(filter(None, map(pattern.match, matching))) == 0:
             errors.append('Needs more reviewers')
 
     return errors
