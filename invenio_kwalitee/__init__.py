@@ -88,7 +88,7 @@ def check_bullets(lines):
     for (i, line) in enumerate(lines[1:]):
         if line.startswith('*'):
             if lines[i].strip() != '':
-                errors.append('Missing empty line before %d' % (i, ))
+                errors.append('Missing empty line before line %d' % (i, ))
 
     return errors
 
