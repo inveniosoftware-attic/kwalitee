@@ -88,7 +88,15 @@ def check_bullets(lines):
     for (i, line) in enumerate(lines[1:]):
         if line.startswith('*'):
             if lines[i].strip() != '':
-                errors.append('Missing empty line before line %d' % (i, ))
+                errors.append('Missing empty line before line %d' % (i+1, ))
+            for (j, indented) in enumerate(lines[i+2:]):
+                if indented.strip() == '':
+                    break
+                if not indented.startswith('  '):
+                    errors.append('Wrong indentation on line %d' % (i+j+3, ))
+
+        if len(line) > 72:
+            errors.append('Line %d is too long' % (i+2, ))
 
     return errors
 
