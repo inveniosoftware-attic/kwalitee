@@ -24,7 +24,7 @@
 import os
 import operator
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, make_response
 
 from .kwalitee import Kwalitee
 
@@ -69,7 +69,14 @@ def index():
 
 @app.route('/payload', methods=['POST'])
 def payload():
-    return jsonify(payload=kw(request))
+    try:
+        return jsonify(payload=kw(request))
+    except Exception as e:
+        import traceback
+        return make_response(jsonify(status="failure",
+                                     stacktrace=traceback.format_exc(),
+                                     exception=str(e)),
+                             500)
 
 
 def main():
