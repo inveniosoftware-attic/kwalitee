@@ -21,6 +21,7 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+import os
 import httpretty
 from flask import json
 from unittest import TestCase
@@ -81,3 +82,7 @@ class PullRequestTest(TestCase):
         self.assertEqual(u"token {0}".format(kw.token),
                          httpretty.last_request().headers["Authorization"])
         self.assertEqual(u"error", body["state"])
+
+        filename = os.path.join(app.instance_path, "status_1.txt")
+        self.assertTrue(os.path.exists(filename), "status file was created")
+        os.unlink(filename)
