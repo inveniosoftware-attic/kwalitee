@@ -26,7 +26,7 @@ import operator
 
 from flask import Flask, jsonify, render_template, request, make_response
 
-from invenio_kwalitee.kwalitee import Kwalitee
+from .kwalitee import Kwalitee
 
 app = Flask(__name__, template_folder='templates', static_folder='static',
             instance_relative_config=True)
@@ -79,7 +79,3 @@ def payload():
                                      stacktrace=traceback.format_exc(),
                                      exception=str(e)),
                              500)
-
-
-def main():
-    app.run(debug=True)
