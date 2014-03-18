@@ -131,7 +131,7 @@ class Kwalitee(object):
         if "X-GitHub-Event" in request.headers:
             event = request.headers["X-GitHub-Event"]
         else:
-            raise ValueError("No X-Github-Event header found.")
+            raise ValueError("No X-GitHub-Event HTTP header found")
 
         data = json.loads(request.data)
         fn = getattr(self, "on_{0}".format(event))
@@ -139,7 +139,8 @@ class Kwalitee(object):
         return fn(data)
 
     def __getattr__(self, command):
-        raise NotImplementedError("{0} is missing".format(command))
+        raise NotImplementedError("{0}.{1} method is missing"
+                                  .format(self.__class__.__name__, command))
 
     def on_ping(self, data):
         return dict(message="Hi there!")

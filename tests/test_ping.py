@@ -47,10 +47,12 @@ class PingTest(TestCase):
                                data="not JSON")
         body = json.loads(response.data)
         self.assertEqual(500, response.status_code)
+        self.assertEqual(u"No JSON object could be decoded",
+                         body["exception"])
         self.assertEqual(u"failure", body["status"])
 
     def test_ping_no_headers(self):
-        """Ping is expected to be JSON encoded."""
+        """Ping: a GitHub-Event header is expected."""
         tester = app.test_client(self)
         response = tester.post("/payload",
                                data=json.dumps({"hook_id": 1,
@@ -58,4 +60,21 @@ class PingTest(TestCase):
                                                        "than fast."}))
         body = json.loads(response.data)
         self.assertEqual(500, response.status_code)
+        self.assertEqual(u"No X-GitHub-Event HTTP header found",
+                         body["exception"])
+        self.assertEqual(u"failure", body["status"])
+
+    def test_not_a_ping(self):
+        """Pong: an unknown GitHub event will fail"""
+        tester = app.test_client(self)
+        response = tester.post("/payload",
+                               headers=(("X-GitHub-Event", "pong"),
+                                        ("X-GitHub-Delivery", "1")),
+                               data=json.dumps({"hook_id": 1,
+                                                "zen": "Responsive is better "
+                                                       "than fast."}))
+        body = json.loads(response.data)
+        self.assertEqual(500, response.status_code)
+        self.assertEqual(u"Kwalitee.on_pong method is missing",
+                         body["exception"])
         self.assertEqual(u"failure", body["status"])
