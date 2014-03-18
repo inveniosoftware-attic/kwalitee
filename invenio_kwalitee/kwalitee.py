@@ -27,6 +27,10 @@ import operator
 from flask import current_app, json, url_for
 
 
+# Max number of errors to be sent back
+MAX = 130
+
+
 def _check_1st_line(line, components, max_first_line=50, **kwargs):
     """Check that the first line has a known component name followed by a colon
     and then a short description of the commit"""
@@ -122,9 +126,27 @@ class Kwalitee(object):
             kwargs.update({
                 "components": app.config["COMPONENTS"],
                 "signatures": app.config["SIGNATURES"],
-                "trusted": app.config["TRUSTED_DEVELOPERS"]
+                "trusted": app.config["TRUSTED_DEVELOPERS"],
             })
         self.config = kwargs
+        # This is your Github personal API token, our advice is to
+        # put it into instance/invenio_kwalitee.cfg so it won't be
+        # versioned ever. Keep it safe.
+        self.token = app.config.get("ACCESS_TOKEN", None)
+
+    @property
+    def token(self):
+        return self._token
+
+    @token.setter
+    def token(self, value):
+        self._token = value
+
+    def __headers(self):
+        headers = {"Content-Type": "application/json"}
+        if self._token is not None:
+            headers["Authorization"] = "token {0}".format(self._token)
+        return headers
 
     def __call__(self, request):
         self.request = request
@@ -158,7 +180,7 @@ class Kwalitee(object):
 
             requests.post(commit["comments_url"],
                           data=json.dumps({"body": "\n".join(errs)}),
-                          headers={"Content-Type": "application/json"})
+                          headers=self.__headers())
             errors += map(lambda x: "%s: %s" % (sha, x), errs)
 
         state = "error" if len(errors) > 0 else "success"
@@ -172,8 +194,8 @@ class Kwalitee(object):
         body = dict(state=state,
                     target_url=url_for("status", commit_sha=commit_sha,
                                        _external=True),
-                    description="\n".join(errors)[:130])
+                    description="\n".join(errors)[:MAX])
         requests.post(data["pull_request"]["statuses_url"],
                       data=json.dumps(body),
-                      headers={"Content-Type": "application/json"})
+                      headers=self.__headers())
         return body

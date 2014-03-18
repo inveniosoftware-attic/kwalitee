@@ -24,13 +24,15 @@
 import httpretty
 from flask import json
 from unittest import TestCase
-from invenio_kwalitee import app
+from invenio_kwalitee import app, kw
 
 
 class PullRequestTest(TestCase):
     @httpretty.activate
     def test_pull_request(self):
         """Pull request should do the checks..."""
+        kw.token = "deadbeef"
+
         commits = [{
             "url": "https://github.com/pulls/1/commits",
             "sha": 1,
@@ -73,6 +75,8 @@ class PullRequestTest(TestCase):
                                headers=(("X-GitHub-Event", "pull_request"),
                                         ("X-GitHub-Delivery", "1")),
                                data=json.dumps(pull_request))
-        body = json.loads(httpretty.last_request().body)
         self.assertEqual(200, response.status_code)
+        body = json.loads(httpretty.last_request().body)
+        self.assertEqual(u"token {0}".format(kw.token),
+                         httpretty.last_request().headers["Authorization"])
         self.assertEqual(u"error", body["state"])

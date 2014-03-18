@@ -26,7 +26,7 @@ import operator
 
 from flask import Flask, jsonify, render_template, request, make_response
 
-from .kwalitee import Kwalitee
+from invenio_kwalitee.kwalitee import Kwalitee
 
 app = Flask(__name__, template_folder='templates', static_folder='static',
             instance_relative_config=True)
