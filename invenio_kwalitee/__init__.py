@@ -39,7 +39,7 @@ app.config.from_pyfile('invenio_kwalitee.cfg', silent=True)
 app.config.from_envvar('INVENIO_KWALITEE_CONFIG', silent=True)
 
 # Create kwalitee instance
-kw = Kwalitee()
+kw = Kwalitee(app)
 
 # Create instance path
 try:
@@ -73,6 +73,8 @@ def payload():
         return jsonify(payload=kw(request))
     except Exception as e:
         import traceback
+        # Uncomment to help you debug
+        #traceback.print_exc()
         return make_response(jsonify(status="failure",
                                      stacktrace=traceback.format_exc(),
                                      exception=str(e)),
