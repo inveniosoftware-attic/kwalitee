@@ -28,9 +28,10 @@ from invenio_kwalitee import app, kw
 
 
 class PullRequestTest(TestCase):
+    """Integration tests for the pull_request event."""
     @httpretty.activate
     def test_pull_request(self):
-        """Pull request should do the checks..."""
+        """POST /payload (pull_request) performs the checks"""
         kw.token = "deadbeef"
 
         commits = [{

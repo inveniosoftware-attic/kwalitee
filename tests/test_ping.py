@@ -27,8 +27,9 @@ from invenio_kwalitee import app
 
 
 class PingTest(TestCase):
+    """Integration tests for the ping event."""
     def test_ping(self):
-        """Ping should be silently ignored by kwalitee."""
+        """POST /payload (ping) is ignored by kwalitee"""
         tester = app.test_client(self)
         response = tester.post("/payload", content_type="application/json",
                                headers=(("X-GitHub-Event", "ping"),
@@ -39,7 +40,7 @@ class PingTest(TestCase):
         self.assertEqual(200, response.status_code)
 
     def test_ping_fail(self):
-        """Ping is expected to be JSON encoded."""
+        """POST /payload (ping) rejects non-JSON content"""
         tester = app.test_client(self)
         response = tester.post("/payload",
                                headers=(("X-GitHub-Event", "ping"),
@@ -52,7 +53,7 @@ class PingTest(TestCase):
         self.assertEqual(u"failure", body["status"])
 
     def test_ping_no_headers(self):
-        """Ping: a GitHub-Event header is expected."""
+        """POST /payload (ping) expects a X-GitHub-Event header"""
         tester = app.test_client(self)
         response = tester.post("/payload",
                                data=json.dumps({"hook_id": 1,
@@ -65,7 +66,7 @@ class PingTest(TestCase):
         self.assertEqual(u"failure", body["status"])
 
     def test_not_a_ping(self):
-        """Pong: an unknown GitHub event will fail"""
+        """POST /payload (pong) rejects an unknown event"""
         tester = app.test_client(self)
         response = tester.post("/payload",
                                headers=(("X-GitHub-Event", "pong"),
