@@ -42,7 +42,6 @@ class IndexTest(TestCase):
         tester = app.test_client(self)
         response = tester.get("/")
 
-        print response.data
         self.assertEquals(200, response.status_code)
         for sha in range(10):
             self.assertRegexpMatches(response.data, r"/status/{0}".format(sha))

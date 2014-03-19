@@ -101,7 +101,7 @@ def _check_signatures(lines, signatures, trusted, **kwargs):
     elif len(matching) <= 2:
         pattern = re.compile('|'.join(map(lambda x: '<' + re.escape(x) + '>',
                                           trusted)))
-        trusted_matching = filter(None, map(pattern.search, matching))
+        trusted_matching = list(filter(None, map(pattern.search, matching)))
         if len(trusted_matching) == 0:
             errors.append('Needs more reviewers')
 
