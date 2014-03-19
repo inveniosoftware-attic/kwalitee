@@ -44,7 +44,7 @@ class IndexTest(TestCase):
 
         self.assertEquals(200, response.status_code)
         for sha in range(10):
-            self.assertRegexpMatches(response.data, r"/status/{0}".format(sha))
+            self.assertIn("/status/{0}".format(sha), str(response.data))
 
         for filename in filenames:
             os.unlink(filename)

@@ -41,7 +41,7 @@ class StatusTest(TestCase):
         response = tester.get("status/{0}".format(sha))
 
         self.assertEquals(200, response.status_code)
-        self.assertRegexpMatches(response.data, r"Signature missing")
-        self.assertRegexpMatches(response.data, "Needs more reviewers")
+        self.assertIn("Signature missing", str(response.data))
+        self.assertIn("Needs more reviewers", str(response.data))
 
         os.unlink(filename)
