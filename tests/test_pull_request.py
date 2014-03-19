@@ -138,5 +138,6 @@ class PullRequestTest(TestCase):
         self.assertEqual(200, response.status_code)
         body = json.loads(httpretty.last_request().body)
         self.assertEqual(u"success", body["state"])
+        filename = os.path.join(app.instance_path, "status_1.txt")
         self.assertTrue(os.path.exists(filename), "status file was created")
         os.unlink(filename)
