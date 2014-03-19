@@ -62,7 +62,7 @@ COMPONENTS = [
     'workflows',
 ]
 
-HEADERS = {'Content-type': 'application/json'}
+SIGNATURES = 'Signed-off-by', 'Tested-by', 'Reviewed-by'
 
 TRUSTED_DEVELOPERS = []
 

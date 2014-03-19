@@ -1,5 +1,6 @@
-# instance folder
+# Folders
 instance
+html_coverage_report
 
 *.py[cod]
 
