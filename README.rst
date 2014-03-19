@@ -21,7 +21,7 @@ Running the tests are as simple as: ::
 
 or (to also show test coverage) ::
 
-    source run-tests.sh
+    python setup.py nosetests
 
 License
 =======
