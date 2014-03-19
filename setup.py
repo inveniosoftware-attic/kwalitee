@@ -66,5 +66,5 @@ setup(
         ],
     },
     test_suite='nose.collector',
-    tests_require=['httpretty']
+    tests_require=['nose', 'coverage', 'httpretty'],
 )
