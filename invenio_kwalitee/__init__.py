@@ -44,8 +44,8 @@ kw = Kwalitee(app)
 # Create instance path
 try:
     if not os.path.exists(app.instance_path):
-        os.makedirs(app.instance_path)
-except Exception:
+        os.makedirs(app.instance_path)  # pragma: no cover
+except Exception: # pragma: no cover
     pass
 
 
