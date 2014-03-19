@@ -66,6 +66,7 @@ class PullRequestTest(TestCase):
             "action": "opened",
             "number": 1,
             "pull_request": {
+                "title": "Lorem ipsum",
                 "url": "https://github.com/pulls/1",
                 "commits_url": "https://github.com/pulls/1/commits",
                 "statuses_url": "https://github.com/pulls/1/statuses",
@@ -89,27 +90,11 @@ class PullRequestTest(TestCase):
 
     @httpretty.activate
     def test_pull_request_in_wip(self):
-        """Pull request is work-in-progress."""
-        kw.token = "deadbeef"
+        """POST /payload (pull request) is work-in-progress
 
-        commits = [{
-            "url": "https://github.com/pulls/1/commits",
-            "sha": 1,
-            "comments_url": "https://github.com/commits/1/comments",
-            "commit": {
-                "message": "fix all the bugs!"
-            }
-        }]
-        httpretty.register_uri(httpretty.GET,
-                               "https://github.com/pulls/1/commits",
-                               body=json.dumps(commits),
-                               content_type="application/json")
-        comment = {"id": 1}
-        httpretty.register_uri(httpretty.POST,
-                               "https://github.com/commits/1/comments",
-                               status=201,
-                               body=json.dumps(comment),
-                               content_type="application/json")
+        If the commit "title" contains "wip" then the status is automatically
+        set to success with no checks.
+        """
         status = {"id": 1, "state": "success"}
         httpretty.register_uri(httpretty.POST,
                                "https://github.com/pulls/1/statuses",
@@ -122,7 +107,7 @@ class PullRequestTest(TestCase):
             "action": "opened",
             "number": 1,
             "pull_request": {
-                "title": "WIP do not check this one",
+                "title": "[WiP] do not check this one",
                 "url": "https://github.com/pulls/1",
                 "commits_url": "https://github.com/pulls/1/commits",
                 "statuses_url": "https://github.com/pulls/1/statuses",
@@ -138,6 +123,3 @@ class PullRequestTest(TestCase):
         self.assertEqual(200, response.status_code)
         body = json.loads(httpretty.last_request().body)
         self.assertEqual(u"success", body["state"])
-        filename = os.path.join(app.instance_path, "status_1.txt")
-        self.assertTrue(os.path.exists(filename), "status file was created")
-        os.unlink(filename)

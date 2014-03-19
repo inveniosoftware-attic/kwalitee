@@ -171,9 +171,14 @@ class Kwalitee(object):
         errors = []
 
         commits_url = data['pull_request']['commits_url']
-        # Check only if title does not contain 'wip'.
-        title = data['pull_request'].get('title', '')
-        if title.lower().find('wip') == -1:
+        commit_sha = data["pull_request"]["head"]["sha"]
+
+        # Check only if the title does not contain 'wip'.
+        must_check = re.search(r"\bwip\b",
+                               data['pull_request']['title'],
+                               re.IGNORECASE) is None
+
+        if must_check is True:
             response = requests.get(commits_url)
             commits = json.loads(response.content)
             for commit in commits:
@@ -186,14 +191,11 @@ class Kwalitee(object):
                               headers=self.__headers())
                 errors += map(lambda x: "%s: %s" % (sha, x), errs)
 
+            filename = "status_{0}.txt".format(commit_sha)
+            with current_app.open_instance_resource(filename, "w+") as f:
+                f.write("\n".join(errors))
+
         state = "error" if len(errors) > 0 else "success"
-
-        commit_sha = data["pull_request"]["head"]["sha"]
-
-        filename = "status_{0}.txt".format(commit_sha)
-        with current_app.open_instance_resource(filename, "w+") as f:
-            f.write("\n".join(errors))
-
         body = dict(state=state,
                     target_url=url_for("status", commit_sha=commit_sha,
                                        _external=True),
