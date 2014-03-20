@@ -23,8 +23,11 @@
 
 import os
 import re
-import requests
+import pep8
+import shutil
+import tempfile
 import operator
+import requests
 from flask import json
 
 
@@ -81,7 +84,7 @@ def _check_bullets(lines, max_length=72, **kwargs):
     return errors, missed_lines
 
 
-def _check_signatures(lines, signatures, trusted, **kwargs):
+def _check_signatures(lines, signatures, trusted=None, **kwargs):
     """Check that there is at least three signatures or that one of them is a
     trusted developer/reviewer.
 
@@ -89,6 +92,7 @@ def _check_signatures(lines, signatures, trusted, **kwargs):
     """
     matching = []
     errors = []
+    trusted = trusted or []
     test = operator.methodcaller('startswith', signatures)
     for i, line in lines:
         if signatures and test(line):
@@ -110,15 +114,64 @@ def _check_signatures(lines, signatures, trusted, **kwargs):
 
 
 def check_message(message, **kwargs):
-    """Check the message format. The first line must start by a component
-    name and shoart description (52 chars), then bullet points are expected
-    and finally signatures. Anything else will be rejected."""
+    """Check the message format.
+
+    Rules:
+    * the first line must start by a component name
+    * and a short description (52 chars),
+    * then bullet points are expected
+    * and finally signatures.
+
+    Required kwargs:
+    * components: e.g. ('auth', 'utils', 'misc')
+    * signatures: e.g. ('Signed-off-by', 'Reviewed-by')
+
+    Optional args:
+    * trusted, e.g. ('john.doe@example.org',), by default empty
+    * max_length: by default 72
+    * max_first_line: by default 50
+    """
     lines = re.split(r"\r\n|\r|\n", message)
     errors = _check_1st_line(lines[0], **kwargs)
     err, signatures = _check_bullets(lines, **kwargs)
     errors += err
     errors += _check_signatures(signatures, **kwargs)
     return errors
+
+
+def check_file(filename, **kwargs):
+    """Perform static analysis on the given file.
+
+    Options:
+    * pep8_ignore: e.g. ('E111', 'E123')
+    * pep8_select: ditto
+    """
+
+    ignore = kwargs.pop("pep8_ignore", None)
+    select = kwargs.pop("pep8_select", None)
+    pep8options = dict(ignore=ignore, select=select)
+    checker = pep8.Checker(filename, reporter=_Report, **pep8options)
+    checker.check_all()
+
+    errors = []
+    checker.report.errors.sort()
+    for error in checker.report.errors:
+        errors.append("{0}:{1}: {3}".format(*error))
+    return errors
+
+
+class _Report(pep8.BaseReport):
+    """Own reporter that keeps a list of errors in a sortable list and never
+    prints.
+    """
+    def __init__(self, options):
+        super(_Report, self).__init__(options)
+        self.errors = []
+
+    def error(self, line_number, offset, text, check):
+        code = super(_Report, self).error(line_number, offset, text, check)
+        if code:
+            self.errors.append((line_number, offset + 1, code, text, check))
 
 
 def pull_request(pull_request_url, status_url, config):
@@ -138,8 +191,9 @@ def pull_request(pull_request_url, status_url, config):
     }
     instance_path = config["instance_path"]
 
-    commits_url = data["commits_url"]
     commit_sha = data["head"]["sha"]
+    commits_url = data["commits_url"]
+    files_url = data["commits_url"].replace("/commits", "/files")
 
     # Check only if the title does not contain 'wip'.
     must_check = re.search(r"\bwip\b",
@@ -147,26 +201,78 @@ def pull_request(pull_request_url, status_url, config):
                            re.IGNORECASE) is None
 
     if must_check is True:
-        response = requests.get(commits_url)
-        commits = json.loads(response.content)
-        for commit in commits:
-            sha = commit["sha"]
-            message = commit["commit"]["message"]
-            errs = check_message(message, **kwargs)
+        commit_messages = {}
+        c_errors, commit_messages = _check_commits(commits_url,
+                                                   commit_messages,
+                                                   **kwargs)
+        f_errors, commit_messages = _check_files(files_url,
+                                                 commit_messages,
+                                                 **kwargs)
+        errors += c_errors
+        errors += f_errors
 
-            requests.post(commit["comments_url"],
-                          data=json.dumps({"body": "\n".join(errs)}),
-                          headers=headers)
-            errors += map(lambda x: "%s: %s" % (sha, x), errs)
+        for msg in commit_messages.values():
+            body = "\n".join(msg["errors"])
+            if body is not "":
+                requests.post(msg["comments_url"],
+                              data=json.dumps(dict(body=body)),
+                              headers=headers)
 
         filename = "status_{0}.txt".format(commit_sha)
         with open(os.path.join(instance_path, filename), "w+") as f:
             f.write("\n".join(errors))
 
-    state = "error" if len(errors) > 0 else "success"
-    body = dict(state=state,
-                target_url=status_url,
-                description="\n".join(errors)[:MAX])
-    requests.post(data["statuses_url"],
-                  data=json.dumps(body),
-                  headers=headers)
+        state = "error" if len(errors) > 0 else "success"
+        body = dict(state=state,
+                    target_url=status_url,
+                    description="\n".join(errors)[:MAX])
+        requests.post(data["statuses_url"],
+                      data=json.dumps(body),
+                      headers=headers)
+        return body
+
+
+def _check_commits(url, messages, **kwargs):
+    """Check the commit messages of a pull request."""
+    errors = []
+    response = requests.get(url)
+    commits = json.loads(response.content)
+    for commit in commits:
+        sha = commit["sha"]
+        message = commit["commit"]["message"]
+        errs = check_message(message, **kwargs)
+
+        messages[sha] = {
+            "comments_url": commit["comments_url"],
+            "errors": errs
+        }
+        errors += list(map(lambda x: "{0}: {1}".format(sha, x), errs))
+    return errors, messages
+
+
+def _check_files(url, messages, **kwargs):
+    """Downloads and runs the checks on the files of a pull request."""
+    errors = []
+    response = requests.get(url)
+    files = json.loads(response.content)
+    tmp = tempfile.mkdtemp()
+    sha_match = re.compile(r"(?<=ref=)[^=]+")
+    for f in files:
+        sha = sha_match.search(f["contents_url"]).group(0)
+        if f["filename"].endswith(".py"):
+            response = requests.get(f["raw_url"])
+            path = os.path.join(tmp, f["filename"])
+            dirname = os.path.dirname(path)
+            if not os.path.exists(dirname):
+                os.makedirs(dirname)
+            with open(path, "wb+") as fp:
+                for block in response.iter_content(1024):
+                    fp.write(block)
+            errs = check_file(path, **kwargs)
+            errs = list(map(lambda x: "{0}:{1}".format(f["filename"], x),
+                            errs))
+            messages[sha]["errors"] += errs
+
+            errors += list(map(lambda x: "{0}: {1}".format(sha, x), errs))
+    shutil.rmtree(tmp)
+    return errors, messages

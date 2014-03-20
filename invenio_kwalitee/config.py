@@ -67,3 +67,5 @@ SIGNATURES = 'Signed-off-by', 'Tested-by', 'Reviewed-by'
 TRUSTED_DEVELOPERS = []
 
 REPO_URL = 'https://github.com/inveniosoftware/invenio/'
+
+PEP8_IGNORE = 'E123', 'E226', 'E24', 'E501'

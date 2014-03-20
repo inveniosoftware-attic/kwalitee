@@ -1,0 +1,4 @@
+# -*- coding: utf-8 -*-
+# I'm a perfectly valid python file
+
+foo = "spam & eggs"
