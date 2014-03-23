@@ -21,10 +21,11 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+import os
 import re
 import requests
 import operator
-from flask import current_app, json, url_for
+from flask import json
 
 
 # Max number of errors to be sent back
@@ -90,7 +91,7 @@ def _check_signatures(lines, signatures, trusted, **kwargs):
     errors = []
     test = operator.methodcaller('startswith', signatures)
     for i, line in lines:
-        if test(line):
+        if signatures and test(line):
             matching.append(line)
         else:
             errors.append('Unrecognized bullet/signature on line {0}: "{1}"'
@@ -120,87 +121,52 @@ def check_message(message, **kwargs):
     return errors
 
 
-class Kwalitee(object):
-    def __init__(self, app=None, **kwargs):
-        if app is not None:
-            kwargs.update({
-                "components": app.config["COMPONENTS"],
-                "signatures": app.config["SIGNATURES"],
-                "trusted": app.config["TRUSTED_DEVELOPERS"],
-            })
-        self.config = kwargs
-        # This is your Github personal API token, our advice is to
-        # put it into instance/invenio_kwalitee.cfg so it won't be
-        # versioned ever. Keep it safe.
-        self.token = app.config.get("ACCESS_TOKEN", None)
+def pull_request(pull_request_url, status_url, config):
+    errors = []
+    pull_request = requests.get(pull_request_url)
+    data = json.loads(pull_request.content)
+    kwargs = {
+        "components": config.get("COMPONENTS", []),
+        "signatures": config.get("SIGNATURES", []),
+        "trusted": config.get("TRUSTED_DEVELOPERS", [])
+    }
+    headers = {
+        "Content-Type": "application/json",
+        # This is required to post comments on GitHub on yours behalf.
+        # Please update your configuration accordingly.
+        "Authorization": "token {0}".format(config["ACCESS_TOKEN"])
+    }
+    instance_path = config["instance_path"]
 
-    @property
-    def token(self):
-        return self._token
+    commits_url = data["commits_url"]
+    commit_sha = data["head"]["sha"]
 
-    @token.setter
-    def token(self, value):
-        self._token = value
+    # Check only if the title does not contain 'wip'.
+    must_check = re.search(r"\bwip\b",
+                           data["title"],
+                           re.IGNORECASE) is None
 
-    def __headers(self):
-        headers = {"Content-Type": "application/json"}
-        if self._token is not None:
-            headers["Authorization"] = "token {0}".format(self._token)
-        return headers
+    if must_check is True:
+        response = requests.get(commits_url)
+        commits = json.loads(response.content)
+        for commit in commits:
+            sha = commit["sha"]
+            message = commit["commit"]["message"]
+            errs = check_message(message, **kwargs)
 
-    def __call__(self, request):
-        self.request = request
-        if "X-GitHub-Event" in request.headers:
-            event = request.headers["X-GitHub-Event"]
-        else:
-            raise ValueError("No X-GitHub-Event HTTP header found")
+            requests.post(commit["comments_url"],
+                          data=json.dumps({"body": "\n".join(errs)}),
+                          headers=headers)
+            errors += map(lambda x: "%s: %s" % (sha, x), errs)
 
-        data = json.loads(request.data)
-        fn = getattr(self, "on_{0}".format(event))
+        filename = "status_{0}.txt".format(commit_sha)
+        with open(os.path.join(instance_path, filename), "w+") as f:
+            f.write("\n".join(errors))
 
-        return fn(data)
-
-    def __getattr__(self, command):
-        raise NotImplementedError("{0}.{1} method is missing"
-                                  .format(self.__class__.__name__, command))
-
-    def on_ping(self, data):
-        return dict(message="Hi there!")
-
-    def on_pull_request(self, data):
-        errors = []
-
-        commits_url = data['pull_request']['commits_url']
-        commit_sha = data["pull_request"]["head"]["sha"]
-
-        # Check only if the title does not contain 'wip'.
-        must_check = re.search(r"\bwip\b",
-                               data['pull_request']['title'],
-                               re.IGNORECASE) is None
-
-        if must_check is True:
-            response = requests.get(commits_url)
-            commits = json.loads(response.content)
-            for commit in commits:
-                sha = commit["sha"]
-                message = commit["commit"]["message"]
-                errs = check_message(message, **self.config)
-
-                requests.post(commit["comments_url"],
-                              data=json.dumps({"body": "\n".join(errs)}),
-                              headers=self.__headers())
-                errors += map(lambda x: "%s: %s" % (sha, x), errs)
-
-            filename = "status_{0}.txt".format(commit_sha)
-            with current_app.open_instance_resource(filename, "w+") as f:
-                f.write("\n".join(errors))
-
-        state = "error" if len(errors) > 0 else "success"
-        body = dict(state=state,
-                    target_url=url_for("status", commit_sha=commit_sha,
-                                       _external=True),
-                    description="\n".join(errors)[:MAX])
-        requests.post(data["pull_request"]["statuses_url"],
-                      data=json.dumps(body),
-                      headers=self.__headers())
-        return body
+    state = "error" if len(errors) > 0 else "success"
+    body = dict(state=state,
+                target_url=status_url,
+                description="\n".join(errors)[:MAX])
+    requests.post(data["statuses_url"],
+                  data=json.dumps(body),
+                  headers=headers)

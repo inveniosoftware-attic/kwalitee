@@ -22,20 +22,80 @@
 ## or submit itself to any jurisdiction.
 
 import os
+import shutil
+import tempfile
 import httpretty
+
 from flask import json
 from unittest import TestCase
-from invenio_kwalitee import app, kw
+from invenio_kwalitee import app, pull_request
 
 
 class PullRequestTest(TestCase):
     """Integration tests for the pull_request event."""
 
-    @httpretty.activate
+    class MyQueue(object):
+        def __init__(self):
+            self.queue = []
+
+        def __len__(self):
+            return len(self.queue)
+
+        def dequeue(self):
+            return self.queue.pop()
+
+        def enqueue(self, *args):
+            self.queue.append(args)
+
     def test_pull_request(self):
         """POST /payload (pull_request) performs the checks"""
-        kw.token = "deadbeef"
+        queue = self.MyQueue()
+        # Replace the default Redis queue
+        app.config["queue"] = queue
 
+        pull_request_event = {
+            "action": "opened",
+            "number": 1,
+            "pull_request": {
+                "title": "Lorem ipsum",
+                "url": "https://github.com/pulls/1",
+                "commits_url": "https://github.com/pulls/1/commits",
+                "statuses_url": "https://github.com/pulls/1/statuses",
+                "head": {
+                    "sha": "1"
+                }
+            }
+        }
+
+        tester = app.test_client(self)
+        response = tester.post("/payload", content_type="application/json",
+                               headers=(("X-GitHub-Event", "pull_request"),
+                                        ("X-GitHub-Delivery", "1")),
+                               data=json.dumps(pull_request_event))
+        self.assertEqual(200, response.status_code)
+        body = json.loads(response.data)
+        self.assertEqual(u"pending", body["payload"]["state"])
+
+        (fn, pull_request_url, status_url, config) = queue.dequeue()
+        self.assertEquals(pull_request, fn)
+        self.assertEquals(u"https://github.com/pulls/1", pull_request_url)
+
+    @httpretty.activate
+    def test_pull_request_worker(self):
+        """Worker pull_request /pulls/1"""
+        pull = {
+            "title": "Lorem ipsum",
+            "url": "https://github.com/pulls/1",
+            "commits_url": "https://github.com/pulls/1/commits",
+            "statuses_url": "https://github.com/pulls/1/statuses",
+            "head": {
+                "sha": "1"
+            }
+        }
+        httpretty.register_uri(httpretty.GET,
+                               "https://github.com/pulls/1",
+                               body=json.dumps(pull),
+                               content_type="application/json")
         commits = [{
             "url": "https://github.com/pulls/1/commits",
             "sha": 1,
@@ -61,65 +121,18 @@ class PullRequestTest(TestCase):
                                body=json.dumps(status),
                                content_type="application/json")
 
-        tester = app.test_client(self)
-        pull_request = {
-            "action": "opened",
-            "number": 1,
-            "pull_request": {
-                "title": "Lorem ipsum",
-                "url": "https://github.com/pulls/1",
-                "commits_url": "https://github.com/pulls/1/commits",
-                "statuses_url": "https://github.com/pulls/1/statuses",
-                "head": {
-                    "sha": "1"
-                }
-            }
-        }
-        response = tester.post("/payload", content_type="application/json",
-                               headers=(("X-GitHub-Event", "pull_request"),
-                                        ("X-GitHub-Delivery", "1")),
-                               data=json.dumps(pull_request))
-        self.assertEqual(200, response.status_code)
+        instance_path = tempfile.mkdtemp()
+        pull_request("https://github.com/pulls/1",
+                     "http://kwalitee.invenio-software.org/status/1",
+                     {"ACCESS_TOKEN": "deadbeef",
+                      "instance_path": instance_path})
+
         body = json.loads(httpretty.last_request().body)
-        self.assertEqual(u"token {0}".format(kw.token),
+        self.assertEqual(u"token deadbeef",
                          httpretty.last_request().headers["Authorization"])
         self.assertEqual(u"error", body["state"])
-        filename = os.path.join(app.instance_path, "status_1.txt")
+
+        filename = os.path.join(instance_path, "status_1.txt")
         self.assertTrue(os.path.exists(filename), "status file was created")
-        os.unlink(filename)
 
-    @httpretty.activate
-    def test_pull_request_in_wip(self):
-        """POST /payload (pull request) is work-in-progress
-
-        If the commit "title" contains "wip" then the status is automatically
-        set to success with no checks.
-        """
-        status = {"id": 1, "state": "success"}
-        httpretty.register_uri(httpretty.POST,
-                               "https://github.com/pulls/1/statuses",
-                               status=201,
-                               body=json.dumps(status),
-                               content_type="application/json")
-
-        tester = app.test_client(self)
-        pull_request = {
-            "action": "opened",
-            "number": 1,
-            "pull_request": {
-                "title": "[WiP] do not check this one",
-                "url": "https://github.com/pulls/1",
-                "commits_url": "https://github.com/pulls/1/commits",
-                "statuses_url": "https://github.com/pulls/1/statuses",
-                "head": {
-                    "sha": "1"
-                }
-            }
-        }
-        response = tester.post("/payload", content_type="application/json",
-                               headers=(("X-GitHub-Event", "pull_request"),
-                                        ("X-GitHub-Delivery", "1")),
-                               data=json.dumps(pull_request))
-        self.assertEqual(200, response.status_code)
-        body = json.loads(httpretty.last_request().body)
-        self.assertEqual(u"success", body["state"])
+        shutil.rmtree(instance_path)

@@ -24,53 +24,81 @@
 import os
 import operator
 
-from flask import Flask, jsonify, render_template, request, make_response
+from flask import (Flask, json, jsonify, make_response, render_template,
+                   request, url_for)
+from rq import Queue
 
-from .kwalitee import Kwalitee
+from .kwalitee import pull_request
+from .worker import conn
 
-app = Flask(__name__, template_folder='templates', static_folder='static',
+app = Flask(__name__, template_folder="templates", static_folder="static",
             instance_relative_config=True)
 
 # Load default configuration
-app.config.from_object('invenio_kwalitee.config')
+app.config.from_object("invenio_kwalitee.config")
 
 # Load invenio_kwalitee.cfg from instance folder
-app.config.from_pyfile('invenio_kwalitee.cfg', silent=True)
-app.config.from_envvar('INVENIO_KWALITEE_CONFIG', silent=True)
+app.config.from_pyfile("invenio_kwalitee.cfg", silent=True)
+app.config.from_envvar("INVENIO_KWALITEE_CONFIG", silent=True)
+app.config["queue"] = Queue(connection=conn)
 
-# Create kwalitee instance
-kw = Kwalitee(app)
 
 # Create instance path
 try:
     if not os.path.exists(app.instance_path):
         os.makedirs(app.instance_path)  # pragma: no cover
-except Exception: # pragma: no cover
+except Exception:  # pragma: no cover
     pass
 
 
-@app.route('/status/<commit_sha>')
+@app.route("/status/<commit_sha>")
 def status(commit_sha):
     with app.open_instance_resource(
-            'status_{sha}.txt'.format(sha=commit_sha), 'r') as f:
+            "status_{sha}.txt".format(sha=commit_sha), "r") as f:
         status = f.read()
-    status = status if len(status) > 0 else commit_sha + ': Everything OK'
-    return render_template('status.html', status=status)
+    status = status if len(status) > 0 else commit_sha + ": Everything OK"
+    return render_template("status.html", status=status)
 
 
-@app.route('/', methods=['GET'])
+@app.route("/", methods=["GET"])
 def index():
     key = lambda x: os.path.getctime(os.path.join(app.instance_path, x))
-    test = operator.methodcaller('startswith', 'status_')
+    test = operator.methodcaller("startswith", "status_")
     files = map(lambda x: x[7:-4], filter(test, sorted(
         os.listdir(app.instance_path), key=key, reverse=True)))
-    return render_template('index.html', files=files)
+    return render_template("index.html", files=files)
 
 
-@app.route('/payload', methods=['POST'])
+@app.route("/payload", methods=["POST"])
 def payload():
+    q = app.config["queue"]
     try:
-        return jsonify(payload=kw(request))
+        event = None
+        if "X-GitHub-Event" in request.headers:
+            event = request.headers["X-GitHub-Event"]
+        else:
+            raise ValueError("No X-GitHub-Event HTTP header found")
+
+        if event == "ping":
+            payload = {"message": "pong"}
+        elif event == "pull_request":
+            data = json.loads(request.data)
+            pull_request_url = data["pull_request"]["url"]
+            commit_sha = data["pull_request"]["head"]["sha"]
+            status_url = url_for("status", commit_sha=commit_sha,
+                                 _external=True)
+            config = dict(app.config, instance_path=app.instance_path)
+            del config["queue"]
+            q.enqueue(pull_request, pull_request_url, status_url, config)
+            payload = {
+                "state": "pending",
+                "target_url": status_url,
+                "description": "kwalitee is working this commit out"
+            }
+        else:
+            raise ValueError("Event {0} is not supported".format(event))
+
+        return jsonify(payload=payload)
     except Exception as e:
         import traceback
         # Uncomment to help you debug

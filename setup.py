@@ -49,7 +49,8 @@ setup(
     install_requires=[
         'Flask',
         'requests',
-        'six',
+        'rq',
+        'six'
     ],
     classifiers=[
         'Environment :: Web Environment',
