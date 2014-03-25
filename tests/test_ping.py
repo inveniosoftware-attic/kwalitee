@@ -39,19 +39,6 @@ class PingTest(TestCase):
                                                        "than fast."}))
         self.assertEqual(200, response.status_code)
 
-    def test_ping_fail(self):
-        """POST /payload (ping) rejects non-JSON content"""
-        tester = app.test_client(self)
-        response = tester.post("/payload",
-                               headers=(("X-GitHub-Event", "ping"),
-                                        ("X-GitHub-Delivery", "1")),
-                               data="not JSON")
-        body = json.loads(response.data)
-        self.assertEqual(500, response.status_code)
-        self.assertEqual(u"No JSON object could be decoded",
-                         body["exception"])
-        self.assertEqual(u"failure", body["status"])
-
     def test_ping_no_headers(self):
         """POST /payload (ping) expects a X-GitHub-Event header"""
         tester = app.test_client(self)
@@ -76,6 +63,6 @@ class PingTest(TestCase):
                                                        "than fast."}))
         body = json.loads(response.data)
         self.assertEqual(500, response.status_code)
-        self.assertEqual(u"Kwalitee.on_pong method is missing",
+        self.assertEqual(u"Event pong is not supported",
                          body["exception"])
         self.assertEqual(u"failure", body["status"])
