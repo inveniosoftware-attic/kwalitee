@@ -49,6 +49,7 @@ setup(
     install_requires=[
         'Flask',
         'pep8',
+        'pyflakes',
         'requests',
         'rq',
         'six'

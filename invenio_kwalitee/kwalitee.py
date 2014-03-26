@@ -25,9 +25,11 @@ import os
 import re
 import pep8
 import shutil
-import tempfile
 import operator
+import pyflakes
+import pyflakes.checker
 import requests
+import tempfile
 from flask import json
 
 
@@ -137,6 +139,42 @@ def check_message(message, **kwargs):
     errors += err
     errors += _check_signatures(signatures, **kwargs)
     return errors
+
+
+class _PyFlakesChecker(pyflakes.checker.Checker):
+    """PEP8 compatible checker for pyFlakes. Inspired by flake8."""
+    name = "pyflakes"
+    version = pyflakes.__version__
+
+    def run(self):
+        for msg in self.messages:
+            col = getattr(msg, 'col', 0)
+            yield msg.lineno, col, (msg.tpl % msg.message_args), msg.__class__
+
+
+def _register_pyflakes_check():
+    """Register the pyFlakes checker into PEP8 set of checks."""
+    # Resolving conflicts between pep8 and pyflakes.
+    codes = {
+        "UnusedImport": "F401",
+        "ImportShadowedByLoopVar": "F402",
+        "ImportStarUsed": "F403",
+        "LateFutureImport": "F404",
+        "Redefined": "F801",
+        "RedefinedInListComp": "F812",
+        "UndefinedName": "F821",
+        "UndefinedExport": "F822",
+        "UndefinedLocal": "F823",
+        "DuplicateArgument": "F831",
+        "UnusedVariable": "F841",
+    }
+
+    for name, obj in vars(pyflakes.messages).items():
+        if name[0].isupper() and obj.message:
+            obj.tpl = "{0} {1}".format(codes.get(name, "F999"), obj.message)
+
+    pep8.register_check(_PyFlakesChecker, codes=['F'])
+_register_pyflakes_check()
 
 
 def check_file(filename, **kwargs):
