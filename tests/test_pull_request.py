@@ -88,6 +88,7 @@ class PullRequestTest(TestCase):
             "url": "https://github.com/pulls/1",
             "commits_url": "https://github.com/pulls/1/commits",
             "statuses_url": "https://github.com/statuses/2",
+            "review_comments_url": "https://github.com/pulls/1/comments",
             "head": {
                 "sha": "2"
             }
@@ -133,7 +134,8 @@ class PullRequestTest(TestCase):
         httpretty.register_uri(httpretty.GET,
                                "https://github.com/raw/2/spam/eggs.py",
                                status=200,
-                               body=foo_py)
+                               body=foo_py,
+                               content_type="text/plain")
         httpretty.register_uri(httpretty.POST,
                                "https://github.com/commits/1/comments",
                                status=201,
@@ -143,6 +145,11 @@ class PullRequestTest(TestCase):
                                "https://github.com/commits/2/comments",
                                status=201,
                                body=json.dumps({"id": 2}),
+                               content_type="application/json")
+        httpretty.register_uri(httpretty.POST,
+                               "https://github.com/pulls/1/comments",
+                               status=201,
+                               body=json.dumps({"id": 3}),
                                content_type="application/json")
         status = {"id": 1, "state": "success"}
         httpretty.register_uri(httpretty.POST,
@@ -156,6 +163,11 @@ class PullRequestTest(TestCase):
                      "http://kwalitee.invenio-software.org/status/2",
                      {"ACCESS_TOKEN": "deadbeef",
                       "instance_path": instance_path})
+
+        latest_requests = httpretty.HTTPretty.latest_requests
+        # 4x GET pull, commits, files, spam/eggs.py
+        # 4x POST comments (2 messages + 1 file), status
+        self.assertEqual(8, len(latest_requests), "8 requests are expected")
 
         body = json.loads(httpretty.last_request().body)
         self.assertEqual(u"token deadbeef",

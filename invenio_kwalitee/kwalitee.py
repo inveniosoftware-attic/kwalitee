@@ -194,6 +194,7 @@ def pull_request(pull_request_url, status_url, config):
     commit_sha = data["head"]["sha"]
     commits_url = data["commits_url"]
     files_url = data["commits_url"].replace("/commits", "/files")
+    review_comments_url = data["review_comments_url"]
 
     # Check only if the title does not contain 'wip'.
     must_check = re.search(r"\bwip\b",
@@ -201,7 +202,10 @@ def pull_request(pull_request_url, status_url, config):
                            re.IGNORECASE) is None
 
     if must_check is True:
-        commit_messages = {}
+        commit_messages = {
+            "commits": {},
+            "files": {}
+        }
         c_errors, commit_messages = _check_commits(commits_url,
                                                    commit_messages,
                                                    **kwargs)
@@ -211,11 +215,20 @@ def pull_request(pull_request_url, status_url, config):
         errors += c_errors
         errors += f_errors
 
-        for msg in commit_messages.values():
+        for msg in commit_messages["commits"].values():
             body = "\n".join(msg["errors"])
             if body is not "":
                 requests.post(msg["comments_url"],
                               data=json.dumps(dict(body=body)),
+                              headers=headers)
+        for path, msg in commit_messages["files"].items():
+            body = "\n".join(msg["errors"])
+            if body is not "":
+                requests.post(review_comments_url,
+                              data=json.dumps(dict(body=body,
+                                                   commit_id=msg["sha"],
+                                                   path=path,
+                                                   position=0)),
                               headers=headers)
 
         filename = "status_{0}.txt".format(commit_sha)
@@ -242,7 +255,7 @@ def _check_commits(url, messages, **kwargs):
         message = commit["commit"]["message"]
         errs = check_message(message, **kwargs)
 
-        messages[sha] = {
+        messages["commits"][sha] = {
             "comments_url": commit["comments_url"],
             "errors": errs
         }
@@ -258,10 +271,11 @@ def _check_files(url, messages, **kwargs):
     tmp = tempfile.mkdtemp()
     sha_match = re.compile(r"(?<=ref=)[^=]+")
     for f in files:
+        filename = f["filename"]
         sha = sha_match.search(f["contents_url"]).group(0)
-        if f["filename"].endswith(".py"):
+        if filename.endswith(".py"):
             response = requests.get(f["raw_url"])
-            path = os.path.join(tmp, f["filename"])
+            path = os.path.join(tmp, filename)
             dirname = os.path.dirname(path)
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
@@ -269,10 +283,14 @@ def _check_files(url, messages, **kwargs):
                 for block in response.iter_content(1024):
                     fp.write(block)
             errs = check_file(path, **kwargs)
-            errs = list(map(lambda x: "{0}:{1}".format(f["filename"], x),
-                            errs))
-            messages[sha]["errors"] += errs
 
-            errors += list(map(lambda x: "{0}: {1}".format(sha, x), errs))
+            messages["files"][filename] = {
+                "sha": sha,
+                "errors": errs
+            }
+
+            errors += list(map(lambda x: "{0}: {1}:{2}"
+                                         .format(sha, filename, x),
+                               errs))
     shutil.rmtree(tmp)
     return errors, messages
