@@ -48,6 +48,7 @@ setup(
     platforms='any',
     install_requires=[
         'Flask',
+        'pep8',
         'requests',
         'rq',
         'six'
