@@ -80,6 +80,16 @@ class TestCheckMessage(TestCase):
                                **self.kwargs)
         self.assertEquals(0, len(errors), errors)
 
+    def test_valid_multiline_bullets(self):
+        errors = check_message("search: hello\r\n\r\n"
+                               "* bullet 1\r\n"
+                               "  lorem ipsum\r\n\r\n"
+                               "* bullet 2\r\n"
+                               "  dolor sit amet\r\n\r\n"
+                               "Signed-off-by: a a <john.doe@example.org>",
+                               **self.kwargs)
+        self.assertEquals(0, len(errors), errors)
+
     def test_line_is_too_long(self):
         # max is 72 total including the identation
         too_long = "".join(list(repeat("M", 70)))

@@ -60,6 +60,7 @@ def _check_bullets(lines, max_length=72, **kwargs):
     """
     errors = []
     missed_lines = []
+    skipped = []
 
     for (i, line) in enumerate(lines[1:]):
         if line.startswith('*'):
@@ -74,7 +75,9 @@ def _check_bullets(lines, max_length=72, **kwargs):
                 if not re.search(r"^ {2}\S", indented):
                     errors.append('Wrong indentation on line {0}'
                                   .format(i+j+3))
-        elif line.strip() != '':
+                else:
+                    skipped.append(i + j + 1)
+        elif i not in skipped and line.strip() != '':
             missed_lines.append((i+1, line))
 
         if len(line) > max_length:
