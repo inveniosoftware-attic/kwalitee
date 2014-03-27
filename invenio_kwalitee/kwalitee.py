@@ -270,11 +270,14 @@ def pull_request(pull_request_url, status_url, config):
         for msg in messages:
             body = "\n".join(msg["errors"])
             if body is not "":
+                # Comment on first line with problem.
+                position = int(msg["errors"][0].split(':')[0])
+                position = position if position > -1 else 0
                 requests.post(review_comments_url,
                               data=json.dumps(dict(body=body,
                                                    commit_id=msg["sha"],
                                                    path=msg["path"],
-                                                   position=0)),
+                                                   position=position)),
                               headers=headers)
 
         filename = "status_{0}.txt".format(commit_sha)
