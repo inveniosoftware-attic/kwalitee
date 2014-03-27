@@ -24,6 +24,7 @@
 from setuptools import setup
 import os
 import re
+import sys
 
 # Get the version string.  Cannot be done with import!
 with open(os.path.join('invenio_kwalitee', 'version.py'), 'rt') as f:
@@ -31,6 +32,17 @@ with open(os.path.join('invenio_kwalitee', 'version.py'), 'rt') as f:
         '__version__\s*=\s*"(?P<version>.*)"\n',
         f.read()
     ).group('version')
+
+install_requires = [
+    'Flask',
+    'pep8',
+    'pyflakes',
+    'requests',
+    'rq',
+    'six'
+]
+if sys.version_info[0] == 2 and sys.version_info[1] < 7:
+    install_requires.append('importlib')
 
 setup(
     name='Invenio-Kwalitee',
@@ -46,20 +58,18 @@ setup(
     zip_safe=False,
     include_package_data=True,
     platforms='any',
-    install_requires=[
-        'Flask',
-        'pep8',
-        'pyflakes',
-        'requests',
-        'rq',
-        'six'
-    ],
+    install_requires=install_requires,
     classifiers=[
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.3',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules'
     ],
@@ -69,5 +79,5 @@ setup(
         ],
     },
     test_suite='nose.collector',
-    tests_require=['nose', 'coverage', 'httpretty'],
+    tests_require=['nose', 'coverage', 'httpretty', 'pyhamcrest'],
 )

@@ -22,8 +22,11 @@
 ## or submit itself to any jurisdiction.
 
 import os
+import shutil
+import tempfile
 from unittest import TestCase
 from invenio_kwalitee import app
+from hamcrest import assert_that, equal_to, contains_string
 
 
 class StatusTest(TestCase):
@@ -31,6 +34,8 @@ class StatusTest(TestCase):
     def test_simple_status(self):
         """GET /status/sha1 displays the associated text file"""
         sha = "deadbeef"
+        instance_path = tempfile.mkdtemp()
+        app.instance_path = instance_path
         filename = os.path.join(app.instance_path,
                                 "status_{0}.txt".format(sha))
         with open(filename, "w+") as f:
@@ -40,8 +45,9 @@ class StatusTest(TestCase):
         tester = app.test_client(self)
         response = tester.get("status/{0}".format(sha))
 
-        self.assertEquals(200, response.status_code)
-        self.assertIn("Signature missing", str(response.data))
-        self.assertIn("Needs more reviewers", str(response.data))
+        assert_that(response.status_code, equal_to(200))
+        assert_that(str(response.data), contains_string("Signature missing"))
+        assert_that(str(response.data),
+                    contains_string("Needs more reviewers"))
 
-        os.unlink(filename)
+        shutil.rmtree(instance_path)

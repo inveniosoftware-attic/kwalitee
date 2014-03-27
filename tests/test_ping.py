@@ -24,6 +24,7 @@
 from flask import json
 from unittest import TestCase
 from invenio_kwalitee import app
+from hamcrest import assert_that, equal_to
 
 
 class PingTest(TestCase):
@@ -37,7 +38,7 @@ class PingTest(TestCase):
                                data=json.dumps({"hook_id": 1,
                                                 "zen": "Responsive is better "
                                                        "than fast."}))
-        self.assertEqual(200, response.status_code)
+        assert_that(response.status_code, equal_to(200))
 
     def test_ping_no_headers(self):
         """POST /payload (ping) expects a X-GitHub-Event header"""
@@ -47,10 +48,10 @@ class PingTest(TestCase):
                                                 "zen": "Responsive is better "
                                                        "than fast."}))
         body = json.loads(response.data)
-        self.assertEqual(500, response.status_code)
-        self.assertEqual(u"No X-GitHub-Event HTTP header found",
-                         body["exception"])
-        self.assertEqual(u"failure", body["status"])
+        assert_that(response.status_code, equal_to(500))
+        assert_that(body["exception"],
+                    equal_to("No X-GitHub-Event HTTP header found"))
+        assert_that(body["status"], equal_to(u"failure"))
 
     def test_not_a_ping(self):
         """POST /payload (pong) rejects an unknown event"""
@@ -62,7 +63,7 @@ class PingTest(TestCase):
                                                 "zen": "Responsive is better "
                                                        "than fast."}))
         body = json.loads(response.data)
-        self.assertEqual(500, response.status_code)
-        self.assertEqual(u"Event pong is not supported",
-                         body["exception"])
-        self.assertEqual(u"failure", body["status"])
+        assert_that(response.status_code, equal_to(500))
+        assert_that(body["exception"],
+                    equal_to("Event pong is not supported"))
+        assert_that(body["status"], equal_to(u"failure"))

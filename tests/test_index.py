@@ -22,14 +22,19 @@
 ## or submit itself to any jurisdiction.
 
 import os
+import shutil
+import tempfile
 from unittest import TestCase
 from invenio_kwalitee import app
+from hamcrest import assert_that, equal_to, is_in
 
 
 class IndexTest(TestCase):
     """Integration tests for the homepage"""
     def test_simple_status(self):
         """GET / displays some recent statuses"""
+        instance_path = tempfile.mkdtemp()
+        app.instance_path = instance_path
         filenames = []
         for sha in range(10):
             filename = os.path.join(app.instance_path,
@@ -42,9 +47,8 @@ class IndexTest(TestCase):
         tester = app.test_client(self)
         response = tester.get("/")
 
-        self.assertEquals(200, response.status_code)
+        assert_that(response.status_code, equal_to(200))
         for sha in range(10):
-            self.assertIn("/status/{0}".format(sha), str(response.data))
+            assert_that("/status/{0}".format(sha), is_in(str(response.data)))
 
-        for filename in filenames:
-            os.unlink(filename)
+        shutil.rmtree(instance_path)
