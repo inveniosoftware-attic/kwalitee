@@ -130,7 +130,7 @@ class PullRequestTest(TestCase):
                                status=200,
                                body=json.dumps(files),
                                content_type="application/json")
-        foo_py = "if foo == bar:\n  print 'derp'\n"
+        foo_py = "if foo == bar:\n  print('derp')\n"
         httpretty.register_uri(httpretty.GET,
                                "https://github.com/raw/2/spam/eggs.py",
                                status=200,
@@ -168,6 +168,19 @@ class PullRequestTest(TestCase):
         # 4x GET pull, commits, files, spam/eggs.py
         # 4x POST comments (2 messages + 1 file), status
         self.assertEqual(8, len(latest_requests), "8 requests are expected")
+
+        expected_requests = [
+            "",
+            "",
+            "Missing component name",
+            "Signature missing",
+            "",
+            "",
+            "F821 undefined name",
+            "/status/2"
+        ]
+        for expected, request in zip(expected_requests, latest_requests):
+            self.assertIn(expected, str(request.body))
 
         body = json.loads(httpretty.last_request().body)
         self.assertEqual(u"token deadbeef",

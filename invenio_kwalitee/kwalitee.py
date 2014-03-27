@@ -25,9 +25,11 @@ import os
 import re
 import pep8
 import shutil
-import tempfile
 import operator
+import pyflakes
+import pyflakes.checker
 import requests
+import tempfile
 from flask import json
 
 
@@ -142,6 +144,42 @@ def check_message(message, **kwargs):
     return errors
 
 
+class _PyFlakesChecker(pyflakes.checker.Checker):
+    """PEP8 compatible checker for pyFlakes. Inspired by flake8."""
+    name = "pyflakes"
+    version = pyflakes.__version__
+
+    def run(self):
+        for msg in self.messages:
+            col = getattr(msg, 'col', 0)
+            yield msg.lineno, col, (msg.tpl % msg.message_args), msg.__class__
+
+
+def _register_pyflakes_check():
+    """Register the pyFlakes checker into PEP8 set of checks."""
+    # Resolving conflicts between pep8 and pyflakes.
+    codes = {
+        "UnusedImport": "F401",
+        "ImportShadowedByLoopVar": "F402",
+        "ImportStarUsed": "F403",
+        "LateFutureImport": "F404",
+        "Redefined": "F801",
+        "RedefinedInListComp": "F812",
+        "UndefinedName": "F821",
+        "UndefinedExport": "F822",
+        "UndefinedLocal": "F823",
+        "DuplicateArgument": "F831",
+        "UnusedVariable": "F841",
+    }
+
+    for name, obj in vars(pyflakes.messages).items():
+        if name[0].isupper() and obj.message:
+            obj.tpl = "{0} {1}".format(codes.get(name, "F999"), obj.message)
+
+    pep8.register_check(_PyFlakesChecker, codes=['F'])
+_registered_pyflakes_check = False
+
+
 def check_file(filename, **kwargs):
     """Perform static analysis on the given file.
 
@@ -150,9 +188,14 @@ def check_file(filename, **kwargs):
     * pep8_select: ditto
     """
 
-    ignore = kwargs.pop("pep8_ignore", None)
-    select = kwargs.pop("pep8_select", None)
-    pep8options = dict(ignore=ignore, select=select)
+    pep8options = {
+        "ignore": kwargs.get("pep8_ignore"),
+        "select": kwargs.get("pep8_select"),
+    }
+
+    if not _registered_pyflakes_check and kwargs.get("pep8_pyflakes", True):
+        _register_pyflakes_check()
+
     checker = pep8.Checker(filename, reporter=_Report, **pep8options)
     checker.check_all()
 
@@ -200,37 +243,34 @@ def pull_request(pull_request_url, status_url, config):
     review_comments_url = data["review_comments_url"]
 
     # Check only if the title does not contain 'wip'.
-    must_check = re.search(r"\bwip\b",
-                           data["title"],
-                           re.IGNORECASE) is None
+    is_wip = bool(re.match(r"\bwip\b", data["title"], re.IGNORECASE))
+    check = not config.get("CHECK_WIP", False) or is_wip
+    check_commit_messages = config.get("CHECK_COMMIT_MESSAGES", True)
+    check_pep8 = config.get("CHECK_PEP8", True)
+    check_pyflakes = config.get("CHECK_PYFLAKES", True)
+    kwargs["pep8_pyflakes"] = check_pyflakes
 
-    if must_check is True:
-        commit_messages = {
-            "commits": {},
-            "files": {}
-        }
-        c_errors, commit_messages = _check_commits(commits_url,
-                                                   commit_messages,
-                                                   **kwargs)
-        f_errors, commit_messages = _check_files(files_url,
-                                                 commit_messages,
-                                                 **kwargs)
-        errors += c_errors
-        errors += f_errors
+    if check and check_commit_messages:
+        errs, messages = _check_commits(commits_url, **kwargs)
+        errors += errs
 
-        for msg in commit_messages["commits"].values():
+        for msg in messages:
             body = "\n".join(msg["errors"])
             if body is not "":
                 requests.post(msg["comments_url"],
                               data=json.dumps(dict(body=body)),
                               headers=headers)
-        for path, msg in commit_messages["files"].items():
+
+    if check and (check_pep8 or check_pyflakes):
+        errs, messages = _check_files(files_url, **kwargs)
+        errors += errs
+        for msg in messages:
             body = "\n".join(msg["errors"])
             if body is not "":
                 requests.post(review_comments_url,
                               data=json.dumps(dict(body=body,
                                                    commit_id=msg["sha"],
-                                                   path=path,
+                                                   path=msg["path"],
                                                    position=0)),
                               headers=headers)
 
@@ -248,27 +288,31 @@ def pull_request(pull_request_url, status_url, config):
         return body
 
 
-def _check_commits(url, messages, **kwargs):
+def _check_commits(url, **kwargs):
     """Check the commit messages of a pull request."""
     errors = []
+    messages = []
+
     response = requests.get(url)
     commits = json.loads(response.content)
     for commit in commits:
         sha = commit["sha"]
-        message = commit["commit"]["message"]
-        errs = check_message(message, **kwargs)
+        errs = check_message(commit["commit"]["message"], **kwargs)
 
-        messages["commits"][sha] = {
+        messages.append({
+            "sha": sha,
             "comments_url": commit["comments_url"],
             "errors": errs
-        }
+        })
         errors += list(map(lambda x: "{0}: {1}".format(sha, x), errs))
     return errors, messages
 
 
-def _check_files(url, messages, **kwargs):
+def _check_files(url, **kwargs):
     """Downloads and runs the checks on the files of a pull request."""
     errors = []
+    messages = []
+
     response = requests.get(url)
     files = json.loads(response.content)
     tmp = tempfile.mkdtemp()
@@ -287,10 +331,11 @@ def _check_files(url, messages, **kwargs):
                     fp.write(block)
             errs = check_file(path, **kwargs)
 
-            messages["files"][filename] = {
+            messages.append({
+                "path": filename,
                 "sha": sha,
                 "errors": errs
-            }
+            })
 
             errors += list(map(lambda x: "{0}: {1}:{2}"
                                          .format(sha, filename, x),

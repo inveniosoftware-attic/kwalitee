@@ -69,3 +69,10 @@ TRUSTED_DEVELOPERS = []
 REPO_URL = 'https://github.com/inveniosoftware/invenio/'
 
 PEP8_IGNORE = 'E123', 'E226', 'E24', 'E501'
+#PEP8_SELECT = 'E111', 'F481'
+
+CHECK_WIP = False
+CHECK_COMMIT_MESSAGES = True
+CHECK_PEP8 = True
+# PyFlakes requires PEP8
+CHECK_PYFLAKES = True

@@ -33,19 +33,30 @@ class TestCheckFile(TestCase):
         self.fixtures = os.path.join(os.path.dirname(__file__), "fixtures", "")
         self.valid = "{0}valid.py.test".format(self.fixtures)
         self.invalid = "{0}invalid.py.test".format(self.fixtures)
+        self.error = "{0}error.py.test".format(self.fixtures)
 
     def test_valid_file(self):
+        """valid.py has is correct"""
         errors = check_file(self.valid)
         self.assertEquals(0, len(errors), errors)
 
     def test_invalid_file(self):
+        """invalid.py has 7 PEP8 violations + 1 from pyFlakes"""
         errors = check_file(self.invalid)
-        self.assertEquals(7, len(errors), errors)
+        print(errors)
+        self.assertEquals(8, len(errors), errors)
+
+    def test_erroneous_file(self):
+        """error.py has 2 pyflakes violations"""
+        errors = check_file(self.error)
+        self.assertEquals(2, len(errors), errors)
 
     def test_pep8_ignore(self):
-        errors = check_file(self.invalid, pep8_ignore=('E111', 'E113'))
+        """ignored PEP8 codes are ignored"""
+        errors = check_file(self.invalid, pep8_ignore=('E111', 'E113', 'E901'))
         self.assertEquals(0, len(errors), errors)
 
     def test_pep8_select(self):
+        """selected PEP8 codes are selected"""
         errors = check_file(self.invalid, pep8_select=('E111',))
         self.assertEquals(3, len(errors), errors)
