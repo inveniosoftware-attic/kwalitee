@@ -180,7 +180,7 @@ class PullRequestTest(TestCase):
             "/status/2"
         ]
         for expected, request in zip(expected_requests, latest_requests):
-            self.assertIn(expected, request.body)
+            self.assertIn(expected, str(request.body))
 
         body = json.loads(httpretty.last_request().body)
         self.assertEqual(u"token deadbeef",

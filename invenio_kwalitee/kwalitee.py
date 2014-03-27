@@ -174,7 +174,7 @@ def _register_pyflakes_check():
             obj.tpl = "{0} {1}".format(codes.get(name, "F999"), obj.message)
 
     pep8.register_check(_PyFlakesChecker, codes=['F'])
-_register_pyflakes_check()
+_registered_pyflakes_check = False
 
 
 def check_file(filename, **kwargs):
@@ -185,9 +185,14 @@ def check_file(filename, **kwargs):
     * pep8_select: ditto
     """
 
-    ignore = kwargs.pop("pep8_ignore", None)
-    select = kwargs.pop("pep8_select", None)
-    pep8options = dict(ignore=ignore, select=select)
+    pep8options = {
+        "ignore": kwargs.get("pep8_ignore"),
+        "select": kwargs.get("pep8_select"),
+    }
+
+    if not _registered_pyflakes_check and kwargs.get("pep8_pyflakes", True):
+        _register_pyflakes_check()
+
     checker = pep8.Checker(filename, reporter=_Report, **pep8options)
     checker.check_all()
 
@@ -235,11 +240,14 @@ def pull_request(pull_request_url, status_url, config):
     review_comments_url = data["review_comments_url"]
 
     # Check only if the title does not contain 'wip'.
-    must_check = re.search(r"\bwip\b",
-                           data["title"],
-                           re.IGNORECASE) is None
+    is_wip = bool(re.match(r"\bwip\b", data["title"], re.IGNORECASE))
+    check = not config.get("CHECK_WIP", False) or is_wip
+    check_commit_messages = config.get("CHECK_COMMIT_MESSAGES", True)
+    check_pep8 = config.get("CHECK_PEP8", True)
+    check_pyflakes = config.get("CHECK_PYFLAKES", True)
+    kwargs["pep8_pyflakes"] = check_pyflakes
 
-    if must_check is True:
+    if check and check_commit_messages:
         errs, messages = _check_commits(commits_url, **kwargs)
         errors += errs
 
@@ -250,6 +258,7 @@ def pull_request(pull_request_url, status_url, config):
                               data=json.dumps(dict(body=body)),
                               headers=headers)
 
+    if check and (check_pep8 or check_pyflakes):
         errs, messages = _check_files(files_url, **kwargs)
         errors += errs
         for msg in messages:
