@@ -240,32 +240,25 @@ def pull_request(pull_request_url, status_url, config):
                            re.IGNORECASE) is None
 
     if must_check is True:
-        commit_messages = {
-            "commits": {},
-            "files": {}
-        }
-        c_errors, commit_messages = _check_commits(commits_url,
-                                                   commit_messages,
-                                                   **kwargs)
-        f_errors, commit_messages = _check_files(files_url,
-                                                 commit_messages,
-                                                 **kwargs)
-        errors += c_errors
-        errors += f_errors
+        errs, messages = _check_commits(commits_url, **kwargs)
+        errors += errs
 
-        for msg in commit_messages["commits"].values():
+        for msg in messages:
             body = "\n".join(msg["errors"])
             if body is not "":
                 requests.post(msg["comments_url"],
                               data=json.dumps(dict(body=body)),
                               headers=headers)
-        for path, msg in commit_messages["files"].items():
+
+        errs, messages = _check_files(files_url, **kwargs)
+        errors += errs
+        for msg in messages:
             body = "\n".join(msg["errors"])
             if body is not "":
                 requests.post(review_comments_url,
                               data=json.dumps(dict(body=body,
                                                    commit_id=msg["sha"],
-                                                   path=path,
+                                                   path=msg["path"],
                                                    position=0)),
                               headers=headers)
 
@@ -283,27 +276,31 @@ def pull_request(pull_request_url, status_url, config):
         return body
 
 
-def _check_commits(url, messages, **kwargs):
+def _check_commits(url, **kwargs):
     """Check the commit messages of a pull request."""
     errors = []
+    messages = []
+
     response = requests.get(url)
     commits = json.loads(response.content)
     for commit in commits:
         sha = commit["sha"]
-        message = commit["commit"]["message"]
-        errs = check_message(message, **kwargs)
+        errs = check_message(commit["commit"]["message"], **kwargs)
 
-        messages["commits"][sha] = {
+        messages.append({
+            "sha": sha,
             "comments_url": commit["comments_url"],
             "errors": errs
-        }
+        })
         errors += list(map(lambda x: "{0}: {1}".format(sha, x), errs))
     return errors, messages
 
 
-def _check_files(url, messages, **kwargs):
+def _check_files(url, **kwargs):
     """Downloads and runs the checks on the files of a pull request."""
     errors = []
+    messages = []
+
     response = requests.get(url)
     files = json.loads(response.content)
     tmp = tempfile.mkdtemp()
@@ -322,10 +319,11 @@ def _check_files(url, messages, **kwargs):
                     fp.write(block)
             errs = check_file(path, **kwargs)
 
-            messages["files"][filename] = {
+            messages.append({
+                "path": filename,
                 "sha": sha,
                 "errors": errs
-            }
+            })
 
             errors += list(map(lambda x: "{0}: {1}:{2}"
                                          .format(sha, filename, x),

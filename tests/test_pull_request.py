@@ -169,15 +169,18 @@ class PullRequestTest(TestCase):
         # 4x POST comments (2 messages + 1 file), status
         self.assertEqual(8, len(latest_requests), "8 requests are expected")
 
-        # Testing some bits of the content of the POST requests
         expected_requests = [
+            "",
+            "",
             "Missing component name",
             "Signature missing",
+            "",
+            "",
             "F821 undefined name",
             "/status/2"
         ]
-        for expected, request in zip(expected_requests, latest_requests[-4:]):
-            self.assertIn(expected, str(request.body))
+        for expected, request in zip(expected_requests, latest_requests):
+            self.assertIn(expected, request.body)
 
         body = json.loads(httpretty.last_request().body)
         self.assertEqual(u"token deadbeef",
