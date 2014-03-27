@@ -24,8 +24,7 @@
 from invenio_kwalitee.kwalitee import check_message
 from itertools import repeat
 from unittest import TestCase
-from hamcrest import (assert_that, equal_to, has_item, has_items, has_length,
-                      is_not)
+from hamcrest import assert_that, has_item, has_items, has_length, is_not
 
 
 class TestCheckMessage(TestCase):
