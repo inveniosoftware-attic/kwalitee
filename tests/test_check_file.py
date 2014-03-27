@@ -43,18 +43,22 @@ class TestCheckFile(TestCase):
     def test_invalid_file(self):
         """invalid.py has 7 PEP8 violations + 1 from pyFlakes"""
         errors = check_file(self.invalid)
-        print(errors)
         self.assertEquals(8, len(errors), errors)
 
     def test_erroneous_file(self):
-        """error.py has 2 pyflakes violations"""
+        """error.py has 2 pyflakes violations + 16 pep8"""
         errors = check_file(self.error)
-        self.assertEquals(2, len(errors), errors)
+        self.assertEquals(18, len(errors), errors)
 
     def test_pep8_ignore(self):
         """ignored PEP8 codes are ignored"""
         errors = check_file(self.invalid, pep8_ignore=('E111', 'E113', 'E901'))
         self.assertEquals(0, len(errors), errors)
+
+    def test_pep8_ignore_license(self):
+        """ignored PEP8 codes are ignored"""
+        errors = check_file(self.error, pep8_ignore=('E265',))
+        self.assertEquals(2, len(errors), errors)
 
     def test_pep8_select(self):
         """selected PEP8 codes are selected"""
