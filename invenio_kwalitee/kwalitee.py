@@ -186,6 +186,7 @@ def check_file(filename, **kwargs):
     Options:
     * pep8_ignore: e.g. ('E111', 'E123')
     * pep8_select: ditto
+    * pep8_pyflakes: True
     """
 
     pep8options = {
@@ -249,6 +250,8 @@ def pull_request(pull_request_url, status_url, config):
     check_pep8 = config.get("CHECK_PEP8", True)
     check_pyflakes = config.get("CHECK_PYFLAKES", True)
     kwargs["pep8_pyflakes"] = check_pyflakes
+    kwargs["pep8_ignore"] = config.get("PEP8_IGNORE", None)
+    kwargs["pep8_select"] = config.get("PEP8_SELECT", None)
 
     if check and check_commit_messages:
         errs, messages = _check_commits(commits_url, **kwargs)
