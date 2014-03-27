@@ -29,6 +29,7 @@ import httpretty
 from flask import json
 from unittest import TestCase
 from invenio_kwalitee import app, pull_request
+from hamcrest import assert_that, equal_to, contains_string
 
 
 class PullRequestTest(TestCase):
@@ -72,13 +73,15 @@ class PullRequestTest(TestCase):
                                headers=(("X-GitHub-Event", "pull_request"),
                                         ("X-GitHub-Delivery", "1")),
                                data=json.dumps(pull_request_event))
-        self.assertEqual(200, response.status_code)
+
+        assert_that(response.status_code, equal_to(200))
         body = json.loads(response.data)
-        self.assertEqual(u"pending", body["payload"]["state"])
+        assert_that(body["payload"]["state"], equal_to("pending"))
 
         (fn, pull_request_url, status_url, config) = queue.dequeue()
         self.assertEquals(pull_request, fn)
-        self.assertEquals(u"https://github.com/pulls/1", pull_request_url)
+        assert_that(fn, equal_to(pull_request))
+        assert_that(pull_request_url, equal_to("https://github.com/pulls/1"))
 
     @httpretty.activate
     def test_pull_request_worker(self):
@@ -167,7 +170,7 @@ class PullRequestTest(TestCase):
         latest_requests = httpretty.HTTPretty.latest_requests
         # 4x GET pull, commits, files, spam/eggs.py
         # 4x POST comments (2 messages + 1 file), status
-        self.assertEqual(8, len(latest_requests), "8 requests are expected")
+        assert_that(len(latest_requests), equal_to(8), "4x GET + 4x POST")
 
         expected_requests = [
             "",
@@ -180,23 +183,21 @@ class PullRequestTest(TestCase):
             "/status/2"
         ]
         for expected, request in zip(expected_requests, latest_requests):
-            self.assertIn(expected, str(request.body))
+            assert_that(str(request.body), contains_string(expected))
 
         body = json.loads(httpretty.last_request().body)
-        self.assertEqual(u"token deadbeef",
-                         httpretty.last_request().headers["Authorization"])
-        self.assertEqual(u"error", body["state"])
+        assert_that(httpretty.last_request().headers["authorization"],
+                    equal_to(u"token deadbeef"))
+        assert_that(body["state"], equal_to("error"))
 
         filename = os.path.join(instance_path, "status_{0}.txt")
-        self.assertFalse(os.path.exists(filename.format(1)),
-                         "status 1 file was NOT created")
-        self.assertTrue(os.path.exists(filename.format(2)),
-                        "status 2 file was created")
+        assert_that(not os.path.exists(filename.format(1)))
+        assert_that(os.path.exists(filename.format(2)))
 
         with open(filename.format(2)) as f:
             data = f.read()
-            self.assertIn("2: spam/eggs.py:2:3: E111 indentation is not a "
-                          "multiple of four",
-                          data)
+            assert_that(data,
+                        contains_string("2: spam/eggs.py:2:3: E111 indentation"
+                                        " is not a multiple of four"))
 
         shutil.rmtree(instance_path)

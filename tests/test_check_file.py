@@ -24,6 +24,7 @@
 import os
 from invenio_kwalitee.kwalitee import check_file
 from unittest import TestCase
+from hamcrest import assert_that, equal_to, has_length
 
 
 class TestCheckFile(TestCase):
@@ -38,29 +39,29 @@ class TestCheckFile(TestCase):
     def test_valid_file(self):
         """valid.py has is correct"""
         errors = check_file(self.valid)
-        self.assertEquals(0, len(errors), errors)
+        assert_that(errors, has_length(0), errors)
 
     def test_invalid_file(self):
         """invalid.py has 7 PEP8 violations + 1 from pyFlakes"""
         errors = check_file(self.invalid)
-        self.assertEquals(8, len(errors), errors)
+        assert_that(errors, has_length(8), errors)
 
     def test_erroneous_file(self):
         """error.py has 2 pyflakes violations + 16 pep8"""
         errors = check_file(self.error)
-        self.assertEquals(18, len(errors), errors)
+        assert_that(errors, has_length(18), errors)
 
     def test_pep8_ignore(self):
         """ignored PEP8 codes are ignored"""
         errors = check_file(self.invalid, pep8_ignore=('E111', 'E113', 'E901'))
-        self.assertEquals(0, len(errors), errors)
+        assert_that(errors, has_length(0), errors)
 
     def test_pep8_ignore_license(self):
         """ignored PEP8 codes are ignored"""
         errors = check_file(self.error, pep8_ignore=('E265',))
-        self.assertEquals(2, len(errors), errors)
+        assert_that(errors, has_length(2), errors)
 
     def test_pep8_select(self):
         """selected PEP8 codes are selected"""
         errors = check_file(self.invalid, pep8_select=('E111',))
-        self.assertEquals(3, len(errors), errors)
+        assert_that(errors, has_length(3), errors)

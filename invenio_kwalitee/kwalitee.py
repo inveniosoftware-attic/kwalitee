@@ -68,23 +68,24 @@ def _check_bullets(lines, max_length=72, **kwargs):
         if line.startswith('*'):
             if len(missed_lines) > 0:
                 errors.append("No bullets are allowed after signatures on line"
-                              " {0}".format(i+1))
+                              " {0}".format(i + 1))
             if lines[i].strip() != '':
-                errors.append('Missing empty line before line {0}'.format(i+1))
-            for (j, indented) in enumerate(lines[i+2:]):
+                errors.append('Missing empty line before line {0}'
+                              .format(i + 1))
+            for (j, indented) in enumerate(lines[i + 2:]):
                 if indented.strip() == '':
                     break
                 if not re.search(r"^ {2}\S", indented):
                     errors.append('Wrong indentation on line {0}'
-                                  .format(i+j+3))
+                                  .format(i + j + 3))
                 else:
                     skipped.append(i + j + 1)
         elif i not in skipped and line.strip() != '':
-            missed_lines.append((i+1, line))
+            missed_lines.append((i + 1, line))
 
         if len(line) > max_length:
             errors.append('Line {0} is too long ({1} > {2})'
-                          .format(i+2, len(line), max_length))
+                          .format(i + 2, len(line), max_length))
 
     return errors, missed_lines
 
@@ -322,29 +323,31 @@ def _check_files(url, **kwargs):
     response = requests.get(url)
     files = json.loads(response.content)
     tmp = tempfile.mkdtemp()
-    sha_match = re.compile(r"(?<=ref=)[^=]+")
-    for f in files:
-        filename = f["filename"]
-        sha = sha_match.search(f["contents_url"]).group(0)
-        if filename.endswith(".py"):
-            response = requests.get(f["raw_url"])
-            path = os.path.join(tmp, filename)
-            dirname = os.path.dirname(path)
-            if not os.path.exists(dirname):
-                os.makedirs(dirname)
-            with open(path, "wb+") as fp:
-                for block in response.iter_content(1024):
-                    fp.write(block)
-            errs = check_file(path, **kwargs)
+    try:
+        sha_match = re.compile(r"(?<=ref=)[^=]+")
+        for f in files:
+            filename = f["filename"]
+            sha = sha_match.search(f["contents_url"]).group(0)
+            if filename.endswith(".py"):
+                response = requests.get(f["raw_url"])
+                path = os.path.join(tmp, filename)
+                dirname = os.path.dirname(path)
+                if not os.path.exists(dirname):
+                    os.makedirs(dirname)
+                with open(path, "wb+") as fp:
+                    for block in response.iter_content(1024):
+                        fp.write(block)
+                errs = check_file(path, **kwargs)
 
-            messages.append({
-                "path": filename,
-                "sha": sha,
-                "errors": errs
-            })
+                messages.append({
+                    "path": filename,
+                    "sha": sha,
+                    "errors": errs
+                })
 
-            errors += list(map(lambda x: "{0}: {1}:{2}"
-                                         .format(sha, filename, x),
-                               errs))
-    shutil.rmtree(tmp)
+                errors += list(map(lambda x: "{0}: {1}:{2}"
+                                             .format(sha, filename, x),
+                                   errs))
+    finally:
+        shutil.rmtree(tmp)
     return errors, messages
