@@ -25,16 +25,38 @@ import os
 import re
 import pep8
 import shutil
+import codecs
 import operator
 import pyflakes
 import pyflakes.checker
 import requests
 import tempfile
 from flask import json
+from datetime import datetime
 
 
 # Max number of errors to be sent back
 MAX = 130
+
+_re_copyright_year = re.compile(r"^Copyright\s+(?:\([Cc]\)|\xa9)\s+"
+                                r"(?:\d{4},\s+)*"
+                                r"(?P<year>\d{4})\s+CERN\.?$",
+                                re.UNICODE | re.MULTILINE)
+
+_re_program = re.compile(r"^(?P<program>.*?) is free software;",
+                         re.UNICODE | re.MULTILINE)
+_re_program_2 = re.compile(r"^(?P<program>.*?) is distributed in",
+                           re.UNICODE | re.MULTILINE)
+_re_program_3 = re.compile(r"GNU General Public License\s+along\s+with "
+                           r"(?P<program>.*?)[;\.]",
+                           re.UNICODE | re.MULTILINE)
+
+_licenses_codes = {
+    "I100": "license is missing",
+    "I101": "copyright is missing",
+    "I102": "copyright year is outdated, expected {0} but got {1}",
+    "I103": "license is not GNU GPLv2",
+}
 
 
 def _check_1st_line(line, components, max_first_line=50, **kwargs):
@@ -181,7 +203,21 @@ def _register_pyflakes_check():
 _registered_pyflakes_check = False
 
 
-def check_file(filename, **kwargs):
+class _Report(pep8.BaseReport):
+    """Own reporter that keeps a list of errors in a sortable list and never
+    prints.
+    """
+    def __init__(self, options):
+        super(_Report, self).__init__(options)
+        self.errors = []
+
+    def error(self, line_number, offset, text, check):
+        code = super(_Report, self).error(line_number, offset, text, check)
+        if code:
+            self.errors.append((line_number, offset + 1, code, text, check))
+
+
+def check_pep8(filename, **kwargs):
     """Perform static analysis on the given file.
 
     Options:
@@ -208,18 +244,80 @@ def check_file(filename, **kwargs):
     return errors
 
 
-class _Report(pep8.BaseReport):
-    """Own reporter that keeps a list of errors in a sortable list and never
-    prints.
-    """
-    def __init__(self, options):
-        super(_Report, self).__init__(options)
-        self.errors = []
+def check_license(filename, **kwargs):
+    """Perform a license check on the given file.
 
-    def error(self, line_number, offset, text, check):
-        code = super(_Report, self).error(line_number, offset, text, check)
-        if code:
-            self.errors.append((line_number, offset + 1, code, text, check))
+    The license format should be commented using ## and live at the top of the
+    file. Also, the year should be the current one.
+
+    Supported filetypes: python, jinja
+    """
+    year = kwargs.pop("year", datetime.now().year)
+    errors = []
+    lines = []
+    ignores = kwargs.get("pep8_ignore")
+    template = "{0}: {1} {2}"
+    file_is_empty = False
+    license = ""
+    lineno = 0
+    re_comment = re.compile(r"^#.*|\{#.*|[\r\n]+$")
+    with codecs.open(filename, "r", "utf-8") as fp:
+        line = fp.readline()
+        blocks = []
+        while re_comment.match(line):
+            if line.startswith("##"):
+                line = line.lstrip("# ")
+                blocks.append(line)
+                lines.append((lineno, line.strip()))
+            lineno, line = lineno + 1, fp.readline()
+        file_is_empty = line == ""
+        license = "".join(blocks)
+
+    if file_is_empty and license == "":
+        return errors
+
+    match_year = _re_copyright_year.search(license)
+    if match_year is None:
+        errors.append((lineno, "I101"))
+    elif int(match_year.group("year")) != year:
+        theline = match_year.group(0)
+        lno = lineno
+        for no, l in lines:
+            if theline.strip() == l:
+                lno = no
+                break
+        errors.append((lno + 1, "I102", year, match_year.group("year")))
+    else:
+        program_match = _re_program.search(license)
+        program_2_match = _re_program_2.search(license)
+        program_3_match = _re_program_3.search(license)
+        if program_match is None:
+            errors.append((lineno, "I100"))
+        elif (program_2_match is None or
+              program_3_match is None or
+              (program_match.group("program").upper() !=
+               program_2_match.group("program").upper() !=
+               program_3_match.group("program").upper())):
+            errors.append((lineno, "I103"))
+
+    def _format_error(lineno, code, *args):
+        return template.format(lineno, code,
+                               _licenses_codes[code].format(*args))
+
+    def _filter_codes(error):
+        if not ignores or error[1] not in ignores:
+            return error
+
+    return list(map(lambda x: _format_error(*x),
+                    filter(_filter_codes, errors)))
+
+
+def check_file(filename, **kwargs):
+    """Perform static analysis on the given file.
+
+    See: check_pep8 and check_license
+    """
+    return check_pep8(filename, **kwargs) + check_license(filename, **kwargs)
 
 
 def pull_request(pull_request_url, status_url, config):
@@ -250,6 +348,9 @@ def pull_request(pull_request_url, status_url, config):
     check_commit_messages = config.get("CHECK_COMMIT_MESSAGES", True)
     check_pep8 = config.get("CHECK_PEP8", True)
     check_pyflakes = config.get("CHECK_PYFLAKES", True)
+    check_license = config.get("CHECK_LICENSE", True)
+    kwargs["pep8"] = check_pep8
+    kwargs["license"] = check_license
     kwargs["pep8_pyflakes"] = check_pyflakes
     kwargs["pep8_ignore"] = config.get("PEP8_IGNORE", None)
     kwargs["pep8_select"] = config.get("PEP8_SELECT", None)
@@ -265,7 +366,7 @@ def pull_request(pull_request_url, status_url, config):
                               data=json.dumps(dict(body=body)),
                               headers=headers)
 
-    if check and (check_pep8 or check_pyflakes):
+    if check and (check_pep8 or check_pyflakes or check_license):
         errs, messages = _check_files(files_url, **kwargs)
         errors += errs
         for msg in messages:
@@ -328,7 +429,7 @@ def _check_files(url, **kwargs):
         for f in files:
             filename = f["filename"]
             sha = sha_match.search(f["contents_url"]).group(0)
-            if filename.endswith(".py"):
+            if filename.endswith(".py") or filename.endswith(".html"):
                 response = requests.get(f["raw_url"])
                 path = os.path.join(tmp, filename)
                 dirname = os.path.dirname(path)
@@ -337,7 +438,11 @@ def _check_files(url, **kwargs):
                 with open(path, "wb+") as fp:
                     for block in response.iter_content(1024):
                         fp.write(block)
-                errs = check_file(path, **kwargs)
+
+                if filename.endswith(".py"):
+                    errs = check_file(path, **kwargs)
+                else:
+                    errs = check_license(path, **kwargs)
 
                 messages.append({
                     "path": filename,

@@ -22,46 +22,105 @@
 ## or submit itself to any jurisdiction.
 
 import os
-from invenio_kwalitee.kwalitee import check_file
+from invenio_kwalitee.kwalitee import check_pep8, check_license
 from unittest import TestCase
-from hamcrest import assert_that, equal_to, has_length
+from hamcrest import assert_that, has_length, has_item, is_not
 
 
 class TestCheckFile(TestCase):
-    """Unit tests of the file validation checks"""
 
     def setUp(self):
-        self.fixtures = os.path.join(os.path.dirname(__file__), "fixtures", "")
-        self.valid = "{0}valid.py.test".format(self.fixtures)
-        self.invalid = "{0}invalid.py.test".format(self.fixtures)
-        self.error = "{0}error.py.test".format(self.fixtures)
+        fixtures = os.path.join(os.path.dirname(__file__), "fixtures", "")
+        self.valid = "{0}valid.py.test".format(fixtures)
+        self.invalid = "{0}invalid.py.test".format(fixtures)
+        self.error = "{0}error.py.test".format(fixtures)
+        self.empty = "{0}empty.py.test".format(fixtures)
+        self.invalid_license = "{0}invalid_license.py.test".format(fixtures)
+        self.valid_license = "{0}valid_license.py.test".format(fixtures)
+        self.missing_license = "{0}missing_license.py.test".format(fixtures)
+        self.license_html = "{0}license.html.test".format(fixtures)
 
-    def test_valid_file(self):
-        """valid.py has is correct"""
-        errors = check_file(self.valid)
-        assert_that(errors, has_length(0), errors)
+
+class TestCheckPep8(TestCheckFile):
+    """Unit tests of the PEP8 check."""
+
+    def test_valid_pep8(self):
+        """valid.py is correctly formatted (according to pep8)"""
+        errors = check_pep8(self.valid)
+        assert_that(errors, has_length(0))
 
     def test_invalid_file(self):
         """invalid.py has 7 PEP8 violations + 1 from pyFlakes"""
-        errors = check_file(self.invalid)
-        assert_that(errors, has_length(8), errors)
+        errors = check_pep8(self.invalid)
+        assert_that(errors, has_length(8))
 
     def test_erroneous_file(self):
-        """error.py has 2 pyflakes violations + 16 pep8"""
-        errors = check_file(self.error)
-        assert_that(errors, has_length(18), errors)
+        """error.py has 2 pyflakes violations"""
+        errors = check_pep8(self.error)
+        assert_that(errors, has_length(2))
 
     def test_pep8_ignore(self):
         """ignored PEP8 codes are ignored"""
-        errors = check_file(self.invalid, pep8_ignore=('E111', 'E113', 'E901'))
-        assert_that(errors, has_length(0), errors)
+        errors = check_pep8(self.invalid,
+                            pep8_ignore=('E111', 'E113', 'E901'))
+        assert_that(errors, has_length(0))
 
     def test_pep8_ignore_license(self):
         """ignored PEP8 codes are ignored"""
-        errors = check_file(self.error, pep8_ignore=('E265',))
-        assert_that(errors, has_length(2), errors)
+        errors = check_pep8(self.error, pep8_ignore=('E265',))
+        assert_that(errors, has_length(2))
 
     def test_pep8_select(self):
         """selected PEP8 codes are selected"""
-        errors = check_file(self.invalid, pep8_select=('E111',))
-        assert_that(errors, has_length(3), errors)
+        errors = check_pep8(self.invalid, pep8_select=('E111',))
+        assert_that(errors, has_length(3))
+
+
+class TestCheckLicense(TestCheckFile):
+    """Unit tests of the license validation."""
+
+    def test_license(self):
+        """valid_license has a well formatted license."""
+        errors = check_license(self.valid_license, year=2014)
+        assert_that(errors, has_length(0))
+
+    def test_missing(self):
+        """missing_license has only the copyright"""
+        errors = check_license(self.missing_license)
+        assert_that(errors, has_item("13: I100 license is missing"))
+
+    def test_license_jinja(self):
+        """license.html has a well formatted license."""
+        errors = check_license(self.license_html, year=2014)
+        assert_that(errors, has_length(0))
+
+    def test_empty(self):
+        """empty files like __init__ are skipped"""
+        errors = check_license(self.empty)
+        assert_that(errors, has_length(0))
+
+    def test_unicode_license(self):
+        """invalid_license uses unicode © and multiline years."""
+        errors = check_license(self.invalid_license, year=2014)
+        assert_that(errors, is_not(has_item("24: I101 copyright is missing")))
+
+    def test_no_license(self):
+        """license is missing"""
+        errors = check_license(self.valid)
+        assert_that(errors, has_item("24: I101 copyright is missing"))
+
+    def test_no_copyright(self):
+        """copyright is missing"""
+        errors = check_license(self.valid)
+        assert_that(errors, has_item("24: I101 copyright is missing"))
+
+    def test_outdated_license(self):
+        """valid_license has an outdated license."""
+        errors = check_license(self.valid_license, year=2015)
+        assert_that(errors, has_item("4: I102 copyright year is outdated, "
+                                     "expected 2015 but got 2014"))
+
+    def test_doesnt_look_like_gnu_gpl(self):
+        """invalid_license doesn't look like the GNU GPL"""
+        errors = check_license(self.invalid_license, year=2014)
+        assert_that(errors, has_item("25: I103 license is not GNU GPLv2"))

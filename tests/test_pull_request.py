@@ -127,6 +127,11 @@ class PullRequestTest(TestCase):
             "status": "added",
             "raw_url": "https://github.com/raw/2/spam/eggs.py",
             "contents_url": "https://api.github.com/spam/eggs.py?ref=2"
+        }, {
+            "filename": "spam/herp.html",
+            "status": "added",
+            "raw_url": "https://github.com/raw/2/spam/herp.html",
+            "contents_url": "https://api.github.com/spam/herp.html?ref=2"
         }]
         httpretty.register_uri(httpretty.GET,
                                "https://github.com/pulls/1/files",
@@ -139,6 +144,12 @@ class PullRequestTest(TestCase):
                                status=200,
                                body=foo_py,
                                content_type="text/plain")
+        herp_html = "<!DOCTYPE html><html><title>Hello!</title></html>"
+        httpretty.register_uri(httpretty.GET,
+                               "https://github.com/raw/2/spam/herp.html",
+                               status=200,
+                               body=herp_html,
+                               content_type="text/html")
         httpretty.register_uri(httpretty.POST,
                                "https://github.com/commits/1/comments",
                                status=201,
@@ -168,9 +179,9 @@ class PullRequestTest(TestCase):
                       "instance_path": instance_path})
 
         latest_requests = httpretty.HTTPretty.latest_requests
-        # 4x GET pull, commits, files, spam/eggs.py
-        # 4x POST comments (2 messages + 1 file), status
-        assert_that(len(latest_requests), equal_to(8), "4x GET + 4x POST")
+        # 5x GET pull, commits, 2xfiles, spam/eggs.py
+        # 5x POST comments (2 messages + 2 file), status
+        assert_that(len(latest_requests), equal_to(10), "5x GET + 5x POST")
 
         expected_requests = [
             "",
@@ -179,7 +190,9 @@ class PullRequestTest(TestCase):
             "Signature missing",
             "",
             "",
+            "",
             "F821 undefined name",
+            "I101 copyright is missing",
             "/status/2"
         ]
         for expected, request in zip(expected_requests, latest_requests):
