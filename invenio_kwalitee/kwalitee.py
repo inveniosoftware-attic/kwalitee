@@ -260,10 +260,11 @@ def check_license(filename, **kwargs):
     file_is_empty = False
     license = ""
     lineno = 0
+    re_comment = re.compile(r"^#.*|\{#.*|[\r\n]+$")
     with codecs.open(filename, "r", "utf-8") as fp:
         line = fp.readline()
         blocks = []
-        while line.startswith("#") or line.startswith("\n"):
+        while re_comment.match(line):
             if line.startswith("##"):
                 line = line.lstrip("# ")
                 blocks.append(line)
@@ -292,11 +293,11 @@ def check_license(filename, **kwargs):
         program_3_match = _re_program_3.search(license)
         if program_match is None:
             errors.append((lineno, "I100"))
-        elif program_2_match is None or program_3_match is None:
-            errors.append((lineno, "I103"))
-        elif (program_match.group("program").upper() !=
-              program_2_match.group("program").upper() !=
-              program_3_match.group("program").upper()):
+        elif (program_2_match is None or
+              program_3_match is None or
+              (program_match.group("program").upper() !=
+               program_2_match.group("program").upper() !=
+               program_3_match.group("program").upper())):
             errors.append((lineno, "I103"))
 
     def _format_error(lineno, code, *args):
@@ -428,7 +429,7 @@ def _check_files(url, **kwargs):
         for f in files:
             filename = f["filename"]
             sha = sha_match.search(f["contents_url"]).group(0)
-            if filename.endswith(".py"):
+            if filename.endswith(".py") or filename.endswith(".html"):
                 response = requests.get(f["raw_url"])
                 path = os.path.join(tmp, filename)
                 dirname = os.path.dirname(path)
@@ -437,7 +438,11 @@ def _check_files(url, **kwargs):
                 with open(path, "wb+") as fp:
                     for block in response.iter_content(1024):
                         fp.write(block)
-                errs = check_file(path, **kwargs)
+
+                if filename.endswith(".py"):
+                    errs = check_file(path, **kwargs)
+                else:
+                    errs = check_license(path, **kwargs)
 
                 messages.append({
                     "path": filename,

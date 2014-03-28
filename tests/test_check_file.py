@@ -30,16 +30,15 @@ from hamcrest import assert_that, has_length, has_item, is_not
 class TestCheckFile(TestCase):
 
     def setUp(self):
-        self.fixtures = os.path.join(os.path.dirname(__file__), "fixtures", "")
-        self.valid = "{0}valid.py.test".format(self.fixtures)
-        self.invalid = "{0}invalid.py.test".format(self.fixtures)
-        self.error = "{0}error.py.test".format(self.fixtures)
-        self.empty = "{0}empty.py.test".format(self.fixtures)
-        self.invalid_license = "{0}invalid_license.py.test" \
-                               .format(self.fixtures)
-        self.valid_license = "{0}valid_license.py.test".format(self.fixtures)
-        self.missing_license = "{0}missing_license.py.test" \
-                               .format(self.fixtures)
+        fixtures = os.path.join(os.path.dirname(__file__), "fixtures", "")
+        self.valid = "{0}valid.py.test".format(fixtures)
+        self.invalid = "{0}invalid.py.test".format(fixtures)
+        self.error = "{0}error.py.test".format(fixtures)
+        self.empty = "{0}empty.py.test".format(fixtures)
+        self.invalid_license = "{0}invalid_license.py.test".format(fixtures)
+        self.valid_license = "{0}valid_license.py.test".format(fixtures)
+        self.missing_license = "{0}missing_license.py.test".format(fixtures)
+        self.license_html = "{0}license.html.test".format(fixtures)
 
 
 class TestCheckPep8(TestCheckFile):
@@ -83,6 +82,16 @@ class TestCheckLicense(TestCheckFile):
     def test_license(self):
         """valid_license has a well formatted license."""
         errors = check_license(self.valid_license, year=2014)
+        assert_that(errors, has_length(0))
+
+    def test_missing(self):
+        """missing_license has only the copyright"""
+        errors = check_license(self.missing_license)
+        assert_that(errors, has_item("13: I100 license is missing"))
+
+    def test_license_jinja(self):
+        """license.html has a well formatted license."""
+        errors = check_license(self.license_html, year=2014)
         assert_that(errors, has_length(0))
 
     def test_empty(self):
