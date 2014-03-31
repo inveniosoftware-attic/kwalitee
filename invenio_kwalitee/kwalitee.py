@@ -344,7 +344,7 @@ def pull_request(pull_request_url, status_url, config):
 
     # Check only if the title does not contain 'wip'.
     is_wip = bool(re.match(r"\bwip\b", data["title"], re.IGNORECASE))
-    check = not config.get("CHECK_WIP", False) or is_wip
+    check = config.get("CHECK_WIP", False) or not is_wip
     check_commit_messages = config.get("CHECK_COMMIT_MESSAGES", True)
     check_pep8 = config.get("CHECK_PEP8", True)
     check_pyflakes = config.get("CHECK_PYFLAKES", True)
