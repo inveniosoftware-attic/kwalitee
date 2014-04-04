@@ -29,7 +29,8 @@ import httpretty
 from flask import json
 from unittest import TestCase
 from invenio_kwalitee import app, pull_request
-from hamcrest import assert_that, equal_to, contains_string
+from hamcrest import (assert_that, equal_to, contains_string, has_item,
+                      has_items, is_not)
 
 
 class PullRequestTest(TestCase):
@@ -92,6 +93,7 @@ class PullRequestTest(TestCase):
             "commits_url": "https://github.com/pulls/1/commits",
             "statuses_url": "https://github.com/statuses/2",
             "review_comments_url": "https://github.com/pulls/1/comments",
+            "issue_url": "https://github.com/issues/1",
             "head": {
                 "sha": "2"
             }
@@ -99,6 +101,33 @@ class PullRequestTest(TestCase):
         httpretty.register_uri(httpretty.GET,
                                "https://github.com/pulls/1",
                                body=json.dumps(pull),
+                               content_type="application/json")
+        issue = {
+            "url": "https://github.com/issues/1",
+            "labels_url": "https://github.com/issues/1/labels{/name}",
+            "id": "42",
+            "number": "1",
+            "labels": [{"name": "foo"},
+                       {"name": "in_work"}],
+            "state": "open"
+        }
+        httpretty.register_uri(httpretty.GET,
+                               "https://github.com/issues/1",
+                               body=json.dumps(issue),
+                               content_type="application/json")
+        labels = [{
+            "url": "https://github.com/labels/foo",
+            "name": "foo",
+            "color": "000000"
+        }, {
+            "url": "https://github.com/labels/in_review",
+            "name": "in_review",
+            "color": "ff0000"
+        }]
+        httpretty.register_uri(httpretty.PUT,
+                               "https://github.com/issues/1/labels",
+                               status=200,
+                               body=json.dumps(issue),
                                content_type="application/json")
         commits = [
             {
@@ -135,19 +164,16 @@ class PullRequestTest(TestCase):
         }]
         httpretty.register_uri(httpretty.GET,
                                "https://github.com/pulls/1/files",
-                               status=200,
                                body=json.dumps(files),
                                content_type="application/json")
         foo_py = "if foo == bar:\n  print('derp')\n"
         httpretty.register_uri(httpretty.GET,
                                "https://github.com/raw/2/spam/eggs.py",
-                               status=200,
                                body=foo_py,
                                content_type="text/plain")
         herp_html = "<!DOCTYPE html><html><title>Hello!</title></html>"
         httpretty.register_uri(httpretty.GET,
                                "https://github.com/raw/2/spam/herp.html",
-                               status=200,
                                body=herp_html,
                                content_type="text/html")
         httpretty.register_uri(httpretty.POST,
@@ -179,27 +205,29 @@ class PullRequestTest(TestCase):
                       "instance_path": instance_path})
 
         latest_requests = httpretty.HTTPretty.latest_requests
-        # 5x GET pull, commits, 2xfiles, spam/eggs.py
-        # 5x POST comments (2 messages + 2 file), status
-        assert_that(len(latest_requests), equal_to(10), "5x GET + 5x POST")
+        # 6x GET pull, issue, commits, 2xfiles, spam/eggs.py
+        # 6x POST comments (2 messages + 2 file), label, status
+        assert_that(len(latest_requests), equal_to(12), "6x GET + 6x POST")
 
         expected_requests = [
             "",
             "",
-            "Missing component name",
-            "Signature missing",
+            "",
+            "missing component name",
+            "signature is missing",
             "",
             "",
             "",
             "F821 undefined name",
             "I101 copyright is missing",
-            "/status/2"
+            "/status/2",
+            "in_review"
         ]
         for expected, request in zip(expected_requests, latest_requests):
             assert_that(str(request.body), contains_string(expected))
 
-        body = json.loads(httpretty.last_request().body)
-        assert_that(httpretty.last_request().headers["authorization"],
+        body = json.loads(latest_requests[-2].body)
+        assert_that(latest_requests[-2].headers["authorization"],
                     equal_to(u"token deadbeef"))
         assert_that(body["state"], equal_to("error"))
 
@@ -212,5 +240,79 @@ class PullRequestTest(TestCase):
             assert_that(data,
                         contains_string("2: spam/eggs.py:2:3: E111 indentation"
                                         " is not a multiple of four"))
+
+        shutil.rmtree(instance_path)
+
+    @httpretty.activate
+    def test_wip_pull_request_worker(self):
+        """Worker pull_request /pulls/1 is work in progress"""
+        pull = {
+            "title": "WIP Lorem ipsum",
+            "url": "https://github.com/pulls/1",
+            "commits_url": "https://github.com/pulls/1/commits",
+            "statuses_url": "https://github.com/statuses/2",
+            "review_comments_url": "https://github.com/pulls/1/comments",
+            "issue_url": "https://github.com/issues/1",
+            "head": {
+                "sha": "2"
+            }
+        }
+        httpretty.register_uri(httpretty.GET,
+                               "https://github.com/pulls/1",
+                               body=json.dumps(pull),
+                               content_type="application/json")
+        issue = {
+            "url": "https://github.com/issues/1",
+            "labels_url": "https://github.com/issues/1/labels{/name}",
+            "id": "42",
+            "number": "1",
+            "labels": [{"name": "foo"},
+                       {"name": "in_integration"}],
+            "state": "open"
+        }
+        httpretty.register_uri(httpretty.GET,
+                               "https://github.com/issues/1",
+                               body=json.dumps(issue),
+                               content_type="application/json")
+        labels = [{
+            "url": "https://github.com/labels/foo",
+            "name": "foo",
+            "color": "000000"
+        }, {
+            "url": "https://github.com/labels/in_review",
+            "name": "in_review",
+            "color": "ff0000"
+        }]
+        httpretty.register_uri(httpretty.PUT,
+                               "https://github.com/issues/1/labels",
+                               status=200,
+                               body=json.dumps(issue),
+                               content_type="application/json")
+        instance_path = tempfile.mkdtemp()
+        pull_request("https://github.com/pulls/1",
+                     "http://kwalitee.invenio-software.org/status/2",
+                     {"ACCESS_TOKEN": "deadbeef",
+                      "instance_path": instance_path})
+
+        latest_requests = httpretty.HTTPretty.latest_requests
+        # 2x GET pull, issue
+        # 1x POST labels
+        assert_that(len(latest_requests), equal_to(3), "2x GET + 1x POST")
+
+        expected_requests = [
+            "",
+            "",
+            "in_work"
+        ]
+        for expected, request in zip(expected_requests, latest_requests):
+            assert_that(str(request.body), contains_string(expected))
+
+        labels = json.loads(latest_requests[-1].body)
+        assert_that(labels, has_items("in_work", "foo"))
+        assert_that(labels, is_not(has_item("in_review")))
+
+        filename = os.path.join(instance_path, "status_{0}.txt")
+        assert_that(not os.path.exists(filename.format(1)))
+        assert_that(not os.path.exists(filename.format(2)))
 
         shutil.rmtree(instance_path)
