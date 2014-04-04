@@ -138,6 +138,7 @@ def _check_signatures(lines, signatures, trusted=None, **kwargs):
 
     if len(matching) == 0:
         errors.append(("M108", 1))
+        errors.append(("M100", 1))
     elif len(matching) <= 2:
         pattern = re.compile('|'.join(map(lambda x: '<' + re.escape(x) + '>',
                                           trusted)))
@@ -333,7 +334,21 @@ def check_file(filename, **kwargs):
     return check_pep8(filename, **kwargs) + check_license(filename, **kwargs)
 
 
+def _get_issue_labels(issue_url):
+    """Downloads the labels of the issue."""
+    issue = json.loads(requests.get(issue_url).content)
+    labels = set()
+    for label in issue["labels"]:
+        labels.add(label["name"])
+    return labels, issue["labels_url"]
+
+
 def pull_request(pull_request_url, status_url, config):
+    """
+    Performing all the tests on the pull request and pings back the given
+    status_url.
+    """
+    body = {}
     errors = []
     pull_request = requests.get(pull_request_url)
     data = json.loads(pull_request.content)
@@ -351,6 +366,7 @@ def pull_request(pull_request_url, status_url, config):
     instance_path = config["instance_path"]
 
     commit_sha = data["head"]["sha"]
+    issue_url = data["issue_url"]
     commits_url = data["commits_url"]
     files_url = data["commits_url"].replace("/commits", "/files")
     review_comments_url = data["review_comments_url"]
@@ -368,8 +384,14 @@ def pull_request(pull_request_url, status_url, config):
     kwargs["pep8_ignore"] = config.get("PEP8_IGNORE", None)
     kwargs["pep8_select"] = config.get("PEP8_SELECT", None)
 
+    labels, labels_url = _get_issue_labels(issue_url)
+    labels.discard(config.get("LABEL_WIP", "in_work"))
+    labels.discard(config.get("LABEL_REVIEW", "in_review"))
+    labels.discard(config.get("LABEL_READY", "in_integration"))
+    new_labels = set([config.get("LABEL_READY", "in_integration")])
+
     if check and check_commit_messages:
-        errs, messages = _check_commits(commits_url, **kwargs)
+        errs, new_labels, messages = _check_commits(commits_url, **kwargs)
         errors += errs
 
         for msg in messages:
@@ -406,13 +428,23 @@ def pull_request(pull_request_url, status_url, config):
         requests.post(data["statuses_url"],
                       data=json.dumps(body),
                       headers=headers)
-        return body
+
+    if is_wip:
+        new_labels = set([config.get("LABEL_WIP", "in_work")])
+
+    labels.update(new_labels)
+    requests.put(labels_url.replace("{/name}", ""),
+                 data=json.dumps(list(labels)),
+                 headers=headers)
+
+    return dict(body, labels=list(labels))
 
 
 def _check_commits(url, **kwargs):
     """Check the commit messages of a pull request."""
     errors = []
     messages = []
+    labels = set()
 
     response = requests.get(url)
     commits = json.loads(response.content)
@@ -420,13 +452,19 @@ def _check_commits(url, **kwargs):
         sha = commit["sha"]
         errs = check_message(commit["commit"]["message"], **kwargs)
 
+        # filter out the needs more reviewerss
+        e = list(filter(lambda x: not x.startswith("M100:"), errs))
+
+        if len(errs) > len(e):
+            labels.add(kwargs.get("LABEL_REVIEW", "in_review"))
+
         messages.append({
             "sha": sha,
             "comments_url": commit["comments_url"],
-            "errors": errs
+            "errors": e
         })
         errors += list(map(lambda x: "{0}: {1}".format(sha, x), errs))
-    return errors, messages
+    return errors, labels, messages
 
 
 def _check_files(url, **kwargs):

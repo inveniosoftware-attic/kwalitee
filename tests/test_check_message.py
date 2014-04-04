@@ -37,18 +37,21 @@ class TestCheckMessage(TestCase):
         errors = check_message("", **self.kwargs)
         assert_that(errors,
                     has_items("M101: 1: missing component name",
-                              "M108: 1: signature is missing"))
+                              "M108: 1: signature is missing",
+                              "M100: 1: needs more reviewers"))
 
     def test_no_component_name(self):
         errors = check_message("foo bar", **self.kwargs)
         assert_that(errors,
                     has_items("M101: 1: missing component name",
-                              "M108: 1: signature is missing"))
+                              "M108: 1: signature is missing",
+                              "M100: 1: needs more reviewers"))
 
     def test_known_component_name(self):
         errors = check_message("utils: foo bar", **self.kwargs)
         assert_that(errors,
-                    has_item("M108: 1: signature is missing"))
+                    has_items("M108: 1: signature is missing",
+                              "M100: 1: needs more reviewers"))
 
     def test_unknonwn_component_name(self):
         errors = check_message("kikoo: lol", **self.kwargs)
