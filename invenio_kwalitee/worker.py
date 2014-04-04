@@ -22,6 +22,7 @@
 ## or submit itself to any jurisdiction.
 
 import sys
+import logging
 from redis import Redis
 from rq import Worker, Queue, Connection
 
@@ -29,6 +30,10 @@ conn = Redis()
 
 
 def main(argv):  # pragma: no cover
+    if tuple(sys.version_info) < (2, 7):
+        logger = logging.getLogger("rq.worker")
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(logging.StreamHandler())
     with Connection(conn):
         worker = Worker(list(map(Queue, ('high', 'default', 'low'))))
         worker.work()
