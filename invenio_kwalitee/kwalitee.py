@@ -51,6 +51,18 @@ _re_program_3 = re.compile(r"GNU General Public License\s+along\s+with "
                            r"(?P<program>.*?)[;\.]",
                            re.UNICODE | re.MULTILINE)
 
+_messages_codes = {
+    "M100": "needs more reviewers",
+    "M101": "missing component name",
+    "M102": "unrecognized component name: {0}",
+    "M103": "no bullets are allowed after signatures",
+    "M104": "missing empty line before bullet",
+    "M105": "indentation of two spaces expected",
+    "M106": "line is too long ({1} > {0})",
+    "M107": "unrecognized bullet/signature",
+    "M108": "signature is missing",
+}
+
 _licenses_codes = {
     "I100": "license is missing",
     "I101": "copyright is missing",
@@ -64,14 +76,14 @@ def _check_1st_line(line, components, max_first_line=50, **kwargs):
     and then a short description of the commit"""
     errors = []
     if len(line) > max_first_line:
-        errors.append('First line is too long')
+        errors.append(("M106", 1, max_first_line, len(line)))
 
     if ':' not in line:
-        errors.append('Missing component name')
+        errors.append(("M101", 1))
     else:
         component, msg = line.split(':', 1)
         if component not in components:
-            errors.append('Unknown "{0}" component name'.format(component))
+            errors.append(("M102", 1, component))
 
     return errors
 
@@ -89,25 +101,21 @@ def _check_bullets(lines, max_length=72, **kwargs):
     for (i, line) in enumerate(lines[1:]):
         if line.startswith('*'):
             if len(missed_lines) > 0:
-                errors.append("No bullets are allowed after signatures on line"
-                              " {0}".format(i + 1))
+                errors.append(("M103", i + 2))
             if lines[i].strip() != '':
-                errors.append('Missing empty line before line {0}'
-                              .format(i + 1))
+                errors.append(("M104", i + 2))
             for (j, indented) in enumerate(lines[i + 2:]):
                 if indented.strip() == '':
                     break
                 if not re.search(r"^ {2}\S", indented):
-                    errors.append('Wrong indentation on line {0}'
-                                  .format(i + j + 3))
+                    errors.append(("M105", i + j + 3))
                 else:
                     skipped.append(i + j + 1)
         elif i not in skipped and line.strip() != '':
-            missed_lines.append((i + 1, line))
+            missed_lines.append((i + 2, line))
 
         if len(line) > max_length:
-            errors.append('Line {0} is too long ({1} > {2})'
-                          .format(i + 2, len(line), max_length))
+            errors.append(("M106", i + 2, max_length, len(line)))
 
     return errors, missed_lines
 
@@ -126,17 +134,16 @@ def _check_signatures(lines, signatures, trusted=None, **kwargs):
         if signatures and test(line):
             matching.append(line)
         else:
-            errors.append('Unrecognized bullet/signature on line {0}: "{1}"'
-                          .format(i, line))
+            errors.append(("M107", i))
 
     if len(matching) == 0:
-        errors.append('Signature missing')
+        errors.append(("M108", 1))
     elif len(matching) <= 2:
         pattern = re.compile('|'.join(map(lambda x: '<' + re.escape(x) + '>',
                                           trusted)))
         trusted_matching = list(filter(None, map(pattern.search, matching)))
         if len(trusted_matching) == 0:
-            errors.append('Needs more reviewers')
+            errors.append(("M100", 1))
 
     return errors
 
@@ -164,7 +171,13 @@ def check_message(message, **kwargs):
     err, signatures = _check_bullets(lines, **kwargs)
     errors += err
     errors += _check_signatures(signatures, **kwargs)
-    return errors
+
+    def _format(code, lineno, args):
+        return "{0}: {1}: {2}".format(code,
+                                      lineno,
+                                      _messages_codes[code].format(*args))
+
+    return list(map(lambda x: _format(x[0], x[1], x[2:]), errors))
 
 
 class _PyFlakesChecker(pyflakes.checker.Checker):
