@@ -388,7 +388,7 @@ def pull_request(pull_request_url, status_url, config):
     labels.discard(config.get("LABEL_WIP", "in_work"))
     labels.discard(config.get("LABEL_REVIEW", "in_review"))
     labels.discard(config.get("LABEL_READY", "in_integration"))
-    new_labels = set([config.get("LABEL_READY", "in_integration")])
+    new_labels = set([config.get("LABEL_REVIEW", "in_review")])
 
     if check and check_commit_messages:
         errs, new_labels, messages = _check_commits(commits_url, **kwargs)
@@ -431,6 +431,8 @@ def pull_request(pull_request_url, status_url, config):
 
     if is_wip:
         new_labels = set([config.get("LABEL_WIP", "in_work")])
+    if not new_labels and not errors:
+        new_labels = set([config.get("LABEL_READY", "in_integration")])
 
     labels.update(new_labels)
     requests.put(labels_url.replace("{/name}", ""),
