@@ -332,7 +332,31 @@ def check_file(filename, **kwargs):
 
     See: check_pep8 and check_license
     """
-    return check_pep8(filename, **kwargs) + check_license(filename, **kwargs)
+    if filename.endswith(".py"):
+        return check_pep8(filename, **kwargs) + \
+            check_license(filename, **kwargs)
+    else:
+        return check_license(filename, **kwargs)
+
+
+def get_component(filename):
+    """ Get components name from filename """
+    parts = filename.split(os.path.sep)
+
+    if len(parts) >= 3:
+        if parts[1] == 'modules':
+            return parts[2]
+        if parts[1] == 'legacy':
+            return parts[2]
+        if parts[1] == 'ext':
+            return parts[2]
+    if len(parts) >= 2:
+        if parts[1] in ['base', 'celery', 'utils', ]:
+            return parts[1]
+    if len(parts) >= 1:
+        if parts[0] in ['grunt', 'docs', ]:
+            return parts[0]
+    return 'global'
 
 
 def _get_issue_labels(issue_url):
@@ -344,6 +368,22 @@ def _get_issue_labels(issue_url):
     return labels, issue["labels_url"]
 
 
+def get_options(config):
+    kwargs = {
+        "components": config.get("COMPONENTS", None),
+        "signatures": config.get("SIGNATURES", None),
+        "trusted": config.get("TRUSTED_DEVELOPERS", None)
+    }
+
+    kwargs["pep8"] = config.get("CHECK_PEP8", True)
+    kwargs["license"] = config.get("CHECK_LICENSE", True)
+    kwargs["pep8_pyflakes"] = config.get("CHECK_PYFLAKES", True)
+    kwargs["pep8_ignore"] = config.get("PEP8_IGNORE", None)
+    kwargs["pep8_select"] = config.get("PEP8_SELECT", None)
+
+    return kwargs
+
+
 def pull_request(pull_request_url, status_url, config):
     """
     Performing all the tests on the pull request and pings back the given
@@ -353,11 +393,7 @@ def pull_request(pull_request_url, status_url, config):
     errors = []
     pull_request = requests.get(pull_request_url)
     data = json.loads(pull_request.content)
-    kwargs = {
-        "components": config.get("COMPONENTS", None),
-        "signatures": config.get("SIGNATURES", None),
-        "trusted": config.get("TRUSTED_DEVELOPERS", None)
-    }
+    options = get_options(config)
     headers = {
         "Content-Type": "application/json",
         # This is required to post comments on GitHub on yours behalf.
@@ -376,14 +412,9 @@ def pull_request(pull_request_url, status_url, config):
     is_wip = bool(re.match(r"\bwip\b", data["title"], re.IGNORECASE))
     check = config.get("CHECK_WIP", False) or not is_wip
     check_commit_messages = config.get("CHECK_COMMIT_MESSAGES", True)
-    check_pep8 = config.get("CHECK_PEP8", True)
-    check_pyflakes = config.get("CHECK_PYFLAKES", True)
-    check_license = config.get("CHECK_LICENSE", True)
-    kwargs["pep8"] = check_pep8
-    kwargs["license"] = check_license
-    kwargs["pep8_pyflakes"] = check_pyflakes
-    kwargs["pep8_ignore"] = config.get("PEP8_IGNORE", None)
-    kwargs["pep8_select"] = config.get("PEP8_SELECT", None)
+    check_pep8 = options['pep8']
+    check_pyflakes = options['pep8_pyflakes']
+    check_license = options['license']
 
     labels, labels_url = _get_issue_labels(issue_url)
     labels.discard(config.get("LABEL_WIP", "in_work"))
@@ -392,7 +423,7 @@ def pull_request(pull_request_url, status_url, config):
     new_labels = set([])
 
     if check and check_commit_messages:
-        errs, new_labels, messages = _check_commits(commits_url, **kwargs)
+        errs, new_labels, messages = _check_commits(commits_url, **options)
         errors += errs
 
         for msg in messages:
@@ -403,7 +434,7 @@ def pull_request(pull_request_url, status_url, config):
                               headers=headers)
 
     if check and (check_pep8 or check_pyflakes or check_license):
-        errs, messages = _check_files(files_url, **kwargs)
+        errs, messages = _check_files(files_url, **options)
         errors += errs
         for msg in messages:
             body = "\n".join(msg["errors"])
@@ -496,10 +527,7 @@ def _check_files(url, **kwargs):
                     for block in response.iter_content(1024):
                         fp.write(block)
 
-                if filename.endswith(".py"):
-                    errs = check_file(path, **kwargs)
-                else:
-                    errs = check_license(path, **kwargs)
+                errs = check_file(path, **kwargs)
 
                 messages.append({
                     "path": filename,
