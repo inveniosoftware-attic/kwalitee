@@ -129,6 +129,7 @@ def _check_signatures(lines, signatures, trusted=None, **kwargs):
     matching = []
     errors = []
     trusted = trusted or []
+    signatures = tuple(signatures) if signatures else []
     test = operator.methodcaller('startswith', signatures)
     for i, line in lines:
         if signatures and test(line):
@@ -169,9 +170,9 @@ def check_message(message, **kwargs):
     """
     lines = re.split(r"\r\n|\r|\n", message)
     errors = _check_1st_line(lines[0], **kwargs)
-    err, signatures = _check_bullets(lines, **kwargs)
+    err, signature_lines = _check_bullets(lines, **kwargs)
     errors += err
-    errors += _check_signatures(signatures, **kwargs)
+    errors += _check_signatures(signature_lines, **kwargs)
 
     def _format(code, lineno, args):
         return "{0}: {1}: {2}".format(code,
@@ -353,9 +354,9 @@ def pull_request(pull_request_url, status_url, config):
     pull_request = requests.get(pull_request_url)
     data = json.loads(pull_request.content)
     kwargs = {
-        "components": config.get("COMPONENTS", []),
-        "signatures": config.get("SIGNATURES", []),
-        "trusted": config.get("TRUSTED_DEVELOPERS", [])
+        "components": config.get("COMPONENTS", None),
+        "signatures": config.get("SIGNATURES", None),
+        "trusted": config.get("TRUSTED_DEVELOPERS", None)
     }
     headers = {
         "Content-Type": "application/json",
@@ -388,7 +389,7 @@ def pull_request(pull_request_url, status_url, config):
     labels.discard(config.get("LABEL_WIP", "in_work"))
     labels.discard(config.get("LABEL_REVIEW", "in_review"))
     labels.discard(config.get("LABEL_READY", "in_integration"))
-    new_labels = set([config.get("LABEL_REVIEW", "in_review")])
+    new_labels = set([])
 
     if check and check_commit_messages:
         errs, new_labels, messages = _check_commits(commits_url, **kwargs)
@@ -431,8 +432,11 @@ def pull_request(pull_request_url, status_url, config):
 
     if is_wip:
         new_labels = set([config.get("LABEL_WIP", "in_work")])
-    if not new_labels and not errors:
-        new_labels = set([config.get("LABEL_READY", "in_integration")])
+    if not new_labels:
+        if not errors:
+            new_labels = set([config.get("LABEL_READY", "in_integration")])
+        else:
+            new_labels = set([config.get("LABEL_REVIEW", "in_review")])
 
     labels.update(new_labels)
     requests.put(labels_url.replace("{/name}", ""),
