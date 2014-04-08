@@ -13,6 +13,45 @@ Invenio-Kwalitee is on PyPI so all you need is: ::
 
     pip install Invenio-Kwalitee
 
+Git Hooks
+=========
+Install git hooks into your repository using::
+
+    cd /path/to/git-repo
+    kwalitee githooks install
+
+and uninstall hooks using::
+
+    kwalitee githooks uninstall
+
+Following hooks are installed:
+
+* ``pre-commit`` - run PEP8, pyflakes and copyright year checks on files
+  being committed. If errors are found, the commit is aborted.
+* ``prepare-commit-msg`` - prepare standard form commit message.
+* ``post-commit`` - check commit message form and signatures. If errors are
+  found, they can be fixed with ``git commit --amend``.
+
+All checks can be disabled using::
+
+    git commit --no-verify
+
+
+Kwalitee checks
+===============
+
+* Static analysis of files:
+   * pyflake
+   * PEP8
+   * Copyright year in license
+
+* Commit message analysis:
+   * First line less than 50 chars and according to the
+     pattern ``<component>: <short description>`` (using nouns).
+   * Body with detailed description of what this patch does, formatted as a
+     bulletted list. (using present tense).
+   * Required signatures: ``Signed-off-by`` and ``Reviewed-by``.
+
 Testing
 =======
 Running the tests are as simple as: ::

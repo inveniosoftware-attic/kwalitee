@@ -30,6 +30,8 @@ from rq import Queue
 
 from .kwalitee import pull_request
 from .worker import conn
+from .version import __version__
+
 
 app = Flask(__name__, template_folder="templates", static_folder="static",
             instance_relative_config=True)
@@ -107,3 +109,5 @@ def payload():
                                      stacktrace=traceback.format_exc(),
                                      exception=str(e)),
                              500)
+
+

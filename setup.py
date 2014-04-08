@@ -38,6 +38,7 @@ install_requires = [
     'pep8',
     'pyflakes',
     'requests',
+    'Flask-Script',
     'rq',
     'six'
 ]
@@ -75,7 +76,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'invenio-kwalitee-server = invenio_kwalitee:main',
+            'kwalitee = invenio_kwalitee.cli:main',
         ],
     },
     test_suite='nose.collector',
