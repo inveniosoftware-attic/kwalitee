@@ -111,7 +111,7 @@ def _check_bullets(lines, max_length=72, **kwargs):
                     errors.append(("M105", i + j + 3))
                 else:
                     skipped.append(i + j + 1)
-        elif i not in skipped and line.strip() != '':
+        elif i not in skipped and line.strip():
             missed_lines.append((i + 2, line))
 
         if len(line) > max_length:
@@ -167,7 +167,12 @@ def check_message(message, **kwargs):
     * trusted, e.g. ('john.doe@example.org',), by default empty
     * max_length: by default 72
     * max_first_line: by default 50
+    * allow_empty: by default False
     """
+    if kwargs.pop("allow_empty", False):
+        if not message or message.isspace():
+            return []
+
     lines = re.split(r"\r\n|\r|\n", message)
     errors = _check_1st_line(lines[0], **kwargs)
     err, signature_lines = _check_bullets(lines, **kwargs)
@@ -288,12 +293,12 @@ def check_license(filename, **kwargs):
         file_is_empty = line == ""
         license = "".join(blocks)
 
-    if file_is_empty and license == "":
+    if file_is_empty and not license.strip():
         return errors
 
     match_year = _re_copyright_year.search(license)
     if match_year is None:
-        errors.append((lineno, "I101"))
+        errors.append((lineno + 1, "I101"))
     elif int(match_year.group("year")) != year:
         theline = match_year.group(0)
         lno = lineno
@@ -339,26 +344,6 @@ def check_file(filename, **kwargs):
         return check_license(filename, **kwargs)
 
 
-def get_component(filename):
-    """ Get components name from filename """
-    parts = filename.split(os.path.sep)
-
-    if len(parts) >= 3:
-        if parts[1] == 'modules':
-            return parts[2]
-        if parts[1] == 'legacy':
-            return parts[2]
-        if parts[1] == 'ext':
-            return parts[2]
-    if len(parts) >= 2:
-        if parts[1] in ['base', 'celery', 'utils', ]:
-            return parts[1]
-    if len(parts) >= 1:
-        if parts[0] in ['grunt', 'docs', ]:
-            return parts[0]
-    return 'global'
-
-
 def _get_issue_labels(issue_url):
     """Downloads the labels of the issue."""
     issue = json.loads(requests.get(issue_url).content)
@@ -369,19 +354,17 @@ def _get_issue_labels(issue_url):
 
 
 def get_options(config):
-    kwargs = {
+    """Build the options from the Flask config"""
+    return {
         "components": config.get("COMPONENTS", None),
         "signatures": config.get("SIGNATURES", None),
-        "trusted": config.get("TRUSTED_DEVELOPERS", None)
+        "trusted": config.get("TRUSTED_DEVELOPERS", None),
+        "pep8": config.get("CHECK_PEP8", True),
+        "license": config.get("CHECK_LICENSE", True),
+        "pep8_pyflakes": config.get("CHECK_PYFLAKES", True),
+        "pep8_ignore": config.get("PEP8_IGNORE", None),
+        "pep8_select": config.get("PEP8_SELECT", None)
     }
-
-    kwargs["pep8"] = config.get("CHECK_PEP8", True)
-    kwargs["license"] = config.get("CHECK_LICENSE", True)
-    kwargs["pep8_pyflakes"] = config.get("CHECK_PYFLAKES", True)
-    kwargs["pep8_ignore"] = config.get("PEP8_IGNORE", None)
-    kwargs["pep8_select"] = config.get("PEP8_SELECT", None)
-
-    return kwargs
 
 
 def pull_request(pull_request_url, status_url, config):
@@ -412,9 +395,9 @@ def pull_request(pull_request_url, status_url, config):
     is_wip = bool(re.match(r"\bwip\b", data["title"], re.IGNORECASE))
     check = config.get("CHECK_WIP", False) or not is_wip
     check_commit_messages = config.get("CHECK_COMMIT_MESSAGES", True)
-    check_pep8 = options['pep8']
-    check_pyflakes = options['pep8_pyflakes']
-    check_license = options['license']
+    check_pep8 = options["pep8"]
+    check_pyflakes = options["pep8_pyflakes"]
+    check_license = options["license"]
 
     labels, labels_url = _get_issue_labels(issue_url)
     labels.discard(config.get("LABEL_WIP", "in_work"))
@@ -509,11 +492,11 @@ def _check_files(url, **kwargs):
     errors = []
     messages = []
 
+    sha_match = re.compile(r"(?<=ref=)[^=]+")
     response = requests.get(url)
     files = json.loads(response.content)
     tmp = tempfile.mkdtemp()
     try:
-        sha_match = re.compile(r"(?<=ref=)[^=]+")
         for f in files:
             filename = f["filename"]
             sha = sha_match.search(f["contents_url"]).group(0)

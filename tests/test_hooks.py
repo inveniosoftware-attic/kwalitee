@@ -25,87 +25,186 @@ import os
 import sys
 import shutil
 import tempfile
+import subprocess
+from io import StringIO
 from unittest import TestCase
-import six
+from mock import patch, mock_open, MagicMock
+from hamcrest import (assert_that, equal_to, has_length, has_items,
+                      contains_string)
 
-from invenio_kwalitee import hooks
-
-
-class MessageTest(TestCase):
-    def test_commit_message(self):
-        assert hooks.check_commit_message("") == 0
-        assert hooks.check_commit_message("  ") == 0
-        assert hooks.check_commit_message(" \n  \n  ") == 0
-        assert hooks.check_commit_message("some message") == 3
+from invenio_kwalitee.hooks import (_get_component, _get_components,
+                                    _get_git_author, _get_files_modified,
+                                    _pre_commit, _prepare_commit_msg,
+                                    pre_commit_hook)
 
 
-class CheckFilesTest(TestCase):
-    def setUp(self):
-        self.path = tempfile.mkdtemp()
-        fixtures = os.path.join(os.path.dirname(__file__), "fixtures")
-        self.valid = os.path.join(self.path, "valid.py")
-        self.invalid = os.path.join(self.path, "invalid.py")
-        shutil.copyfile(
-            os.path.join(fixtures, "valid.py.test"),
-            self.valid
-        )
-        shutil.copyfile(
-            os.path.join(fixtures, "invalid.py.test"),
-            self.invalid
-        )
+class GetComponentTest(TestCase):
+    """_get_component and _get_components are"""
 
-    def tearDown(self):
-        shutil.rmtree(self.path)
+    def test_get_component(self):
+        files = {
+            "invenio/base/factory.py": "base",
+            "invenio/modules/oauthclient/utils.py": "oauthclient",
+            "zenodo/modules/deposit/__init__.py": "deposit",
+            "invenio/legacy/bibupload/engine.py": "bibupload",
+            "invenio/ext/sqlalchemy/__init__.py": "sqlalchemy",
+            "docs/index.rst": "docs",
+            "grunt/app.js": "grunt",
+            "setup.py": "global",
+        }
 
-    def test_check_filles(self):
-        report = hooks.check_files([self.valid, self.invalid])
-        assert report['count'] == 10
+        for filename, expected in files.items():
+            assert_that(_get_component(filename), equal_to(expected), filename)
+
+    def test_get_components(self):
+        components = _get_components(("setup.py", "test.py", "grunt/app.js"))
+        assert_that(components, has_length(2))
+        assert_that(components, has_items("global", "grunt"))
+
+
+class PreCommitTest(TestCase):
+    """Testing the pre-commit actions"""
+
+    options = {}
+
+    def test_pre_commit(self):
+        errors = _pre_commit((("__init__.py", b""),
+                              ("a/b/c/d/e/f/g/test.py", b""),
+                              ("i/j/k/error.py", b"import os")),
+                             self.options)
+
+        assert_that(
+            errors,
+            has_items(
+                "i/j/k/error.py: 1: I101 copyright is missing",
+                "i/j/k/error.py: 1:1: F401 'os' imported but unused"))
+
+
+class PrepareCommitMsgTest(TestCase):
+    """Testing the preparation of commit message."""
+
+    def _mock_open(self, data=""):
+        """Creates a mock for a file with the given data and returns the mock
+        and the file handler.
+
+        NB: everytime the file is reopened, it's trucated. To be used in
+        read or read then write operations.
+        """
+        mock = mock_open()
+        filehandler = StringIO(data)
+
+        def _open():
+            if filehandler.tell() > 0:
+                filehandler.truncate(0)
+                filehandler.seek(0)
+            return filehandler
+
+        mock.return_value = MagicMock(spec=StringIO)
+        mock.return_value.__enter__.side_effect = _open
+        return mock, filehandler
+
+    def test_prepare_commit_msg(self):
+        commit_msg = u"# this is a comment"
+        mock, tmp_file = self._mock_open(commit_msg)
+        with patch("invenio_kwalitee.hooks.open", mock, create=True):
+            _prepare_commit_msg("mock", u"John",
+                                template=u"{component}: {author}")
+
+            tmp_file.seek(0)
+            new_commit_msg = "\n".join(tmp_file.readlines())
+
+            assert_that(new_commit_msg, equal_to("unknown: John"))
+
+    def test_prepare_commit_msg_with_one_component(self):
+        commit_msg = u"# this is a comment"
+        mock, tmp_file = self._mock_open(commit_msg)
+        with patch("invenio_kwalitee.hooks.open", mock, create=True):
+            _prepare_commit_msg("mock", u"John",
+                                ("setup.py", "test.py"),
+                                u"{component}")
+
+            tmp_file.seek(0)
+            new_commit_msg = "\n".join(tmp_file.readlines())
+
+            assert_that(new_commit_msg, equal_to("global"))
+
+    def test_prepare_commit_msg_with_many_components(self):
+        commit_msg = u"# this is a comment"
+        mock, tmp_file = self._mock_open(commit_msg)
+        with patch("invenio_kwalitee.hooks.open", mock, create=True):
+            _prepare_commit_msg("mock", u"John",
+                                ("setup.py", "grunt/foo.js"),
+                                u"{component}")
+
+            tmp_file.seek(0)
+            new_commit_msg = "\n".join(tmp_file.readlines())
+
+            assert_that(new_commit_msg, contains_string("global"))
+            assert_that(new_commit_msg, contains_string("grunt"))
+
+    def test_prepare_commit_msg_aborts_if_existing(self):
+        commit_msg = u"Lorem ipsum"
+        mock, tmp_file = self._mock_open(commit_msg)
+        with patch("invenio_kwalitee.hooks.open", mock, create=True):
+            _prepare_commit_msg("mock", u"John")
+
+            tmp_file.seek(0)
+            new_commit_msg = "\n".join(tmp_file.readlines())
+
+            assert_that(new_commit_msg, equal_to(commit_msg))
 
 
 class GitHooksTest(TestCase):
     def setUp(self):
-        self.path = tempfile.mkdtemp()
-
-        os.chdir(self.path)
-
-        cmds = [
+        cmds = (
             "git init",
-            "git config user.name 'Test user'",
-            "git config user.email 'info@invenio-software.org'",
+            u"git config user.name 'Jürg Müller'",
+            "git config user.email juerg.mueller@example.org",
             "touch empty.py",
             "git add empty.py",
-            "git commit -m 'test'",
+            "git commit -m test",
             "mkdir -p invenio/modules/testmod1/",
-            "mkdir -p invenio/modules/testmod2/",
-            "echo 'pass' > invenio/modules/testmod1/test.py",
-            "echo 'pass' > invenio/modules/testmod2/test.py",
+            "mkdir invenio/modules/testmod2/",
+            "echo pass > invenio/modules/testmod1/test.py",
+            "echo pass > invenio/modules/testmod2/test.py",
             "git add invenio/modules/testmod1/test.py",
             "git add invenio/modules/testmod2/test.py",
-        ]
+        )
 
-        for c in cmds:
-            os.system("cd %s && %s" % (self.path, c))
+        self.path = tempfile.mkdtemp()
+        self.cwd = os.getcwd()
+        os.chdir(self.path)
+        for command in cmds:
+            proc = subprocess.Popen(command.encode("utf-8"),
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE,
+                                    shell=True,
+                                    cwd=self.path)
+            (stdout, stderr) = proc.communicate()
+            assert_that(proc.wait(), equal_to(0),
+                        u"{0}: {1}".format(command, stderr))
 
     def tearDown(self):
         shutil.rmtree(self.path)
+        os.chdir(self.cwd)
 
-    def test_post_commit_hook(self):
-        assert hooks.post_commit_hook() == 3
+    def test_get_files_modified(self):
+        assert_that(_get_files_modified(),
+                    has_items("invenio/modules/testmod1/test.py",
+                              "invenio/modules/testmod2/test.py"))
+
+    def test_get_git_author(self):
+        assert_that(_get_git_author(),
+                    equal_to(u"Jürg Müller <juerg.mueller@example.org>"))
 
     def test_pre_commit_hook(self):
-        assert hooks.pre_commit_hook() == 2
+        """Hook: pre-commit fails because some copyrights are missing"""
+        stderr = sys.stderr
 
-    def test_prepare_commit_msg_hook(self):
-        # Assert that the no message is prepared if file already have contents
-        sys.argv[1] = tempfile.mkstemp(text=True)[1]
-        with open(sys.argv[1], 'w') as fh:
-            fh.write(six.u("Some content"))
-        assert hooks.prepare_commit_msg_hook() == 0
-        with open(sys.argv[1], 'r') as fh:
-            assert fh.read() == "Some content"
-        os.remove(sys.argv[1])
+        sys.stderr = StringIO()
+        assert_that(not pre_commit_hook())
+        sys.stderr.seek(0)
+        output = "\n".join(sys.stderr.readlines())
+        sys.stderr = stderr
 
-        sys.argv[1] = tempfile.mkstemp(text=True)[1]
-        hooks.prepare_commit_msg_hook()
-        assert hooks.commit_msg_hook() == 2
-        os.remove(sys.argv[1])
+        assert_that(output, contains_string("kwalitee errors"))

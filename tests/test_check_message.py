@@ -29,38 +29,43 @@ from hamcrest import assert_that, has_item, has_items, has_length, is_not
 
 class TestCheckMessage(TestCase):
     """Unit tests of the commit message validation checks"""
-    kwargs = dict(components=("search", "utils"),
-                  trusted=("john.doe@example.org",),
-                  signatures=("Signed-off-by", "Reviewed-by"))
+    options = dict(components=("search", "utils"),
+                   trusted=("john.doe@example.org",),
+                   signatures=("Signed-off-by", "Reviewed-by"))
 
     def test_no_message(self):
-        errors = check_message("", **self.kwargs)
+        errors = check_message("", **self.options)
         assert_that(errors,
                     has_items("M101: 1: missing component name",
                               "M108: 1: signature is missing",
                               "M100: 1: needs more reviewers"))
 
+    def test_allow_empty_message(self):
+        options = dict(self.options, allow_empty="True")
+        errors = check_message("", **options)
+        assert_that(errors, has_length(0))
+
     def test_no_component_name(self):
-        errors = check_message("foo bar", **self.kwargs)
+        errors = check_message("foo bar", **self.options)
         assert_that(errors,
                     has_items("M101: 1: missing component name",
                               "M108: 1: signature is missing",
                               "M100: 1: needs more reviewers"))
 
     def test_known_component_name(self):
-        errors = check_message("utils: foo bar", **self.kwargs)
+        errors = check_message("utils: foo bar", **self.options)
         assert_that(errors,
                     has_items("M108: 1: signature is missing",
                               "M100: 1: needs more reviewers"))
 
     def test_unknonwn_component_name(self):
-        errors = check_message("kikoo: lol", **self.kwargs)
+        errors = check_message("kikoo: lol", **self.options)
         assert_that(errors,
                     has_item("M102: 1: unrecognized component name: kikoo"))
 
     def test_first_line_is_too_long(self):
         message = "".join(repeat("M", 51))
-        errors = check_message(message, **self.kwargs)
+        errors = check_message(message, **self.options)
         assert_that(errors, has_item("M106: 1: line is too long (51 > 50)"))
 
     def test_has_enough_reviewers(self):
@@ -68,19 +73,19 @@ class TestCheckMessage(TestCase):
                                "Signed-off-by: a a <a@a.com>\r\n"
                                "Reviewed-by: b b <b@b.com>\r\n"
                                "Reviewed-by: c c <c@c.com>",
-                               **self.kwargs)
+                               **self.options)
         assert_that(errors, has_length(0), errors)
 
     def test_needs_more_reviewers(self):
         errors = check_message("search: hello\r\n\r\n"
                                "Signed-off-by: a a <a@a.com>",
-                               **self.kwargs)
+                               **self.options)
         assert_that(errors, has_item("M100: 1: needs more reviewers"))
 
     def test_has_a_trusted_developer(self):
         errors = check_message("search: hello\r\n\r\n"
                                "Signed-off-by: a a <john.doe@example.org>",
-                               **self.kwargs)
+                               **self.options)
         assert_that(errors, has_length(0), errors)
 
     def test_valid_bullets(self):
@@ -89,7 +94,7 @@ class TestCheckMessage(TestCase):
                                "* bullet 2\r\n\r\n"
                                "* bullet 3\r\n\r\n"
                                "Signed-off-by: a a <john.doe@example.org>",
-                               **self.kwargs)
+                               **self.options)
         assert_that(errors, has_length(0), errors)
 
     def test_valid_multiline_bullets(self):
@@ -99,7 +104,7 @@ class TestCheckMessage(TestCase):
                                "* bullet 2\r\n"
                                "  dolor sit amet\r\n\r\n"
                                "Signed-off-by: a a <john.doe@example.org>",
-                               **self.kwargs)
+                               **self.options)
         assert_that(errors, has_length(0), errors)
 
     def test_line_is_too_long(self):
@@ -110,7 +115,7 @@ class TestCheckMessage(TestCase):
                                "* M{0}\r\n\r\n"
                                "Signed-off-by: a a <john.doe@example.org>"
                                .format(too_long),
-                               **self.kwargs)
+                               **self.options)
         assert_that(errors, has_length(1))
         assert_that(errors,
                     has_item("M106: 5: line is too long (73 > 72)"))
@@ -121,7 +126,7 @@ class TestCheckMessage(TestCase):
                                "* bullet 2\r\n"
                                "* bullet 3\r\n\r\n"
                                "Signed-off-by: a a <john.doe@example.org>",
-                               **self.kwargs)
+                               **self.options)
         assert_that(errors, has_length(3))
         assert_that(errors,
                     has_items("M104: 2: missing empty line before bullet",
@@ -131,7 +136,7 @@ class TestCheckMessage(TestCase):
         errors = check_message("search: hello\r\n\r\n"
                                "- bullet 1\r\n\r\n"
                                "Signed-off-by: a a <john.doe@example.org>",
-                               **self.kwargs)
+                               **self.options)
         assert_that(errors,
                     has_item("M107: 3: unrecognized bullet/signature"))
 
@@ -143,7 +148,7 @@ class TestCheckMessage(TestCase):
                                "  line 4\r\n"
                                "   line 5\r\n\r\n"
                                "Signed-off-by: a a <john.doe@example.org>",
-                               **self.kwargs)
+                               **self.options)
         assert_that(errors,
                     has_items("M105: 4: indentation of two spaces expected",
                               "M105: 5: indentation of two spaces expected",
@@ -160,7 +165,7 @@ class TestCheckMessage(TestCase):
                                "Reviewed-by: b b <b@b.com>\r\n\r\n"
                                "* bullet 3\r\n\r\n"
                                "Reviewed-by: c c <c@c.com>",
-                               **self.kwargs)
+                               **self.options)
         assert_that(errors, has_items(
             "M103: 7: no bullets are allowed after signatures",
             "M103: 11: no bullets are allowed after signatures"))

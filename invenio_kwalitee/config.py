@@ -89,21 +89,19 @@ CHECK_LICENSE = True
 #LABEL_READY = "in_integration"
 
 
-COMMIT_MSG_TEMPLATE = \
-    "%(component)s: short description (max 50 chars, using nouns)\n" \
-    "\n" \
-    "* Detailed description formatted as a bullet list" \
-    " (using present tense).\n" \
-    "\n" \
-    "Signed-off-by: %(author)s\n" \
-    "%(extra)s"
+COMMIT_MSG_TEMPLATE = """{component}: description (max 50 chars, using nouns)
+
+* Detailed description formatted as a bullet list (using present tense).
+
+Signed-off-by: {author}
+{extra}"""
 
 
 HOOK_TEMPLATE = """#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import sys
-from invenio_kwalitee.hooks import %(hook)s
+from invenio_kwalitee.hooks import {hook}
 
-if __name__ == '__main__':
-    sys.exit(%(hook)s())
-
+if __name__ == "__main__":
+    sys.exit({hook}(sys.argv))
 """

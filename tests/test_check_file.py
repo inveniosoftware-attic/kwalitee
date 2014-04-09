@@ -102,17 +102,17 @@ class TestCheckLicense(TestCheckFile):
     def test_unicode_license(self):
         """invalid_license uses unicode © and multiline years."""
         errors = check_license(self.invalid_license, year=2014)
-        assert_that(errors, is_not(has_item("24: I101 copyright is missing")))
+        assert_that(errors, is_not(has_item("25: I101 copyright is missing")))
 
     def test_no_license(self):
         """license is missing"""
         errors = check_license(self.valid)
-        assert_that(errors, has_item("24: I101 copyright is missing"))
+        assert_that(errors, has_item("25: I101 copyright is missing"))
 
     def test_no_copyright(self):
         """copyright is missing"""
         errors = check_license(self.valid)
-        assert_that(errors, has_item("24: I101 copyright is missing"))
+        assert_that(errors, has_item("25: I101 copyright is missing"))
 
     def test_outdated_license(self):
         """valid_license has an outdated license."""
