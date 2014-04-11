@@ -27,6 +27,7 @@ from __future__ import print_function, absolute_import
 import os
 import sys
 import shutil
+import operator
 from codecs import open
 from tempfile import mkdtemp
 from subprocess import Popen, PIPE
@@ -34,12 +35,16 @@ from subprocess import Popen, PIPE
 from .kwalitee import check_file, check_message, get_options
 
 
+SUPPORTED_FILES = '.py', '.html', '.rst', '.js', '.css'
+
+
 def _get_files_modified():
     """Get the list of modified files that are Python or Jinja2"""
     cmd = "git diff-index --cached --name-only --diff-filter=ACMRTUXB HEAD"
     _, files_modified, _ = run(cmd)
-    return list(filter(lambda f: f.endswith(".py") or f.endswith(".html"),
-                       files_modified))
+
+    test = operator.methodcaller('endswith', SUPPORTED_FILES)
+    return list(filter(lambda f: test(f), files_modified))
 
 
 def _get_git_author():

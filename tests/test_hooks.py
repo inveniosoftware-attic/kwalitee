@@ -29,8 +29,8 @@ import subprocess
 from io import StringIO
 from unittest import TestCase
 from mock import patch, mock_open, MagicMock
-from hamcrest import (assert_that, equal_to, has_length, has_items,
-                      contains_string)
+from hamcrest import (assert_that, equal_to, has_length, has_item, has_items,
+                      is_not, contains_string)
 
 from invenio_kwalitee.hooks import (_get_component, _get_components,
                                     _get_git_author, _get_files_modified,
@@ -133,7 +133,9 @@ class PrepareCommitMsgTest(TestCase):
         mock, tmp_file = self._mock_open(commit_msg)
         with patch("invenio_kwalitee.hooks.open", mock, create=True):
             _prepare_commit_msg("mock", u"John",
-                                ("setup.py", "grunt/foo.js"),
+                                ("setup.py",
+                                 "grunt/foo.js",
+                                 "docs/bar.rst"),
                                 u"{component}")
 
             tmp_file.seek(0)
@@ -141,6 +143,7 @@ class PrepareCommitMsgTest(TestCase):
 
             assert_that(new_commit_msg, contains_string("global"))
             assert_that(new_commit_msg, contains_string("grunt"))
+            assert_that(new_commit_msg, contains_string("docs"))
 
     def test_prepare_commit_msg_aborts_if_existing(self):
         commit_msg = u"Lorem ipsum"
@@ -163,12 +166,18 @@ class GitHooksTest(TestCase):
             "touch empty.py",
             "git add empty.py",
             "git commit -m test",
+            "touch README.rst",
+            "git add README.rst",
             "mkdir -p invenio/modules/testmod1/",
             "mkdir invenio/modules/testmod2/",
             "echo pass > invenio/modules/testmod1/test.py",
             "echo pass > invenio/modules/testmod2/test.py",
+            "touch invenio/modules/testmod1/script.js",
+            "touch invenio/modules/testmod1/style.css",
             "git add invenio/modules/testmod1/test.py",
             "git add invenio/modules/testmod2/test.py",
+            "git add invenio/modules/testmod1/script.js",
+            "git add invenio/modules/testmod1/style.css",
         )
 
         self.path = tempfile.mkdtemp()
@@ -189,9 +198,13 @@ class GitHooksTest(TestCase):
         os.chdir(self.cwd)
 
     def test_get_files_modified(self):
+        assert_that(_get_files_modified(), is_not(has_item("empty.py")))
         assert_that(_get_files_modified(),
-                    has_items("invenio/modules/testmod1/test.py",
-                              "invenio/modules/testmod2/test.py"))
+                    has_items("README.rst",
+                              "invenio/modules/testmod1/test.py",
+                              "invenio/modules/testmod2/test.py",
+                              "invenio/modules/testmod1/script.js",
+                              "invenio/modules/testmod1/style.css"))
 
     def test_get_git_author(self):
         assert_that(_get_git_author(),

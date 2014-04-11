@@ -270,28 +270,44 @@ def check_license(filename, **kwargs):
     The license format should be commented using ## and live at the top of the
     file. Also, the year should be the current one.
 
-    Supported filetypes: python, jinja
+    Supported filetypes: python, jinja, javascript
+    Options:
+    * year: default current year
+    * pep8_ignores: e.g. ('L100', 'L101')
+    * python_style: False for JavaScript or CSS files
     """
     year = kwargs.pop("year", datetime.now().year)
-    errors = []
-    lines = []
+    python_style = kwargs.pop("python_style", True)
     ignores = kwargs.get("pep8_ignore")
     template = "{0}: {1} {2}"
+
+    if python_style:
+        re_comment = re.compile(r"^#.*|\{#.*|[\r\n]+$")
+        starter = "## "
+    else:
+        re_comment = re.compile(r"^/\*.*| \*.*|[\r\n]+$")
+        starter = " *"
+
+    errors = []
+    lines = []
     file_is_empty = False
     license = ""
     lineno = 0
-    re_comment = re.compile(r"^#.*|\{#.*|[\r\n]+$")
     with codecs.open(filename, "r", "utf-8") as fp:
         line = fp.readline()
         blocks = []
+        print(repr(line))
         while re_comment.match(line):
-            if line.startswith("##"):
-                line = line.lstrip("# ")
+            print(line)
+            if line.startswith(starter):
+                line = line[len(starter):].lstrip()
                 blocks.append(line)
                 lines.append((lineno, line.strip()))
             lineno, line = lineno + 1, fp.readline()
         file_is_empty = line == ""
         license = "".join(blocks)
+
+    print(lines)
 
     if file_is_empty and not license.strip():
         return errors
@@ -340,8 +356,11 @@ def check_file(filename, **kwargs):
     if filename.endswith(".py"):
         return check_pep8(filename, **kwargs) + \
             check_license(filename, **kwargs)
-    else:
+    elif filename.endswith(".html"):
         return check_license(filename, **kwargs)
+    elif filename.endswith(".js") or filename.endswith(".css"):
+        return check_license(filename, python_style=False, **kwargs)
+    return []
 
 
 def _get_issue_labels(issue_url):

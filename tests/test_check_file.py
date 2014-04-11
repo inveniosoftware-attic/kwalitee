@@ -39,6 +39,8 @@ class TestCheckFile(TestCase):
         self.valid_license = "{0}valid_license.py.test".format(fixtures)
         self.missing_license = "{0}missing_license.py.test".format(fixtures)
         self.license_html = "{0}license.html.test".format(fixtures)
+        self.license_js = "{0}license.js.test".format(fixtures)
+        self.license_css = "{0}license.css.test".format(fixtures)
 
 
 class TestCheckPep8(TestCheckFile):
@@ -92,6 +94,16 @@ class TestCheckLicense(TestCheckFile):
     def test_license_jinja(self):
         """license.html has a well formatted license."""
         errors = check_license(self.license_html, year=2014)
+        assert_that(errors, has_length(0))
+
+    def test_license_js(self):
+        """license.js has a well formatted license."""
+        errors = check_license(self.license_js, year=2014, python_style=False)
+        assert_that(errors, has_length(0))
+
+    def test_license_css(self):
+        """license.css has a well formatted license."""
+        errors = check_license(self.license_css, year=2014, python_style=False)
         assert_that(errors, has_length(0))
 
     def test_empty(self):
