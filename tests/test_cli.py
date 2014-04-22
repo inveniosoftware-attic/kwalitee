@@ -22,49 +22,86 @@
 ## or submit itself to any jurisdiction.
 
 import os
+import sys
 import shutil
 import tempfile
+import subprocess
+from io import StringIO
 from unittest import TestCase
+from hamcrest import assert_that, has_length, is_not
+from invenio_kwalitee.cli import install, uninstall, HOOK_PATH
 
 
 class CliTest(TestCase):
-    def test_install_hook(self):
-        """GET / displays some recent statuses"""
-        test_path = tempfile.mkdtemp()
-        notest_path = tempfile.mkdtemp()
-        os.system("cd %s && git init" % test_path)
-        os.system("cd %s && touch .git/hooks/pre-commit" % test_path)
 
-        os.chdir(test_path)
-        from invenio_kwalitee.cli import install, uninstall
-        install(False)
+    def setUp(self):
+        self.hooks = ('pre-commit', 'prepare-commit-msg', 'post-commit')
+        self.path = tempfile.mkdtemp()
+        self.cwd = os.getcwd()
+        self.stderr = sys.stderr
+        sys.stderr = StringIO(u"")
+        os.chdir(self.path)
 
-        for f in ['pre-commit', 'prepare-commit-msg', 'post-commit', ]:
-            assert os.path.exists(os.path.join(test_path, '.git/hooks/%s' % f))
+    def tearDown(self):
+        os.chdir(self.cwd)
+        sys.stderr = self.stderr
+        shutil.rmtree(self.path)
 
-        uninstall()
+    def call(self, *args):
+        return subprocess.Popen(
+            args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=self.path
+        ).wait()
 
-        for f in ['pre-commit', 'prepare-commit-msg', 'post-commit', ]:
-            assert not os.path.exists(os.path.join(
-                test_path, '.git/hooks/%s' % f)
-            )
+    def test_install_hooks(self):
+        precommit = os.path.join(HOOK_PATH, "pre-commit")
+        self.call("git", "init")
+        self.call("touch", precommit)
 
-        # Do write in non git repository
-        os.chdir(notest_path)
-        install(True)
-        uninstall()
+        assert_that(install())
 
-        for f in ['pre-commit', 'prepare-commit-msg', 'post-commit', ]:
-            assert not os.path.exists(
-                os.path.join(notest_path, '.git/hooks/%s' % f)
-            )
+        for hook in self.hooks:
+            filename = os.path.join(self.path, HOOK_PATH, hook)
+            assert_that(os.path.exists(filename), filename)
 
-        shutil.rmtree(test_path)
-        shutil.rmtree(notest_path)
+        with open(precommit, "r") as f:
+            assert_that(f.read(), has_length(0),
+                        "precommit should be have been left as is")
 
-    def test_main(self):
-        from invenio_kwalitee.cli import main
-        self.assertRaises(
-            SystemExit,
-            main
-        )
+        assert_that(uninstall())
+
+        for hook in self.hooks:
+            filename = os.path.join(self.path, HOOK_PATH, hook)
+            assert_that(not os.path.exists(filename), filename)
+
+    def test_dont_install_in_non_git(self):
+        assert_that(not install())
+
+        for hook in self.hooks:
+            filename = os.path.join(self.path, HOOK_PATH, hook)
+            assert_that(not os.path.exists(filename), filename)
+
+        assert_that(not uninstall())
+
+    def test_install_hooks_and_overrides(self):
+        precommit = os.path.join(HOOK_PATH, "pre-commit")
+        self.call("git", "init")
+        self.call("touch", precommit)
+
+        assert_that(install(force=True))
+
+        for hook in self.hooks:
+            filename = os.path.join(self.path, HOOK_PATH, hook)
+            assert_that(os.path.exists(filename), filename)
+
+        with open(precommit, "r") as f:
+            assert_that(f.read(), is_not(has_length(0)),
+                        "precommit should have been overridden")
+
+        assert_that(uninstall())
+
+        for hook in self.hooks:
+            filename = os.path.join(self.path, HOOK_PATH, hook)
+            assert_that(not os.path.exists(filename), filename)

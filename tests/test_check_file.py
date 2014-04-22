@@ -39,6 +39,8 @@ class TestCheckFile(TestCase):
         self.valid_license = "{0}valid_license.py.test".format(fixtures)
         self.missing_license = "{0}missing_license.py.test".format(fixtures)
         self.license_html = "{0}license.html.test".format(fixtures)
+        self.license_js = "{0}license.js.test".format(fixtures)
+        self.license_css = "{0}license.css.test".format(fixtures)
 
 
 class TestCheckPep8(TestCheckFile):
@@ -94,6 +96,16 @@ class TestCheckLicense(TestCheckFile):
         errors = check_license(self.license_html, year=2014)
         assert_that(errors, has_length(0))
 
+    def test_license_js(self):
+        """license.js has a well formatted license."""
+        errors = check_license(self.license_js, year=2014, python_style=False)
+        assert_that(errors, has_length(0))
+
+    def test_license_css(self):
+        """license.css has a well formatted license."""
+        errors = check_license(self.license_css, year=2014, python_style=False)
+        assert_that(errors, has_length(0))
+
     def test_empty(self):
         """empty files like __init__ are skipped"""
         errors = check_license(self.empty)
@@ -102,17 +114,17 @@ class TestCheckLicense(TestCheckFile):
     def test_unicode_license(self):
         """invalid_license uses unicode © and multiline years."""
         errors = check_license(self.invalid_license, year=2014)
-        assert_that(errors, is_not(has_item("24: I101 copyright is missing")))
+        assert_that(errors, is_not(has_item("25: I101 copyright is missing")))
 
     def test_no_license(self):
         """license is missing"""
         errors = check_license(self.valid)
-        assert_that(errors, has_item("24: I101 copyright is missing"))
+        assert_that(errors, has_item("25: I101 copyright is missing"))
 
     def test_no_copyright(self):
         """copyright is missing"""
         errors = check_license(self.valid)
-        assert_that(errors, has_item("24: I101 copyright is missing"))
+        assert_that(errors, has_item("25: I101 copyright is missing"))
 
     def test_outdated_license(self):
         """valid_license has an outdated license."""

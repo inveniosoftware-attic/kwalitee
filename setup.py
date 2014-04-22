@@ -29,20 +29,27 @@ import sys
 # Get the version string.  Cannot be done with import!
 with open(os.path.join('invenio_kwalitee', 'version.py'), 'rt') as f:
     version = re.search(
-        '__version__\s*=\s*"(?P<version>.*)"\n',
+        '__version__\s*=\s*.(?P<version>.*).\n',
         f.read()
     ).group('version')
 
 install_requires = [
     'Flask',
+    'Flask-Script',
     'pep8',
     'pyflakes',
     'requests',
-    'Flask-Script',
-    'rq',
-    'six'
+    'rq'
 ]
-if sys.version_info[0] == 2 and sys.version_info[1] < 7:
+test_requires = [
+    'coverage',
+    'httpretty',
+    'mock',
+    'nose',
+    'pyhamcrest'
+]
+
+if tuple(sys.version_info) < (2, 7):
     install_requires.append('importlib')
 
 setup(
@@ -80,5 +87,5 @@ setup(
         ],
     },
     test_suite='nose.collector',
-    tests_require=['nose', 'coverage', 'httpretty', 'pyhamcrest'],
+    tests_require=test_requires,
 )

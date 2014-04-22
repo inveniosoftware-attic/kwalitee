@@ -29,7 +29,7 @@ from rq import Worker, Queue, Connection
 conn = Redis()
 
 
-def main(argv):  # pragma: no cover
+if __name__ == "__main__":
     if tuple(sys.version_info) < (2, 7):
         logger = logging.getLogger("rq.worker")
         logger.setLevel(logging.DEBUG)
@@ -37,7 +37,3 @@ def main(argv):  # pragma: no cover
     with Connection(conn):
         worker = Worker(list(map(Queue, ('high', 'default', 'low'))))
         worker.work()
-
-
-if __name__ == "__main__":  # pragma: no cover
-    sys.exit(main(sys.argv))
