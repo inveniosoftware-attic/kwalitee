@@ -262,7 +262,7 @@ def run(command, raw_output=False):
     raw_output: does not attempt to convert the output as unicode
     """
     p = Popen(command.split(), stdout=PIPE, stderr=PIPE)
-    p.wait()
+    (stdout, stderr) = p.communicate()
     # On python 3, subprocess.Popen returns bytes objects which expect
     # endswith to be given a bytes object or a tuple of bytes but not native
     # string objects. This is simply less mysterious than using b'.py' in the
@@ -270,9 +270,9 @@ def run(command, raw_output=False):
     if not raw_output:
         return (
             p.returncode,
-            [line.decode("utf-8").strip() for line in p.stdout.readlines()],
-            [line.decode("utf-8").strip() for line in p.stderr.readlines()]
+            [line.strip() for line in stdout.decode("utf-8").splitlines()],
+            [line.strip() for line in stderr.decode("utf-8").splitlines()]
         )
     else:
-        return (p.returncode, p.stdout.read(), p.stderr.read())
+        return (p.returncode, stdout, stderr)
 # =============================================================================
