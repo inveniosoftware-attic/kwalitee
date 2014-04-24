@@ -296,9 +296,7 @@ def check_license(filename, **kwargs):
     with codecs.open(filename, "r", "utf-8") as fp:
         line = fp.readline()
         blocks = []
-        print(repr(line))
         while re_comment.match(line):
-            print(line)
             if line.startswith(starter):
                 line = line[len(starter):].lstrip()
                 blocks.append(line)
@@ -306,8 +304,6 @@ def check_license(filename, **kwargs):
             lineno, line = lineno + 1, fp.readline()
         file_is_empty = line == ""
         license = "".join(blocks)
-
-    print(lines)
 
     if file_is_empty and not license.strip():
         return errors
