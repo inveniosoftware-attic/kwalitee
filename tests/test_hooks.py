@@ -32,10 +32,11 @@ from mock import patch, mock_open, MagicMock
 from hamcrest import (assert_that, equal_to, has_length, has_item, has_items,
                       is_not, contains_string)
 
+from invenio_kwalitee import app
 from invenio_kwalitee.hooks import (_get_component, _get_components,
                                     _get_git_author, _get_files_modified,
                                     _pre_commit, _prepare_commit_msg,
-                                    pre_commit_hook)
+                                    post_commit_hook, pre_commit_hook)
 
 
 class GetComponentTest(TestCase):
@@ -159,13 +160,17 @@ class PrepareCommitMsgTest(TestCase):
 
 class GitHooksTest(TestCase):
     def setUp(self):
+        commit_msg = "dummy: test\n\n" \
+                     "* foo\n" \
+                     "  bar\n\n" \
+                     "Signed-off-by: John Doe <john.doe@example.org>"
         cmds = (
             "git init",
             u"git config user.name 'Jürg Müller'",
             "git config user.email juerg.mueller@example.org",
             "touch empty.py",
             "git add empty.py",
-            "git commit -m test",
+            "git commit -m '{0}'".format(commit_msg),
             "touch README.rst",
             "git add README.rst",
             "mkdir -p invenio/modules/testmod1/",
@@ -180,6 +185,12 @@ class GitHooksTest(TestCase):
             "git add invenio/modules/testmod1/style.css",
         )
 
+        self.config = app.config
+        app.config.update({
+            "COMPONENTS": ["dummy"],
+            "TRUSTED_DEVELOPERS": ["john.doe@example.org"]
+        })
+
         self.path = tempfile.mkdtemp()
         self.cwd = os.getcwd()
         os.chdir(self.path)
@@ -190,12 +201,13 @@ class GitHooksTest(TestCase):
                                     shell=True,
                                     cwd=self.path)
             (stdout, stderr) = proc.communicate()
-            assert_that(proc.wait(), equal_to(0),
+            assert_that(proc.returncode, equal_to(0),
                         u"{0}: {1}".format(command, stderr))
 
     def tearDown(self):
         shutil.rmtree(self.path)
         os.chdir(self.cwd)
+        app.config = self.config
 
     def test_get_files_modified(self):
         assert_that(_get_files_modified(), is_not(has_item("empty.py")))
@@ -209,6 +221,18 @@ class GitHooksTest(TestCase):
     def test_get_git_author(self):
         assert_that(_get_git_author(),
                     equal_to(u"Jürg Müller <juerg.mueller@example.org>"))
+
+    def test_post_commit_hook(self):
+        """Hook: post-commit doesn't fail"""
+        stderr = sys.stderr
+
+        sys.stderr = StringIO()
+        assert_that(not post_commit_hook())
+        sys.stderr.seek(0)
+        output = "\n".join(sys.stderr.readlines())
+        sys.stderr = stderr
+
+        assert_that(output, has_length(0))
 
     def test_pre_commit_hook(self):
         """Hook: pre-commit fails because some copyrights are missing"""
