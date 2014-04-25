@@ -180,9 +180,9 @@ def check_message(message, **kwargs):
     errors += _check_signatures(signature_lines, **kwargs)
 
     def _format(code, lineno, args):
-        return "{0}: {1}: {2}".format(code,
-                                      lineno,
-                                      _messages_codes[code].format(*args))
+        return u"{0}: {1}: {2}".format(code,
+                                       lineno,
+                                       _messages_codes[code].format(*args))
 
     return list(map(lambda x: _format(x[0], x[1], x[2:]), errors))
 

@@ -133,6 +133,7 @@ def _check_message(message, options):
             print(error, file=sys.stderr)
 
         return False
+    return True
 
 
 def prepare_commit_msg_hook(argv):
@@ -159,7 +160,7 @@ def commit_msg_hook(argv):
         return False
 
 
-def post_commit_hook(argv):
+def post_commit_hook(argv=None):
     """Hook: for checking commit message"""
     _, stdout, _ = run("git log -1 --format=%B HEAD")
     message = "\n".join(stdout)
@@ -270,8 +271,8 @@ def run(command, raw_output=False):
     if not raw_output:
         return (
             p.returncode,
-            [line.strip() for line in stdout.decode("utf-8").splitlines()],
-            [line.strip() for line in stderr.decode("utf-8").splitlines()]
+            [line.rstrip() for line in stdout.decode("utf-8").splitlines()],
+            [line.rstrip() for line in stderr.decode("utf-8").splitlines()]
         )
     else:
         return (p.returncode, stdout, stderr)
