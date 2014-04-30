@@ -66,7 +66,7 @@ class GetComponentTest(TestCase):
 class PreCommitTest(TestCase):
     """Testing the pre-commit actions"""
 
-    options = {}
+    options = {"ignore": ("D100",)}
 
     def test_pre_commit(self):
         errors = _pre_commit((("__init__.py", b""),

@@ -576,7 +576,7 @@ class PullRequestTest(TestCase):
                       "TRUSTED_DEVELOPERS": ["john.doe@example.org"],
                       "COMPONENTS": ["herp"],
                       "SIGNATURES": ["Signed-off-by"],
-                      "PEP8_IGNORE": ["E265"],
+                      "IGNORE": ["E265", "D100"],
                       "instance_path": instance_path})
 
         latest_requests = httpretty.HTTPretty.latest_requests

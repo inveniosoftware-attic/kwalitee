@@ -37,6 +37,7 @@ install_requires = [
     'Flask',
     'Flask-Script',
     'pep8',
+    'pep257',
     'pyflakes',
     'requests',
     'rq'

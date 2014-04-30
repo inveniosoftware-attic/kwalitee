@@ -24,8 +24,9 @@
 import os
 import re
 import pep8
-import shutil
 import codecs
+import pep257
+import shutil
 import operator
 import pyflakes
 import pyflakes.checker
@@ -240,27 +241,45 @@ class _Report(pep8.BaseReport):
 def check_pep8(filename, **kwargs):
     """Perform static analysis on the given file.
 
-    Options:
-    * pep8_ignore: e.g. ('E111', 'E123')
-    * pep8_select: ditto
-    * pep8_pyflakes: True
+    :param ignore: list of codes to ignore, e.g. ('E111', 'E123')
+    :param select: list of codes to explicitly select.
+    :param pyflakes: run the pyflakes checks too (default True)
+    :return: list of errors
     """
 
-    pep8options = {
-        "ignore": kwargs.get("pep8_ignore"),
-        "select": kwargs.get("pep8_select"),
+    options = {
+        "ignore": kwargs.get("ignore"),
+        "select": kwargs.get("select"),
     }
 
-    if not _registered_pyflakes_check and kwargs.get("pep8_pyflakes", True):
+    if not _registered_pyflakes_check and kwargs.get("pyflakes", True):
         _register_pyflakes_check()
 
-    checker = pep8.Checker(filename, reporter=_Report, **pep8options)
+    checker = pep8.Checker(filename, reporter=_Report, **options)
     checker.check_all()
 
     errors = []
     checker.report.errors.sort()
     for error in checker.report.errors:
         errors.append("{0}:{1}: {3}".format(*error))
+    return errors
+
+
+def check_pep257(filename, **kwargs):
+    """Perform static analysis on the given file docstrings.
+
+    :param ignore: list of codes to ignore, e.g. ('D400')
+    :return: list of errors
+    """
+
+    ignore = kwargs.get("ignore")
+
+    errors = []
+    checker = pep257.PEP257Checker()
+    with open(filename) as fp:
+        for error in checker.check_source(fp.read(), filename):
+            if ignore is None or error.code not in ignore:
+                errors.append("{0}:{1}".format(error.line, error.message))
     return errors
 
 
@@ -271,14 +290,15 @@ def check_license(filename, **kwargs):
     file. Also, the year should be the current one.
 
     Supported filetypes: python, jinja, javascript
-    Options:
-    * year: default current year
-    * pep8_ignores: e.g. ('L100', 'L101')
-    * python_style: False for JavaScript or CSS files
+
+    :param year: default current year
+    :param ignore: list of codes to ignore, e.g. ('L100', 'L101')
+    :param python_style: False for JavaScript or CSS files
+    :return: list of errors
     """
     year = kwargs.pop("year", datetime.now().year)
     python_style = kwargs.pop("python_style", True)
-    ignores = kwargs.get("pep8_ignore")
+    ignores = kwargs.get("ignore")
     template = "{0}: {1} {2}"
 
     if python_style:
@@ -349,14 +369,19 @@ def check_file(filename, **kwargs):
 
     See: check_pep8 and check_license
     """
+    errors = []
     if filename.endswith(".py"):
-        return check_pep8(filename, **kwargs) + \
-            check_license(filename, **kwargs)
+        if kwargs.get("pep8", True):
+            errors += check_pep8(filename, **kwargs)
+        if kwargs.get("pep257", True):
+            errors += check_pep257(filename, **kwargs)
+        if kwargs.get("license", True):
+            errors += check_license(filename, **kwargs)
     elif filename.endswith(".html"):
-        return check_license(filename, **kwargs)
+        errors += check_license(filename, **kwargs)
     elif filename.endswith(".js") or filename.endswith(".css"):
-        return check_license(filename, python_style=False, **kwargs)
-    return []
+        errors += check_license(filename, python_style=False, **kwargs)
+    return errors
 
 
 def _get_issue_labels(issue_url):
@@ -369,22 +394,22 @@ def _get_issue_labels(issue_url):
 
 
 def get_options(config):
-    """Build the options from the Flask config"""
+    """Build the options from the Flask config."""
     return {
-        "components": config.get("COMPONENTS", None),
-        "signatures": config.get("SIGNATURES", None),
-        "trusted": config.get("TRUSTED_DEVELOPERS", None),
+        "components": config.get("COMPONENTS"),
+        "signatures": config.get("SIGNATURES"),
+        "trusted": config.get("TRUSTED_DEVELOPERS"),
         "pep8": config.get("CHECK_PEP8", True),
+        "pep257": config.get("CHECK_PEP257", True),
         "license": config.get("CHECK_LICENSE", True),
-        "pep8_pyflakes": config.get("CHECK_PYFLAKES", True),
-        "pep8_ignore": config.get("PEP8_IGNORE", None),
-        "pep8_select": config.get("PEP8_SELECT", None)
+        "pyflakes": config.get("CHECK_PYFLAKES", True),
+        "ignore": config.get("IGNORE"),
+        "select": config.get("SELECT"),
     }
 
 
 def pull_request(pull_request_url, status_url, config):
-    """
-    Performing all the tests on the pull request and pings back the given
+    """Performing all the tests on the pull request and pings back the given
     status_url.
     """
     body = {}
@@ -411,7 +436,8 @@ def pull_request(pull_request_url, status_url, config):
     check = config.get("CHECK_WIP", False) or not is_wip
     check_commit_messages = config.get("CHECK_COMMIT_MESSAGES", True)
     check_pep8 = options["pep8"]
-    check_pyflakes = options["pep8_pyflakes"]
+    check_pep257 = options["pep257"]
+    check_pyflakes = options["pyflakes"]
     check_license = options["license"]
 
     labels, labels_url = _get_issue_labels(issue_url)
@@ -431,7 +457,8 @@ def pull_request(pull_request_url, status_url, config):
                               data=json.dumps(dict(body=body)),
                               headers=headers)
 
-    if check and (check_pep8 or check_pyflakes or check_license):
+    if check and (check_pep8 or check_pep257 or check_pyflakes or
+                  check_license):
         errs, messages = _check_files(files_url, **options)
         errors += errs
         for msg in messages:

@@ -22,7 +22,7 @@
 ## or submit itself to any jurisdiction.
 
 import os
-from invenio_kwalitee.kwalitee import check_pep8, check_license
+from invenio_kwalitee.kwalitee import check_pep8, check_pep257, check_license
 from unittest import TestCase
 from hamcrest import assert_that, has_length, has_item, is_not
 
@@ -46,7 +46,7 @@ class TestCheckFile(TestCase):
 class TestCheckPep8(TestCheckFile):
     """Unit tests of the PEP8 check."""
 
-    def test_valid_pep8(self):
+    def test_valid(self):
         """valid.py is correctly formatted (according to pep8)"""
         errors = check_pep8(self.valid)
         assert_that(errors, has_length(0))
@@ -61,21 +61,41 @@ class TestCheckPep8(TestCheckFile):
         errors = check_pep8(self.error)
         assert_that(errors, has_length(2))
 
-    def test_pep8_ignore(self):
+    def test_ignore(self):
         """ignored PEP8 codes are ignored"""
         errors = check_pep8(self.invalid,
-                            pep8_ignore=('E111', 'E113', 'E901'))
+                            ignore=('E111', 'E113', 'E901'))
         assert_that(errors, has_length(0))
 
-    def test_pep8_ignore_license(self):
+    def test_ignore_license(self):
         """ignored PEP8 codes are ignored"""
-        errors = check_pep8(self.error, pep8_ignore=('E265',))
+        errors = check_pep8(self.error, ignore=('E265',))
         assert_that(errors, has_length(2))
 
-    def test_pep8_select(self):
+    def test_select(self):
         """selected PEP8 codes are selected"""
-        errors = check_pep8(self.invalid, pep8_select=('E111',))
+        errors = check_pep8(self.invalid, select=('E111',))
         assert_that(errors, has_length(3))
+
+
+class TestCheckPep257(TestCheckFile):
+    """Unit tests of the PEP257 checks."""
+
+    def test_valid(self):
+        """valid.py is correctly formatted (according to pep257)"""
+        print(self.valid)
+        errors = check_pep257(self.valid)
+        assert_that(errors, has_length(0))
+
+    def test_missing(self):
+        """invalid.py has no docstring"""
+        errors = check_pep257(self.invalid)
+        assert_that(errors, has_item("1:D100: Docstring missing"))
+
+    def test_ignore(self):
+        """ignored PEP257 codes are ignored"""
+        errors = check_pep257(self.invalid, ignore=('D100'))
+        assert_that(errors, has_length(0))
 
 
 class TestCheckLicense(TestCheckFile):

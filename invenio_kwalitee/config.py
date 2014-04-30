@@ -68,15 +68,20 @@ TRUSTED_DEVELOPERS = []
 
 REPO_URL = 'https://github.com/inveniosoftware/invenio/'
 
-PEP8_IGNORE = 'E123', 'E226', 'E24', 'E501', 'E265'
-#PEP8_SELECT = 'E111', 'F481'
+# Checks run on the files
+#
+# Default values, uncomment to change:
+#CHECK_COMMIT_MESSAGES = True
+#CHECK_WIP = False
+#CHECK_LICENSE = True
+#CHECK_PEP8 = True
+#CHECK_PEP257 = True
+#CHECK_PYFLAKES = True # PyFlakes requires PEP8
 
-CHECK_WIP = False
-CHECK_COMMIT_MESSAGES = True
-CHECK_PEP8 = True
-# PyFlakes requires PEP8
-CHECK_PYFLAKES = True
-CHECK_LICENSE = True
+# You may ignore some codes from PEP8, PEP257 and
+# the license checks as well.
+IGNORE = ['E123', 'E226', 'E24', 'E501', 'E265']
+#SELECT = []
 
 # Labels applied to the pull request in case we are in the following states:
 # - wip, the wip label has been found in the title
