@@ -125,7 +125,6 @@ def _check_message(message, options):
     with app.app_context():
         options.update(get_options(app.config))
 
-
     errors = check_message(message, **options)
 
     if errors:
@@ -153,6 +152,7 @@ def commit_msg_hook(argv):
     with open(argv[1], "r", "utf-8") as fh:
         message = "\n".join(filter(lambda x: not x.startswith("#"),
                                    fh.readlines()))
+    options = {"allow_empty": True}
 
     if not _check_message(message, options):
         print(u"Aborting commit due to commit message errors (override with "
