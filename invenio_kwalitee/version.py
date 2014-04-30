@@ -22,7 +22,7 @@
 ## or submit itself to any jurisdiction.
 
 """
-Version information for Invenio-Kwalitee
+Version information for Invenio-Kwalitee.
 
 This file is imported by ``invenio_kwalitee.__init__``, and parsed by
 ``setup.py`` as well as ``docs/conf.py``.

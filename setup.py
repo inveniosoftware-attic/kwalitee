@@ -21,6 +21,8 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+"""Invenio-Kwalitee setuptools configuration."""
+
 from setuptools import setup
 import os
 import re

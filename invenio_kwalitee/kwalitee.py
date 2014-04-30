@@ -21,6 +21,8 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+"""Kwalitee checks for PEP8, PEP257, PyFlakes and License."""
+
 import os
 import re
 import pep8
@@ -32,6 +34,7 @@ import pyflakes
 import pyflakes.checker
 import requests
 import tempfile
+import tokenize
 from flask import json
 from datetime import datetime
 
@@ -73,8 +76,11 @@ _licenses_codes = {
 
 
 def _check_1st_line(line, components, max_first_line=50, **kwargs):
-    """Check that the first line has a known component name followed by a colon
-    and then a short description of the commit"""
+    """First line check.
+
+    Check that the first line has a known component name followed by a colon
+    and then a short description of the commit.
+    """
     errors = []
     if len(line) > max_first_line:
         errors.append(("M106", 1, max_first_line, len(line)))
@@ -90,10 +96,12 @@ def _check_1st_line(line, components, max_first_line=50, **kwargs):
 
 
 def _check_bullets(lines, max_length=72, **kwargs):
-    """Check that the bullet point list is well formatted. Each bullet point
-    shall have one space before and after it. The bullet character is the
-    "*" and there is no space before it but one after it meaning the next line
-    are starting with two blanks spaces to respect the identation.
+    """Check that the bullet point list is well formatted.
+
+    Each bullet point shall have one space before and after it. The bullet
+    character is the "*" and there is no space before it but one after it
+    meaning the next line are starting with two blanks spaces to respect the
+    identation.
     """
     errors = []
     missed_lines = []
@@ -122,10 +130,17 @@ def _check_bullets(lines, max_length=72, **kwargs):
 
 
 def _check_signatures(lines, signatures, trusted=None, **kwargs):
-    """Check that there is at least three signatures or that one of them is a
+    """Check that the signatures are valid.
+
+    There should be at least three signatures. If not, one of them should be a
     trusted developer/reviewer.
 
-    Format should be: [signature] full name <email@address>
+    Formatting supported being: [signature] full name <email@address>
+
+    :param lines: list of lines (lineno, content) to verify.
+    :param signatures: list of supported signature, e.g. Signed-off-by
+    :param trusted: list of trusted reviewers, the e-mail address.
+    :return: list of errors
     """
     matching = []
     errors = []
@@ -161,14 +176,14 @@ def check_message(message, **kwargs):
     * and finally signatures.
 
     Required kwargs:
-    * components: e.g. ('auth', 'utils', 'misc')
-    * signatures: e.g. ('Signed-off-by', 'Reviewed-by')
-
-    Optional args:
-    * trusted, e.g. ('john.doe@example.org',), by default empty
-    * max_length: by default 72
-    * max_first_line: by default 50
-    * allow_empty: by default False
+    :param components: list of compontents, e.g. ('auth', 'utils', 'misc')
+    :param signatures: list of signatrues, e.g. ('Signed-off-by',
+                       'Reviewed-by')
+    :param trusted: optional list of reviewers, e.g. ('john.doe@example.org',)
+    :param max_length: optional maximum line length (by default 72)
+    :param max_first_line: optional maximum first line length (by default 50)
+    :param allow_empty: optional way to allow empty message (by default False)
+    :return: list of errors found
     """
     if kwargs.pop("allow_empty", False):
         if not message or message.isspace():
@@ -189,11 +204,14 @@ def check_message(message, **kwargs):
 
 
 class _PyFlakesChecker(pyflakes.checker.Checker):
-    """PEP8 compatible checker for pyFlakes. Inspired by flake8."""
+
+    """PEP8 compatible checker for pyFlakes (inspired by flake8)."""
+
     name = "pyflakes"
     version = pyflakes.__version__
 
     def run(self):
+        """Yield the error messages."""
         for msg in self.messages:
             col = getattr(msg, 'col', 0)
             yield msg.lineno, col, (msg.tpl % msg.message_args), msg.__class__
@@ -225,9 +243,12 @@ _registered_pyflakes_check = False
 
 
 class _Report(pep8.BaseReport):
-    """Own reporter that keeps a list of errors in a sortable list and never
-    prints.
+
+    """Custom reporter.
+
+    It keeps a list of errors in a sortable list and never prints.
     """
+
     def __init__(self, options):
         super(_Report, self).__init__(options)
         self.errors = []
@@ -246,7 +267,6 @@ def check_pep8(filename, **kwargs):
     :param pyflakes: run the pyflakes checks too (default True)
     :return: list of errors
     """
-
     options = {
         "ignore": kwargs.get("ignore"),
         "select": kwargs.get("select"),
@@ -271,15 +291,20 @@ def check_pep257(filename, **kwargs):
     :param ignore: list of codes to ignore, e.g. ('D400')
     :return: list of errors
     """
-
     ignore = kwargs.get("ignore")
 
     errors = []
     checker = pep257.PEP257Checker()
     with open(filename) as fp:
-        for error in checker.check_source(fp.read(), filename):
-            if ignore is None or error.code not in ignore:
-                errors.append("{0}:{1}".format(error.line, error.message))
+        try:
+            for error in checker.check_source(fp.read(), filename):
+                if ignore is None or error.code not in ignore:
+                    errors.append("{0}:{1}".format(error.line, error.message))
+        except tokenize.TokenError as e:
+            errors.append("{0}:{1}:{2}".format(e.args[0], *e.args[1]))
+        except pep257.AllError as e:
+            errors.append(str(e))
+
     return errors
 
 
@@ -385,7 +410,7 @@ def check_file(filename, **kwargs):
 
 
 def _get_issue_labels(issue_url):
-    """Downloads the labels of the issue."""
+    """Download the labels of the issue."""
     issue = json.loads(requests.get(issue_url).content)
     labels = set()
     for label in issue["labels"]:
@@ -409,8 +434,14 @@ def get_options(config):
 
 
 def pull_request(pull_request_url, status_url, config):
-    """Performing all the tests on the pull request and pings back the given
-    status_url.
+    """Performing all the tests on the pull request.
+
+    Then pings back the given status_url and update the issue labels.
+
+    :param pull_request_url: github api pull request
+    :param status_url: github api status url
+    :param config: configuration dictionary
+    :return: status body and applied labels
     """
     body = {}
     errors = []
@@ -530,7 +561,7 @@ def _check_commits(url, **kwargs):
 
 
 def _check_files(url, **kwargs):
-    """Downloads and runs the checks on the files of a pull request."""
+    """Download and runs the checks on the files of a pull request."""
     errors = []
     messages = []
 

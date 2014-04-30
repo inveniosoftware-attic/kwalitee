@@ -40,7 +40,7 @@ from invenio_kwalitee.hooks import (_get_component, _get_components,
 
 
 class GetComponentTest(TestCase):
-    """_get_component and _get_components are"""
+    """Testing _get_component and _get_components."""
 
     def test_get_component(self):
         files = {
@@ -64,7 +64,7 @@ class GetComponentTest(TestCase):
 
 
 class PreCommitTest(TestCase):
-    """Testing the pre-commit actions"""
+    """Testing the pre-commit actions."""
 
     options = {"ignore": ("D100",)}
 

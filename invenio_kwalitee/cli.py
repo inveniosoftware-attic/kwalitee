@@ -21,6 +21,8 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+"""Command-line tools for the git hooks."""
+
 from __future__ import absolute_import, print_function
 
 import os
@@ -48,7 +50,7 @@ manager.add_command("githooks", githooks)
                  help="Overwrite existing hooks", default=False,
                  action="store_true")
 def install(force=False):
-    """Install git hooks"""
+    """Install git hooks."""
     ret, git_dir, _ = run("git rev-parse --show-toplevel")
     if ret != 0:
         print(u"ERROR: Please run from within a GIT repository.",
@@ -75,7 +77,7 @@ def install(force=False):
 
 @githooks.command
 def uninstall():
-    """Uninstall git hooks"""
+    """Uninstall git hooks."""
     ret, git_dir, _ = run("git rev-parse --show-toplevel")
     if ret != 0:
         print(u"ERROR: Please run from within a GIT repository.",
@@ -93,4 +95,5 @@ def uninstall():
 
 
 def main():  # pragma: no cover
+    """Running the manager."""
     manager.run()

@@ -21,6 +21,8 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+"""Invenio Kwalitee Flask application and git hooks."""
+
 import os
 import operator
 
@@ -33,7 +35,7 @@ from .worker import conn
 from .version import __version__
 
 
-__all__ = ["__version__", "app"]
+__all__ = ("__version__", "app")
 
 
 app = Flask(__name__, template_folder="templates", static_folder="static",

@@ -1,3 +1,9 @@
+"""
+Invenio-Kwalitee base configuration.
+
+To change it, put a config.py into your instance.
+"""
+
 COMPONENTS = [
     'base',
     'celery',
