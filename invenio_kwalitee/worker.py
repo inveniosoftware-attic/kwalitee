@@ -21,6 +21,8 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+"""Initialize Redis and setups the RQ worker."""
+
 import sys
 import logging
 from redis import Redis

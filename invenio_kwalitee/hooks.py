@@ -21,6 +21,7 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+"""Git hooks."""
 
 from __future__ import print_function, absolute_import
 
@@ -39,7 +40,7 @@ SUPPORTED_FILES = '.py', '.html', '.rst', '.js', '.css'
 
 
 def _get_files_modified():
-    """Get the list of modified files that are Python or Jinja2"""
+    """Get the list of modified files that are Python or Jinja2."""
     cmd = "git diff-index --cached --name-only --diff-filter=ACMRTUXB HEAD"
     _, files_modified, _ = run(cmd)
 
@@ -48,7 +49,7 @@ def _get_files_modified():
 
 
 def _get_git_author():
-    """Returns the git author from the git variables."""
+    """Return the git author from the git variables."""
     _, stdout, _ = run("git var GIT_AUTHOR_IDENT")
 
     git_author = stdout[0]
@@ -79,7 +80,7 @@ def _get_components(files):
 
 
 def _prepare_commit_msg(tmp_file, author, files_modified=None, template=None):
-    """Prepare the commit message in tmp_file
+    """Prepare the commit message in tmp_file.
 
     It will build the commit message prefilling the component line, as well
     as the signature using the git author and the modified files.
@@ -118,13 +119,11 @@ def _prepare_commit_msg(tmp_file, author, files_modified=None, template=None):
 
 def _check_message(message, options):
     """Checking the message and printing the errors."""
-
     options = options or dict()
 
     from invenio_kwalitee import app
     with app.app_context():
         options.update(get_options(app.config))
-
 
     errors = check_message(message, **options)
 
@@ -137,7 +136,7 @@ def _check_message(message, options):
 
 
 def prepare_commit_msg_hook(argv):
-    """Hook: prepare a commit message"""
+    """Hook: prepare a commit message."""
     from invenio_kwalitee import app
     with app.app_context():
         template = app.config["COMMIT_MSG_TEMPLATE"]
@@ -149,10 +148,11 @@ def prepare_commit_msg_hook(argv):
 
 
 def commit_msg_hook(argv):
-    """Hook: for checking commit message (prevent commit)"""
+    """Hook: for checking commit message (prevent commit)."""
     with open(argv[1], "r", "utf-8") as fh:
         message = "\n".join(filter(lambda x: not x.startswith("#"),
                                    fh.readlines()))
+    options = {"allow_empty": True}
 
     if not _check_message(message, options):
         print(u"Aborting commit due to commit message errors (override with "
@@ -161,7 +161,7 @@ def commit_msg_hook(argv):
 
 
 def post_commit_hook(argv=None):
-    """Hook: for checking commit message"""
+    """Hook: for checking commit message."""
     _, stdout, _ = run("git log -1 --format=%B HEAD")
     message = "\n".join(stdout)
     options = {"allow_empty": True}
@@ -200,8 +200,10 @@ def post_commit_hook(argv=None):
 # SOFTWARE.
 
 def _pre_commit(files, options):
-    """Run the check on files of the added version which may be different than
-    the one on disk. Equivalent than doing a git stash.
+    """Run the check on files of the added version.
+
+    They might be different than the one on disk. Equivalent than doing a git
+    stash, check, and git stash pop.
     """
     errors = []
     tmpdir = mkdtemp()
@@ -230,7 +232,7 @@ def _pre_commit(files, options):
 
 
 def pre_commit_hook(argv=None):
-    """Hook: checking the staged files"""
+    """Hook: checking the staged files."""
     from invenio_kwalitee import app
     with app.app_context():
         options = get_options(app.config)
