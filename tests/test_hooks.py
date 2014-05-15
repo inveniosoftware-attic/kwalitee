@@ -21,6 +21,8 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+from __future__ import unicode_literals
+
 import os
 import sys
 import shutil
@@ -105,11 +107,11 @@ class PrepareCommitMsgTest(TestCase):
         return mock, filehandler
 
     def test_prepare_commit_msg(self):
-        commit_msg = u"# this is a comment"
+        commit_msg = "# this is a comment"
         mock, tmp_file = self._mock_open(commit_msg)
         with patch("invenio_kwalitee.hooks.open", mock, create=True):
-            _prepare_commit_msg("mock", u"John",
-                                template=u"{component}: {author}")
+            _prepare_commit_msg("mock", "John",
+                                template="{component}: {author}")
 
             tmp_file.seek(0)
             new_commit_msg = "\n".join(tmp_file.readlines())
@@ -117,12 +119,12 @@ class PrepareCommitMsgTest(TestCase):
             assert_that(new_commit_msg, equal_to("unknown: John"))
 
     def test_prepare_commit_msg_with_one_component(self):
-        commit_msg = u"# this is a comment"
+        commit_msg = "# this is a comment"
         mock, tmp_file = self._mock_open(commit_msg)
         with patch("invenio_kwalitee.hooks.open", mock, create=True):
-            _prepare_commit_msg("mock", u"John",
+            _prepare_commit_msg("mock", "John",
                                 ("setup.py", "test.py"),
-                                u"{component}")
+                                "{component}")
 
             tmp_file.seek(0)
             new_commit_msg = "\n".join(tmp_file.readlines())
@@ -130,14 +132,14 @@ class PrepareCommitMsgTest(TestCase):
             assert_that(new_commit_msg, equal_to("global"))
 
     def test_prepare_commit_msg_with_many_components(self):
-        commit_msg = u"# this is a comment"
+        commit_msg = "# this is a comment"
         mock, tmp_file = self._mock_open(commit_msg)
         with patch("invenio_kwalitee.hooks.open", mock, create=True):
-            _prepare_commit_msg("mock", u"John",
+            _prepare_commit_msg("mock", "John",
                                 ("setup.py",
                                  "grunt/foo.js",
                                  "docs/bar.rst"),
-                                u"{component}")
+                                "{component}")
 
             tmp_file.seek(0)
             new_commit_msg = "\n".join(tmp_file.readlines())
@@ -147,10 +149,10 @@ class PrepareCommitMsgTest(TestCase):
             assert_that(new_commit_msg, contains_string("docs"))
 
     def test_prepare_commit_msg_aborts_if_existing(self):
-        commit_msg = u"Lorem ipsum"
+        commit_msg = "Lorem ipsum"
         mock, tmp_file = self._mock_open(commit_msg)
         with patch("invenio_kwalitee.hooks.open", mock, create=True):
-            _prepare_commit_msg("mock", u"John")
+            _prepare_commit_msg("mock", "John")
 
             tmp_file.seek(0)
             new_commit_msg = "\n".join(tmp_file.readlines())
@@ -166,7 +168,7 @@ class GitHooksTest(TestCase):
                      "Signed-off-by: John Doe <john.doe@example.org>"
         cmds = (
             "git init",
-            u"git config user.name 'Jürg Müller'",
+            "git config user.name 'Jürg Müller'",
             "git config user.email juerg.mueller@example.org",
             "touch empty.py",
             "git add empty.py",
@@ -202,7 +204,7 @@ class GitHooksTest(TestCase):
                                     cwd=self.path)
             (stdout, stderr) = proc.communicate()
             assert_that(proc.returncode, equal_to(0),
-                        u"{0}: {1}".format(command, stderr))
+                        "{0}: {1}".format(command, stderr))
 
     def tearDown(self):
         shutil.rmtree(self.path)
@@ -220,7 +222,7 @@ class GitHooksTest(TestCase):
 
     def test_get_git_author(self):
         assert_that(_get_git_author(),
-                    equal_to(u"Jürg Müller <juerg.mueller@example.org>"))
+                    equal_to("Jürg Müller <juerg.mueller@example.org>"))
 
     def test_post_commit_hook(self):
         """Hook: post-commit doesn't fail"""

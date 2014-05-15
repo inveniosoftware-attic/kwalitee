@@ -4,6 +4,14 @@ Invenio-Kwalitee base configuration.
 To change it, put a config.py into your instance.
 """
 
+# Context for the Github statuses.
+#
+# See: https://developer.github.com/v3/repos/statuses/
+CONTEXT = "invenio-kwalitee"
+# Github urls
+GITHUB = "https://github.com/"
+GITHUB_REPO = GITHUB + "{account}/{repository}/"
+
 COMPONENTS = [
     'base',
     'celery',
@@ -69,10 +77,10 @@ COMPONENTS = [
 ]
 
 SIGNATURES = 'Signed-off-by', 'Tested-by', 'Reviewed-by'
+ALT_SIGNATURES = 'Reported-by',
+
 
 TRUSTED_DEVELOPERS = []
-
-REPO_URL = 'https://github.com/inveniosoftware/invenio/'
 
 # Checks run on the files
 #

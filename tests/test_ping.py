@@ -21,6 +21,8 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+from __future__ import unicode_literals
+
 from flask import json
 from unittest import TestCase
 from invenio_kwalitee import app
@@ -51,7 +53,7 @@ class PingTest(TestCase):
         assert_that(response.status_code, equal_to(500))
         assert_that(body["exception"],
                     equal_to("No X-GitHub-Event HTTP header found"))
-        assert_that(body["status"], equal_to(u"failure"))
+        assert_that(body["status"], equal_to("failure"))
 
     def test_not_a_ping(self):
         """POST /payload (pong) rejects an unknown event"""
@@ -66,4 +68,4 @@ class PingTest(TestCase):
         assert_that(response.status_code, equal_to(500))
         assert_that(body["exception"],
                     equal_to("Event pong is not supported"))
-        assert_that(body["status"], equal_to(u"failure"))
+        assert_that(body["status"], equal_to("failure"))

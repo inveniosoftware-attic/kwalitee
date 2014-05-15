@@ -41,8 +41,9 @@ Kwalitee checks
 ===============
 
 * Static analysis of files:
-   * pyflake
-   * PEP8
+   * `pyflakes <https://launchpad.net/pyflakes>`
+   * `PEP8 <http://legacy.python.org/dev/peps/pep-0008/>
+   * `PEP257 <http://legacy.python.org/dev/peps/pep-0257/>`
    * Copyright year in license
 
 * Commit message analysis:

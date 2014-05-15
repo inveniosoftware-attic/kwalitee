@@ -38,11 +38,12 @@ install_requires = reqs('requirements.txt')
 test_requires = reqs('requirements-test.txt')
 
 if tuple(sys.version_info) < (2, 7):
+    install_requires.append('argparse')
     install_requires.append('importlib')
 
 
 # Get the version string.  Cannot be done with import!
-with open(os.path.join('invenio_kwalitee', 'version.py'), 'rt') as f:
+with open(os.path.join('invenio_kwalitee', '__init__.py'), 'rt') as f:
     version = re.search(
         '__version__\s*=\s*.(?P<version>.*).\n',
         f.read()

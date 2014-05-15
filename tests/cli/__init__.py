@@ -21,14 +21,4 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
-"""
-Version information for Invenio-Kwalitee.
-
-This file is imported by ``invenio_kwalitee.__init__``, and parsed by
-``setup.py`` as well as ``docs/conf.py``.
-"""
-
-# Do not change the format of this next line. Doing so risks breaking
-# setup.py and docs/conf.py
-
-__version__ = "0.1"
+"""Integration tests of the commands."""

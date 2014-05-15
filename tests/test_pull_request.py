@@ -21,18 +21,21 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
-import os
-import shutil
-import tempfile
+from __future__ import unicode_literals
+
 import httpretty
 
 from flask import json
 from datetime import datetime
 from unittest import TestCase
-from invenio_kwalitee import app, pull_request
+from invenio_kwalitee import app, db
+from invenio_kwalitee.models import (Account, Repository, BranchStatus,
+                                     CommitStatus)
+from invenio_kwalitee.tasks import pull_request
 from hamcrest import (assert_that, equal_to, contains_string, has_length,
                       has_item, has_items, is_not)
 
+from . import MyQueue, DatabaseMixin
 
 GPL = """
 ## This file is part of Invenio-Kwalitee
@@ -58,25 +61,22 @@ GPL = """
 """
 
 
-class PullRequestTest(TestCase):
+class PullRequestTest(TestCase, DatabaseMixin):
     """Integration tests for the pull_request event."""
 
-    class MyQueue(object):
-        def __init__(self):
-            self.queue = []
+    def setUp(self):
+        super(PullRequestTest, self).setUp()
+        self.databaseUp()
+        owner = Account.find_or_create("invenio")
+        self.repository = Repository.find_or_create(owner, "test")
 
-        def __len__(self):
-            return len(self.queue)
-
-        def dequeue(self):
-            return self.queue.pop()
-
-        def enqueue(self, *args):
-            self.queue.append(args)
+    def tearDown(self):
+        self.databaseDown()
+        super(PullRequestTest, self).tearDown()
 
     def test_pull_request(self):
         """POST /payload (pull_request) performs the checks"""
-        queue = self.MyQueue()
+        queue = MyQueue()
         # Replace the default Redis queue
         app.config["queue"] = queue
 
@@ -89,7 +89,14 @@ class PullRequestTest(TestCase):
                 "commits_url": "https://github.com/pulls/1/commits",
                 "statuses_url": "https://github.com/pulls/1/statuses",
                 "head": {
-                    "sha": "1"
+                    "sha": "1",
+                    "label": "test:my-branch"
+                }
+            },
+            "repository": {
+                "name": "test",
+                "owner": {
+                    "name": "invenio"
                 }
             }
         }
@@ -110,26 +117,29 @@ class PullRequestTest(TestCase):
         assert_that(pull_request_url, equal_to("https://github.com/pulls/1"))
 
     @httpretty.activate
-    def test_pull_request_worker(self):
-        """Worker pull_request /pulls/1"""
+    def test_pull_request_task(self):
+        """Task pull_request /pulls/1"""
         pull = {
             "title": "Lorem ipsum",
-            "url": "https://github.com/pulls/1",
-            "commits_url": "https://github.com/pulls/1/commits",
-            "statuses_url": "https://github.com/statuses/2",
-            "review_comments_url": "https://github.com/pulls/1/comments",
-            "issue_url": "https://github.com/issues/1",
+            "url": "https://api.github.com/pulls/1",
+            "html_url": "https://github.com/pulls/1",
+            "commits_url": "https://api.github.com/pulls/1/commits",
+            "statuses_url": "https://api.github.com/statuses/2",
+            "review_comments_url": "https://api.github.com/pulls/1/comments",
+            "issue_url": "https://api.github.com/issues/1",
             "head": {
-                "sha": "2"
+                "sha": "2",
+                "label": "test:my-branch"
             }
         }
         httpretty.register_uri(httpretty.GET,
-                               "https://github.com/pulls/1",
+                               "https://api.github.com/pulls/1",
                                body=json.dumps(pull),
                                content_type="application/json")
         issue = {
-            "url": "https://github.com/issues/1",
-            "labels_url": "https://github.com/issues/1/labels{/name}",
+            "url": "https://api.github.com/issues/1",
+            "html_url": "https://github.com/issues/1",
+            "labels_url": "https://api.github.com/issues/1/labels{/name}",
             "id": "42",
             "number": "1",
             "labels": [{"name": "foo"},
@@ -137,7 +147,7 @@ class PullRequestTest(TestCase):
             "state": "open"
         }
         httpretty.register_uri(httpretty.GET,
-                               "https://github.com/issues/1",
+                               "https://api.github.com/issues/1",
                                body=json.dumps(issue),
                                content_type="application/json")
         labels = [{
@@ -150,30 +160,32 @@ class PullRequestTest(TestCase):
             "color": "ff0000"
         }]
         httpretty.register_uri(httpretty.PUT,
-                               "https://github.com/issues/1/labels",
+                               "https://api.github.com/issues/1/labels",
                                status=200,
                                body=json.dumps(labels),
                                content_type="application/json")
         commits = [
             {
-                "url": "https://github.com/commits/1",
-                "sha": "1",
-                "comments_url": "https://github.com/commits/1/comments",
+                "url": "https://api.github.com/commits/2",
+                "sha": "2",
+                "html_url": "https://github.com/commits/2",
+                "comments_url": "https://api.github.com/commits/2/comments",
                 "commit": {
                     "message": "fix all the bugs!"
                 }
             }, {
 
-                "url": "https://github.com/commits/2",
-                "sha": "2",
-                "comments_url": "https://github.com/commits/2/comments",
+                "url": "https://api.github.com/commits/1",
+                "sha": "1",
+                "html_url": "https://github.com/commits/1",
+                "comments_url": "https://api.github.com/commits/1/comments",
                 "commit": {
                     "message": "herp derp"
                 }
             }
         ]
         httpretty.register_uri(httpretty.GET,
-                               "https://github.com/pulls/1/commits",
+                               "https://api.github.com/pulls/1/commits",
                                body=json.dumps(commits),
                                content_type="application/json")
         files = [{
@@ -188,7 +200,7 @@ class PullRequestTest(TestCase):
             "contents_url": "https://api.github.com/spam/herp.html?ref=2"
         }]
         httpretty.register_uri(httpretty.GET,
-                               "https://github.com/pulls/1/files",
+                               "https://api.github.com/pulls/1/files",
                                body=json.dumps(files),
                                content_type="application/json")
         eggs_py = "if foo == bar:\n  print('derp')\n"
@@ -202,32 +214,31 @@ class PullRequestTest(TestCase):
                                body=herp_html,
                                content_type="text/html")
         httpretty.register_uri(httpretty.POST,
-                               "https://github.com/commits/1/comments",
+                               "https://api.github.com/commits/1/comments",
                                status=201,
                                body=json.dumps({"id": 1}),
                                content_type="application/json")
         httpretty.register_uri(httpretty.POST,
-                               "https://github.com/commits/2/comments",
+                               "https://api.github.com/commits/2/comments",
                                status=201,
                                body=json.dumps({"id": 2}),
                                content_type="application/json")
         httpretty.register_uri(httpretty.POST,
-                               "https://github.com/pulls/1/comments",
+                               "https://api.github.com/pulls/1/comments",
                                status=201,
                                body=json.dumps({"id": 3}),
                                content_type="application/json")
         status = {"id": 1, "state": "success"}
         httpretty.register_uri(httpretty.POST,
-                               "https://github.com/statuses/2",
+                               "https://api.github.com/statuses/2",
                                status=201,
                                body=json.dumps(status),
                                content_type="application/json")
 
-        instance_path = tempfile.mkdtemp()
-        pull_request("https://github.com/pulls/1",
+        pull_request("https://api.github.com/pulls/1",
                      "http://kwalitee.invenio-software.org/status/2",
                      {"ACCESS_TOKEN": "deadbeef",
-                      "instance_path": instance_path})
+                      "repository": self.repository.id})
 
         latest_requests = httpretty.HTTPretty.latest_requests
         # 6x GET pull, issue, commits, 2xfiles, spam/eggs.py
@@ -253,42 +264,76 @@ class PullRequestTest(TestCase):
 
         body = json.loads(latest_requests[-2].body)
         assert_that(latest_requests[-2].headers["authorization"],
-                    equal_to(u"token deadbeef"))
+                    equal_to("token deadbeef"))
         assert_that(body["state"], equal_to("error"))
 
-        filename = os.path.join(instance_path, "status_{0}.txt")
-        assert_that(not os.path.exists(filename.format(1)))
-        assert_that(os.path.exists(filename.format(2)))
+        cs = CommitStatus.query.filter_by(repository_id=self.repository.id) \
+                               .all()
 
-        with open(filename.format(2)) as f:
-            data = f.read()
-            assert_that(data,
-                        contains_string("2: spam/eggs.py:2:3: E111 indentation"
-                                        " is not a multiple of four"))
+        assert_that(cs, has_length(2))
+        assert_that(cs[0].content["message"],
+                    has_item("M110: 1: missing component name"))
+        assert_that(cs[1].content["message"],
+                    has_item("M100: 1: needs more reviewers"))
 
-        shutil.rmtree(instance_path)
+        bs = BranchStatus.query.filter_by(commit_id=cs[0].id,
+                                          name="test:my-branch").first()
+
+        assert_that(bs)
+        assert_that(bs.content["commits"], has_items("1", "2"))
+        assert_that(bs.errors, equal_to(12))
+        assert_that(bs.content["files"],
+                    has_item("2: spam/eggs.py:2:3: E111 indentation is not a "
+                             "multiple of four"))
 
     @httpretty.activate
-    def test_wip_pull_request_worker(self):
-        """Worker pull_request /pulls/1 is work in progress"""
+    def test_wip_pull_request_task(self):
+        """Task pull_request /pulls/1 is work in progress"""
         pull = {
             "title": "WIP Lorem ipsum",
-            "url": "https://github.com/pulls/1",
-            "commits_url": "https://github.com/pulls/1/commits",
-            "statuses_url": "https://github.com/statuses/2",
-            "review_comments_url": "https://github.com/pulls/1/comments",
-            "issue_url": "https://github.com/issues/1",
+            "url": "https://api.github.com/pulls/1",
+            "html_url": "https://github.com/pulls/1",
+            "commits_url": "https://api.github.com/pulls/1/commits",
+            "statuses_url": "https://api.github.com/statuses/2",
+            "review_comments_url": "https://api.github.com/pulls/1/comments",
+            "issue_url": "https://api.github.com/issues/1",
             "head": {
-                "sha": "2"
+                "sha": "2",
+                "label": "test:my-branch"
             }
         }
         httpretty.register_uri(httpretty.GET,
-                               "https://github.com/pulls/1",
+                               "https://api.github.com/pulls/1",
                                body=json.dumps(pull),
                                content_type="application/json")
+        commits = [
+            {
+                "url": "https://api.github.com/commits/2",
+                "sha": "2",
+                "html_url": "https://github.com/commits/2",
+                "comments_url": "https://api.github.com/commits/2/comments",
+                "commit": {
+                    "message": "fix all the bugs!"
+                }
+            }, {
+
+                "url": "https://api.github.com/commits/1",
+                "sha": "1",
+                "html_url": "https://github.com/commits/1",
+                "comments_url": "https://api.github.com/commits/1/comments",
+                "commit": {
+                    "message": "herp derp"
+                }
+            }
+        ]
+        httpretty.register_uri(httpretty.GET,
+                               "https://api.github.com/pulls/1/commits",
+                               body=json.dumps(commits),
+                               content_type="application/json")
         issue = {
-            "url": "https://github.com/issues/1",
-            "labels_url": "https://github.com/issues/1/labels{/name}",
+            "url": "https://api.github.com/issues/1",
+            "html_url": "https://github.com/issues/1",
+            "labels_url": "https://api.github.com/issues/1/labels{/name}",
             "id": "42",
             "number": "1",
             "labels": [{"name": "foo"},
@@ -296,7 +341,7 @@ class PullRequestTest(TestCase):
             "state": "open"
         }
         httpretty.register_uri(httpretty.GET,
-                               "https://github.com/issues/1",
+                               "https://api.github.com/issues/1",
                                body=json.dumps(issue),
                                content_type="application/json")
         labels = [{
@@ -309,22 +354,23 @@ class PullRequestTest(TestCase):
             "color": "ff0000"
         }]
         httpretty.register_uri(httpretty.PUT,
-                               "https://github.com/issues/1/labels",
+                               "https://api.github.com/issues/1/labels",
                                status=200,
                                body=json.dumps(issue),
                                content_type="application/json")
-        instance_path = tempfile.mkdtemp()
-        pull_request("https://github.com/pulls/1",
+
+        pull_request("https://api.github.com/pulls/1",
                      "http://kwalitee.invenio-software.org/status/2",
                      {"ACCESS_TOKEN": "deadbeef",
-                      "instance_path": instance_path})
+                      "repository": self.repository.id})
 
         latest_requests = httpretty.HTTPretty.latest_requests
-        # 2x GET pull, issue
+        # 3x GET pull, commits, issue
         # 1x POST labels
-        assert_that(len(latest_requests), equal_to(3), "2x GET + 1x POST")
+        assert_that(len(latest_requests), equal_to(4), "3x GET + 1x POST")
 
         expected_requests = [
+            "",
             "",
             "",
             "in_work"
@@ -336,33 +382,30 @@ class PullRequestTest(TestCase):
         assert_that(labels, has_items("in_work", "foo"))
         assert_that(labels, is_not(has_item("in_review")))
 
-        filename = os.path.join(instance_path, "status_{0}.txt")
-        assert_that(not os.path.exists(filename.format(1)))
-        assert_that(not os.path.exists(filename.format(2)))
-
-        shutil.rmtree(instance_path)
-
     @httpretty.activate
-    def test_pep8_pull_request_worker(self):
-        """Worker pull_request /pulls/1 with pep8 errors"""
+    def test_pep8_pull_request_task(self):
+        """Task pull_request /pulls/1 with pep8 errors"""
         pull = {
             "title": "Lorem ipsum",
-            "url": "https://github.com/pulls/1",
-            "commits_url": "https://github.com/pulls/1/commits",
-            "statuses_url": "https://github.com/statuses/1",
-            "issue_url": "https://github.com/issues/1",
-            "review_comments_url": "https://github.com/pulls/1/comments",
+            "url": "https://api.github.com/pulls/1",
+            "html_url": "https://github.com/pulls/1",
+            "commits_url": "https://api.github.com/pulls/1/commits",
+            "statuses_url": "https://api.github.com/statuses/1",
+            "issue_url": "https://api.github.com/issues/1",
+            "review_comments_url": "https://api.github.com/pulls/1/comments",
             "head": {
-                "sha": "1"
+                "sha": "1",
+                "label": "test:my-branch"
             }
         }
         httpretty.register_uri(httpretty.GET,
-                               "https://github.com/pulls/1",
+                               "https://api.github.com/pulls/1",
                                body=json.dumps(pull),
                                content_type="application/json")
         issue = {
-            "url": "https://github.com/issues/1",
-            "labels_url": "https://github.com/issues/1/labels{/name}",
+            "url": "https://api.github.com/issues/1",
+            "html_url": "https://github.com/issues/1",
+            "labels_url": "https://api.github.com/issues/1/labels{/name}",
             "id": "42",
             "number": "1",
             "labels": [{"name": "foo"},
@@ -370,7 +413,7 @@ class PullRequestTest(TestCase):
             "state": "open"
         }
         httpretty.register_uri(httpretty.GET,
-                               "https://github.com/issues/1",
+                               "https://api.github.com/issues/1",
                                body=json.dumps(issue),
                                content_type="application/json")
         labels = [{
@@ -383,15 +426,16 @@ class PullRequestTest(TestCase):
             "color": "ff0000"
         }]
         httpretty.register_uri(httpretty.PUT,
-                               "https://github.com/issues/1/labels",
+                               "https://api.github.com/issues/1/labels",
                                status=200,
                                body=json.dumps(labels),
                                content_type="application/json")
         commits = [
             {
-                "url": "https://github.com/commits/1",
+                "url": "https://api.github.com/commits/1",
                 "sha": "2",
-                "comments_url": "https://github.com/commits/1/comments",
+                "html_url": "https://github.com/commits/1",
+                "comments_url": "https://api.github.com/commits/1/comments",
                 "commit": {
                     "message": "herp: derp\r\n\r\nSigned-off-by: John Doe "
                                "<john.doe@example.org>"
@@ -399,7 +443,7 @@ class PullRequestTest(TestCase):
             }
         ]
         httpretty.register_uri(httpretty.GET,
-                               "https://github.com/pulls/1/commits",
+                               "https://api.github.com/pulls/1/commits",
                                body=json.dumps(commits),
                                content_type="application/json")
         files = [{
@@ -409,7 +453,7 @@ class PullRequestTest(TestCase):
             "contents_url": "https://api.github.com/spam/eggs.py?ref=1"
         }]
         httpretty.register_uri(httpretty.GET,
-                               "https://github.com/pulls/1/files",
+                               "https://api.github.com/pulls/1/files",
                                body=json.dumps(files),
                                content_type="application/json")
         eggs_py = "if foo == bar:\n  print('derp')\n"
@@ -418,30 +462,29 @@ class PullRequestTest(TestCase):
                                body=eggs_py,
                                content_type="text/plain")
         httpretty.register_uri(httpretty.POST,
-                               "https://github.com/commits/1/comments",
+                               "https://api.github.com/commits/1/comments",
                                status=201,
                                body=json.dumps({"id": 1}),
                                content_type="application/json")
         httpretty.register_uri(httpretty.POST,
-                               "https://github.com/pulls/1/comments",
+                               "https://api.github.com/pulls/1/comments",
                                status=201,
                                body=json.dumps({"id": 3}),
                                content_type="application/json")
         status = {"id": 1, "state": "success"}
         httpretty.register_uri(httpretty.POST,
-                               "https://github.com/statuses/1",
+                               "https://api.github.com/statuses/1",
                                status=201,
                                body=json.dumps(status),
                                content_type="application/json")
 
-        instance_path = tempfile.mkdtemp()
-        pull_request("https://github.com/pulls/1",
+        pull_request("https://api.github.com/pulls/1",
                      "http://kwalitee.invenio-software.org/status/1",
                      {"ACCESS_TOKEN": "deadbeef",
                       "TRUSTED_DEVELOPERS": ["john.doe@example.org"],
                       "COMPONENTS": ["herp"],
                       "SIGNATURES": ["Signed-off-by"],
-                      "instance_path": instance_path})
+                      "repository": self.repository.id})
 
         latest_requests = httpretty.HTTPretty.latest_requests
         # 5x GET pull, issue, commits, 1 file, spam/eggs.py
@@ -463,41 +506,46 @@ class PullRequestTest(TestCase):
 
         body = json.loads(latest_requests[-2].body)
         assert_that(latest_requests[-2].headers["authorization"],
-                    equal_to(u"token deadbeef"))
+                    equal_to("token deadbeef"))
         assert_that(body["state"], equal_to("error"))
 
-        filename = os.path.join(instance_path, "status_{0}.txt")
-        assert_that(os.path.exists(filename.format(1)))
+        cs = CommitStatus.query.filter_by(repository_id=self.repository.id,
+                                          ).all()
+        assert_that(cs, has_length(1))
+        assert_that(cs[0].content["files"] is None)
 
-        with open(filename.format(1)) as f:
-            data = f.read()
-            assert_that(data,
-                        contains_string("1: spam/eggs.py:2:3: E111 indentation"
-                                        " is not a multiple of four"))
+        bs = BranchStatus.query.filter_by(commit_id=cs[0].id,
+                                          name="test:my-branch").first()
 
-        shutil.rmtree(instance_path)
+        assert_that(bs.errors, equal_to(5))
+        assert_that(bs.content["files"],
+                    has_item("1: spam/eggs.py:2:3: E111 indentation is not a "
+                             "multiple of four"))
 
     @httpretty.activate
-    def test_okay_pull_request_worker(self):
-        """Worker pull_request /pulls/1 with pep8 errors"""
+    def test_okay_pull_request_task(self):
+        """Task pull_request /pulls/1 with pep8 errors"""
         pull = {
             "title": "Lorem ipsum",
-            "url": "https://github.com/pulls/1",
-            "commits_url": "https://github.com/pulls/1/commits",
-            "statuses_url": "https://github.com/statuses/1",
-            "issue_url": "https://github.com/issues/1",
-            "review_comments_url": "https://github.com/pulls/1/comments",
+            "url": "https://api.github.com/pulls/1",
+            "html_url": "https://github.com/pulls/1",
+            "commits_url": "https://api.github.com/pulls/1/commits",
+            "statuses_url": "https://api.github.com/statuses/1",
+            "issue_url": "https://api.github.com/issues/1",
+            "review_comments_url": "https://api.github.com/pulls/1/comments",
             "head": {
-                "sha": "1"
+                "sha": "1",
+                "label": "test:my-branch"
             }
         }
         httpretty.register_uri(httpretty.GET,
-                               "https://github.com/pulls/1",
+                               "https://api.github.com/pulls/1",
                                body=json.dumps(pull),
                                content_type="application/json")
         issue = {
-            "url": "https://github.com/issues/1",
-            "labels_url": "https://github.com/issues/1/labels{/name}",
+            "url": "https://apigithub.com/issues/1",
+            "html_url": "https://github.com/issues/1",
+            "labels_url": "https://api.github.com/issues/1/labels{/name}",
             "id": "42",
             "number": "1",
             "labels": [{"name": "foo"},
@@ -505,7 +553,7 @@ class PullRequestTest(TestCase):
             "state": "open"
         }
         httpretty.register_uri(httpretty.GET,
-                               "https://github.com/issues/1",
+                               "https://api.github.com/issues/1",
                                body=json.dumps(issue),
                                content_type="application/json")
         labels = [{
@@ -518,15 +566,16 @@ class PullRequestTest(TestCase):
             "color": "ff0000"
         }]
         httpretty.register_uri(httpretty.PUT,
-                               "https://github.com/issues/1/labels",
+                               "https://api.github.com/issues/1/labels",
                                status=200,
                                body=json.dumps(labels),
                                content_type="application/json")
         commits = [
             {
-                "url": "https://github.com/commits/1",
+                "url": "https://api.github.com/commits/1",
                 "sha": "1",
-                "comments_url": "https://github.com/commits/1/comments",
+                "html_url": "https://github.com/commits/1",
+                "comments_url": "https://api.github.com/commits/1/comments",
                 "commit": {
                     "message": "herp: derp\r\n\r\nSigned-off-by: John Doe "
                                "<john.doe@example.org>"
@@ -534,7 +583,7 @@ class PullRequestTest(TestCase):
             }
         ]
         httpretty.register_uri(httpretty.GET,
-                               "https://github.com/pulls/1/commits",
+                               "https://api.github.com/pulls/1/commits",
                                body=json.dumps(commits),
                                content_type="application/json")
         files = [{
@@ -544,7 +593,7 @@ class PullRequestTest(TestCase):
             "contents_url": "https://api.github.com/eggs/__init__.py?ref=1"
         }]
         httpretty.register_uri(httpretty.GET,
-                               "https://github.com/pulls/1/files",
+                               "https://api.github.com/pulls/1/files",
                                body=json.dumps(files),
                                content_type="application/json")
         init_py = GPL.format(datetime.now().year)
@@ -553,31 +602,30 @@ class PullRequestTest(TestCase):
                                body=init_py,
                                content_type="text/plain")
         httpretty.register_uri(httpretty.POST,
-                               "https://github.com/commits/1/comments",
+                               "https://api.github.com/commits/1/comments",
                                status=201,
                                body=json.dumps({"id": 1}),
                                content_type="application/json")
         httpretty.register_uri(httpretty.POST,
-                               "https://github.com/pulls/1/comments",
+                               "https://api.github.com/pulls/1/comments",
                                status=201,
                                body=json.dumps({"id": 3}),
                                content_type="application/json")
         status = {"id": 1, "state": "success"}
         httpretty.register_uri(httpretty.POST,
-                               "https://github.com/statuses/1",
+                               "https://api.github.com/statuses/1",
                                status=201,
                                body=json.dumps(status),
                                content_type="application/json")
 
-        instance_path = tempfile.mkdtemp()
-        pull_request("https://github.com/pulls/1",
+        pull_request("https://api.github.com/pulls/1",
                      "http://kwalitee.invenio-software.org/status/1",
                      {"ACCESS_TOKEN": "deadbeef",
                       "TRUSTED_DEVELOPERS": ["john.doe@example.org"],
                       "COMPONENTS": ["herp"],
                       "SIGNATURES": ["Signed-off-by"],
                       "IGNORE": ["E265", "D100"],
-                      "instance_path": instance_path})
+                      "repository": self.repository.id})
 
         latest_requests = httpretty.HTTPretty.latest_requests
         # 5x GET pull, issue, commits, 1 file, spam/eggs.py
@@ -598,14 +646,65 @@ class PullRequestTest(TestCase):
 
         body = json.loads(latest_requests[-2].body)
         assert_that(latest_requests[-2].headers["authorization"],
-                    equal_to(u"token deadbeef"))
+                    equal_to("token deadbeef"))
         assert_that(body["state"], equal_to("success"))
 
-        filename = os.path.join(instance_path, "status_{0}.txt")
-        assert_that(os.path.exists(filename.format(1)))
+        cs = CommitStatus.query.filter_by(repository_id=self.repository.id,
+                                          ).all()
+        assert_that(cs, has_length(1))
+        assert_that(cs[0].content["files"] is None)
 
-        with open(filename.format(1)) as f:
-            data = f.read()
-            assert_that(data, has_length(0))
+        bs = BranchStatus.query.filter_by(commit_id=cs[0].id,
+                                          name="test:my-branch").first()
 
-        shutil.rmtree(instance_path)
+        assert_that(bs.errors, equal_to(0))
+        assert_that(bs.content["commits"], has_length(1))
+        assert_that(bs.content["files"], has_length(0))
+
+    @httpretty.activate
+    def test_known_pull_request_task(self):
+        """Task pull_request /pulls/1 that already exists."""
+        cs1 = CommitStatus(self.repository,
+                           "1",
+                           "https://github.com/pulls/1",
+                           {"message": [], "files": []})
+        cs2 = CommitStatus(self.repository,
+                           "2",
+                           "https://github.com/pulls/1",
+                           {"message": [], "files": []})
+        db.session.add(cs1)
+        db.session.add(cs2)
+        db.session.commit()
+
+        bs = BranchStatus(cs2,
+                          "test:my-branch",
+                          "https://github.com/pulls/1",
+                          {"commits": ["1", "2"], "files": []})
+        db.session.add(bs)
+        db.session.commit()
+
+        pull = {
+            "title": "Lorem ipsum",
+            "url": "https://api.github.com/pulls/1",
+            "html_url": "https://github.com/pulls/1",
+            "commits_url": "https://api.github.com/pulls/1/commits",
+            "statuses_url": "https://api.github.com/statuses/2",
+            "review_comments_url": "https://api.github.com/pulls/1/comments",
+            "issue_url": "https://api.github.com/issues/1",
+            "head": {
+                "sha": "2",
+                "label": "test:my-branch"
+            }
+        }
+        httpretty.register_uri(httpretty.GET,
+                               "https://api.github.com/pulls/1",
+                               body=json.dumps(pull),
+                               content_type="application/json")
+
+        pull_request("https://api.github.com/pulls/1",
+                     "http://kwalitee.invenio-software.org/status/2",
+                     {"ACCESS_TOKEN": "deadbeef",
+                      "repository": self.repository.id})
+
+        latest_requests = httpretty.HTTPretty.latest_requests
+        assert_that(len(latest_requests), equal_to(1), "1x GET + 0x POST")

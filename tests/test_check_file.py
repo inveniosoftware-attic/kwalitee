@@ -21,6 +21,8 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+from __future__ import unicode_literals
+
 import os
 from invenio_kwalitee.kwalitee import check_pep8, check_pep257, check_license
 from unittest import TestCase
@@ -132,7 +134,10 @@ class TestCheckLicense(TestCheckFile):
         assert_that(errors, has_length(0))
 
     def test_unicode_license(self):
-        """invalid_license uses unicode © and multiline years."""
+        """invalid_license uses unicode copyright and multiline years.
+
+        Where copyright is ©.
+        """
         errors = check_license(self.invalid_license, year=2014)
         assert_that(errors, is_not(has_item("25: I101 copyright is missing")))
 

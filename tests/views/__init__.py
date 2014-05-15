@@ -1,4 +1,5 @@
-{#
+# -*- coding: utf-8 -*-
+##
 ## This file is part of Invenio-Kwalitee
 ## Copyright (C) 2014 CERN.
 ##
@@ -19,21 +20,5 @@
 ## In applying this licence, CERN does not waive the privileges and immunities
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
-#}
 
-{%- extends 'page.html' -%}
-
-{% block body %}
-<div class="row">
-  <div class="col-lg-12">
-    <h2>Accounts</h2>
-    <ul>
-  {%- for account in accounts -%}
-      <li><a href="{{ url_for("account", account=account.name) }}">
-        {{- account.name -}}
-      </a></li>
-  {%- endfor -%}
-    </ul>
-  </div>
-</div>
-{% endblock body %}
+"""Integration tests of the views."""

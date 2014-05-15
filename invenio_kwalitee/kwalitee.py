@@ -23,19 +23,15 @@
 
 """Kwalitee checks for PEP8, PEP257, PyFlakes and License."""
 
-import os
+from __future__ import unicode_literals
+
 import re
 import pep8
 import codecs
 import pep257
-import shutil
-import operator
 import pyflakes
 import pyflakes.checker
-import requests
-import tempfile
 import tokenize
-from flask import json
 from datetime import datetime
 
 
@@ -56,15 +52,21 @@ _re_program_3 = re.compile(r"GNU General Public License\s+along\s+with "
                            re.UNICODE | re.MULTILINE)
 
 _messages_codes = {
+    # Global
     "M100": "needs more reviewers",
-    "M101": "missing component name",
-    "M102": "unrecognized component name: {0}",
-    "M103": "no bullets are allowed after signatures",
-    "M104": "missing empty line before bullet",
-    "M105": "indentation of two spaces expected",
-    "M106": "line is too long ({1} > {0})",
-    "M107": "unrecognized bullet/signature",
-    "M108": "signature is missing",
+    "M101": "signature is missing",
+    "M102": "unrecognized bullet/signature",
+    # First line
+    "M110": "missing component name",
+    "M111": "unrecognized component name: {0}",
+    # Dots
+    "M120": "missing empty line before bullet",
+    "M121": "indentation of two spaces expected",
+    # Signatures
+    "M130": "no bullets are allowed after signatures",
+    # Generic
+    "M190": "line is too long ({1} > {0})",
+    "M191": "must not end with a dot '.'",
 }
 
 _licenses_codes = {
@@ -82,15 +84,19 @@ def _check_1st_line(line, components, max_first_line=50, **kwargs):
     and then a short description of the commit.
     """
     errors = []
+    lineno = 1
     if len(line) > max_first_line:
-        errors.append(("M106", 1, max_first_line, len(line)))
+        errors.append(("M190", lineno, max_first_line, len(line)))
+
+    if line.endswith("."):
+        errors.append(("M191", lineno))
 
     if ':' not in line:
-        errors.append(("M101", 1))
+        errors.append(("M110", lineno))
     else:
         component, msg = line.split(':', 1)
         if component not in components:
-            errors.append(("M102", 1, component))
+            errors.append(("M111", lineno, component))
 
     return errors
 
@@ -110,26 +116,27 @@ def _check_bullets(lines, max_length=72, **kwargs):
     for (i, line) in enumerate(lines[1:]):
         if line.startswith('*'):
             if len(missed_lines) > 0:
-                errors.append(("M103", i + 2))
+                errors.append(("M130", i + 2))
             if lines[i].strip() != '':
-                errors.append(("M104", i + 2))
+                errors.append(("M120", i + 2))
             for (j, indented) in enumerate(lines[i + 2:]):
                 if indented.strip() == '':
                     break
                 if not re.search(r"^ {2}\S", indented):
-                    errors.append(("M105", i + j + 3))
+                    errors.append(("M121", i + j + 3))
                 else:
                     skipped.append(i + j + 1)
         elif i not in skipped and line.strip():
             missed_lines.append((i + 2, line))
 
         if len(line) > max_length:
-            errors.append(("M106", i + 2, max_length, len(line)))
+            errors.append(("M190", i + 2, max_length, len(line)))
 
     return errors, missed_lines
 
 
-def _check_signatures(lines, signatures, trusted=None, **kwargs):
+def _check_signatures(lines, signatures, alt_signatures=None, trusted=None,
+                      **kwargs):
     """Check that the signatures are valid.
 
     There should be at least three signatures. If not, one of them should be a
@@ -139,6 +146,7 @@ def _check_signatures(lines, signatures, trusted=None, **kwargs):
 
     :param lines: list of lines (lineno, content) to verify.
     :param signatures: list of supported signature, e.g. Signed-off-by
+    :param alt_signatures: list of alternative signatures, not counted
     :param trusted: list of trusted reviewers, the e-mail address.
     :return: list of errors
     """
@@ -146,15 +154,22 @@ def _check_signatures(lines, signatures, trusted=None, **kwargs):
     errors = []
     trusted = trusted or []
     signatures = tuple(signatures) if signatures else []
-    test = operator.methodcaller('startswith', signatures)
+    alt_signatures = tuple(alt_signatures) if alt_signatures else tuple()
+    signatures += alt_signatures
+
+    test_signatures = re.compile("^({0})".format("|".join(signatures)))
+    test_alt_signatures = re.compile("^({0})".format("|".join(alt_signatures)))
     for i, line in lines:
-        if signatures and test(line):
-            matching.append(line)
+        if signatures and test_signatures.search(line):
+            if line.endswith("."):
+                errors.append(("M191", i))
+            if not alt_signatures or not test_alt_signatures.search(line):
+                matching.append(line)
         else:
-            errors.append(("M107", i))
+            errors.append(("M102", i))
 
     if len(matching) == 0:
-        errors.append(("M108", 1))
+        errors.append(("M101", 1))
         errors.append(("M100", 1))
     elif len(matching) <= 2:
         pattern = re.compile('|'.join(map(lambda x: '<' + re.escape(x) + '>',
@@ -196,9 +211,9 @@ def check_message(message, **kwargs):
     errors += _check_signatures(signature_lines, **kwargs)
 
     def _format(code, lineno, args):
-        return u"{0}: {1}: {2}".format(code,
-                                       lineno,
-                                       _messages_codes[code].format(*args))
+        return "{0}: {1}: {2}".format(code,
+                                      lineno,
+                                      _messages_codes[code].format(*args))
 
     return list(map(lambda x: _format(x[0], x[1], x[2:]), errors))
 
@@ -409,15 +424,6 @@ def check_file(filename, **kwargs):
     return errors
 
 
-def _get_issue_labels(issue_url):
-    """Download the labels of the issue."""
-    issue = json.loads(requests.get(issue_url).content)
-    labels = set()
-    for label in issue["labels"]:
-        labels.add(label["name"])
-    return labels, issue["labels_url"]
-
-
 def get_options(config):
     """Build the options from the Flask config."""
     return {
@@ -431,169 +437,3 @@ def get_options(config):
         "ignore": config.get("IGNORE"),
         "select": config.get("SELECT"),
     }
-
-
-def pull_request(pull_request_url, status_url, config):
-    """Performing all the tests on the pull request.
-
-    Then pings back the given status_url and update the issue labels.
-
-    :param pull_request_url: github api pull request
-    :param status_url: github api status url
-    :param config: configuration dictionary
-    :return: status body and applied labels
-    """
-    body = {}
-    errors = []
-    pull_request = requests.get(pull_request_url)
-    data = json.loads(pull_request.content)
-    options = get_options(config)
-    headers = {
-        "Content-Type": "application/json",
-        # This is required to post comments on GitHub on yours behalf.
-        # Please update your configuration accordingly.
-        "Authorization": "token {0}".format(config["ACCESS_TOKEN"])
-    }
-    instance_path = config["instance_path"]
-
-    commit_sha = data["head"]["sha"]
-    issue_url = data["issue_url"]
-    commits_url = data["commits_url"]
-    files_url = data["commits_url"].replace("/commits", "/files")
-    review_comments_url = data["review_comments_url"]
-
-    # Check only if the title does not contain 'wip'.
-    is_wip = bool(re.match(r"\bwip\b", data["title"], re.IGNORECASE))
-    check = config.get("CHECK_WIP", False) or not is_wip
-    check_commit_messages = config.get("CHECK_COMMIT_MESSAGES", True)
-    check_pep8 = options["pep8"]
-    check_pep257 = options["pep257"]
-    check_pyflakes = options["pyflakes"]
-    check_license = options["license"]
-
-    labels, labels_url = _get_issue_labels(issue_url)
-    labels.discard(config.get("LABEL_WIP", "in_work"))
-    labels.discard(config.get("LABEL_REVIEW", "in_review"))
-    labels.discard(config.get("LABEL_READY", "in_integration"))
-    new_labels = set([])
-
-    if check and check_commit_messages:
-        errs, new_labels, messages = _check_commits(commits_url, **options)
-        errors += errs
-
-        for msg in messages:
-            body = "\n".join(msg["errors"])
-            if body is not "":
-                requests.post(msg["comments_url"],
-                              data=json.dumps(dict(body=body)),
-                              headers=headers)
-
-    if check and (check_pep8 or check_pep257 or check_pyflakes or
-                  check_license):
-        errs, messages = _check_files(files_url, **options)
-        errors += errs
-        for msg in messages:
-            body = "\n".join(msg["errors"])
-            if body is not "":
-                # Comment on first line with problem.
-                position = int(msg["errors"][0].split(':')[0])
-                position = position if position > -1 else 0
-                requests.post(review_comments_url,
-                              data=json.dumps(dict(body=body,
-                                                   commit_id=msg["sha"],
-                                                   path=msg["path"],
-                                                   position=position)),
-                              headers=headers)
-
-        filename = "status_{0}.txt".format(commit_sha)
-        with open(os.path.join(instance_path, filename), "w+") as f:
-            f.write("\n".join(errors))
-
-        state = "error" if len(errors) > 0 else "success"
-        body = dict(state=state,
-                    target_url=status_url,
-                    description="\n".join(errors)[:MAX])
-        requests.post(data["statuses_url"],
-                      data=json.dumps(body),
-                      headers=headers)
-
-    if is_wip:
-        new_labels = set([config.get("LABEL_WIP", "in_work")])
-    if not new_labels:
-        if not errors:
-            new_labels = set([config.get("LABEL_READY", "in_integration")])
-        else:
-            new_labels = set([config.get("LABEL_REVIEW", "in_review")])
-
-    labels.update(new_labels)
-    requests.put(labels_url.replace("{/name}", ""),
-                 data=json.dumps(list(labels)),
-                 headers=headers)
-
-    return dict(body, labels=list(labels))
-
-
-def _check_commits(url, **kwargs):
-    """Check the commit messages of a pull request."""
-    errors = []
-    messages = []
-    labels = set()
-
-    response = requests.get(url)
-    commits = json.loads(response.content)
-    for commit in commits:
-        sha = commit["sha"]
-        errs = check_message(commit["commit"]["message"], **kwargs)
-
-        # filter out the needs more reviewerss
-        e = list(filter(lambda x: not x.startswith("M100:"), errs))
-
-        if len(errs) > len(e):
-            labels.add(kwargs.get("LABEL_REVIEW", "in_review"))
-
-        messages.append({
-            "sha": sha,
-            "comments_url": commit["comments_url"],
-            "errors": e
-        })
-        errors += list(map(lambda x: "{0}: {1}".format(sha, x), errs))
-    return errors, labels, messages
-
-
-def _check_files(url, **kwargs):
-    """Download and runs the checks on the files of a pull request."""
-    errors = []
-    messages = []
-
-    sha_match = re.compile(r"(?<=ref=)[^=]+")
-    response = requests.get(url)
-    files = json.loads(response.content)
-    tmp = tempfile.mkdtemp()
-    try:
-        for f in files:
-            filename = f["filename"]
-            sha = sha_match.search(f["contents_url"]).group(0)
-            if filename.endswith(".py") or filename.endswith(".html"):
-                response = requests.get(f["raw_url"])
-                path = os.path.join(tmp, filename)
-                dirname = os.path.dirname(path)
-                if not os.path.exists(dirname):
-                    os.makedirs(dirname)
-                with open(path, "wb+") as fp:
-                    for block in response.iter_content(1024):
-                        fp.write(block)
-
-                errs = check_file(path, **kwargs)
-
-                messages.append({
-                    "path": filename,
-                    "sha": sha,
-                    "errors": errs
-                })
-
-                errors += list(map(lambda x: "{0}: {1}:{2}"
-                                             .format(sha, filename, x),
-                                   errs))
-    finally:
-        shutil.rmtree(tmp)
-    return errors, messages

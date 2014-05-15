@@ -23,7 +23,7 @@
 
 """Git hooks."""
 
-from __future__ import print_function, absolute_import
+from __future__ import print_function, unicode_literals
 
 import os
 import sys
@@ -56,20 +56,20 @@ def _get_git_author():
     return git_author[:git_author.find(">") + 1]
 
 
-def _get_component(filename, default=u"global"):
+def _get_component(filename, default="global"):
     """Get component name from filename."""
     if hasattr(filename, "decode"):
         filename = filename.decode()
     parts = filename.split(os.path.sep)
 
     if len(parts) >= 3:
-        if parts[1] in u"modules legacy ext".split():
+        if parts[1] in "modules legacy ext".split():
             return parts[2]
     if len(parts) >= 2:
-        if parts[1] in u"base celery utils".split():
+        if parts[1] in "base celery utils".split():
             return parts[1]
     if len(parts) >= 1:
-        if parts[0] in u"grunt docs".split():
+        if parts[0] in "grunt docs".split():
             return parts[0]
     return default
 
@@ -99,7 +99,7 @@ def _prepare_commit_msg(tmp_file, author, files_modified=None, template=None):
         if len(list(msg)):
             return
 
-    component = u"unknown"
+    component = "unknown"
     components = _get_components(files_modified)
 
     if len(components) == 1:
@@ -107,14 +107,14 @@ def _prepare_commit_msg(tmp_file, author, files_modified=None, template=None):
     elif len(components) > 1:
         component = "/".join(components)
         contents.append(
-            u"# WARNING: Multiple components detected - consider splitting "
-            u"commit.\r\n"
+            "# WARNING: Multiple components detected - consider splitting "
+            "commit.\r\n"
         )
 
     with open(tmp_file, "w", "utf-8") as fh:
         fh.write(template.format(component=component,
                                  author=author,
-                                 extra=u"".join(contents)))
+                                 extra="".join(contents)))
 
 
 def _check_message(message, options):
@@ -155,8 +155,8 @@ def commit_msg_hook(argv):
     options = {"allow_empty": True}
 
     if not _check_message(message, options):
-        print(u"Aborting commit due to commit message errors (override with "
-              u"'git commit --no-verify').", file=sys.stderr)
+        print("Aborting commit due to commit message errors (override with "
+              "'git commit --no-verify').", file=sys.stderr)
         return False
 
 
@@ -167,7 +167,7 @@ def post_commit_hook(argv=None):
     options = {"allow_empty": True}
 
     if not _check_message(message, options):
-        print(u"Commit message errors (fix with 'git commit --amend').",
+        print("Commit message errors (fix with 'git commit --amend').",
               file=sys.stderr)
 
         return False
@@ -253,8 +253,8 @@ def pre_commit_hook(argv=None):
         print(error, file=sys.stderr)
 
     if errors:
-        print(u"Aborting commit due to kwalitee errors (override with "
-              u"'git commit --no-verify').",
+        print("Aborting commit due to kwalitee errors (override with "
+              "'git commit --no-verify').",
               file=sys.stderr)
         return False
 

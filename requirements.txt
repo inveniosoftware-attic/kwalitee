@@ -1,7 +1,8 @@
 Flask
 Flask-Script
+Flask-SQLAlchemy
 pep8
 pep257
 pyflakes
 requests
-rq
+rq>=0.4.6

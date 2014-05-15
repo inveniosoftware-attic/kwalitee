@@ -1,55 +1,67 @@
+{#
+## This file is part of Invenio-Kwalitee
+## Copyright (C) 2014 CERN.
+##
+## Invenio-Kwalitee is free software; you can redistribute it and/or
+## modify it under the terms of the GNU General Public License as
+## published by the Free Software Foundation; either version 2 of the
+## License, or (at your option) any later version.
+##
+## Invenio-Kwalitee is distributed in the hope that it will be useful, but
+## WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+## General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with Invenio-Kwalitee; if not, write to the Free Software Foundation,
+## Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+##
+## In applying this licence, CERN does not waive the privileges and immunities
+## granted to it by virtue of its status as an Intergovernmental Organization
+## or submit itself to any jurisdiction.
+#}
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="">
-    <meta name="author" content="">
+    {#<meta name="description" content="">
+    <meta name="author" content="">#}
     <link rel="shortcut icon" href="{{ url_for('static', filename='ico/favicon.ico') }}">
 
-    <title>Invenio Kwalitee</title>
+    <title>
+{%- block title -%}
+        Invenio Kwalitee
+{%- endblock -%}
+    </title>
 
-    <!-- Bootstrap core CSS -->
-    <!-- Latest compiled and minified CSS -->
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
-    <!-- Custom styles for this template -->
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/jumbotron-narrow.css') }}" rel="stylesheet">
 
-    <!-- Just for debugging purposes. Don't actually copy this line! -->
-    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
-
-    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    {# HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries #}
     <!--[if lt IE 9]>
       <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
       <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
     <![endif]-->
   </head>
-
   <body>
-
     <div class="container">
-      <div class="header">
-        <ul class="nav nav-pills pull-right">
-          <li class="active"><a href="/">Home</a></li>
-          <li><a href="http://github.com/inveniosoftware/invenio">GitHub</a></li>
-        </ul>
-        <h3 class="text-muted">Invenio Kwalitee</h3>
-      </div>
-      {% block body %}
-
-      {% endblock body %}
-      <div class="footer">
-        <p>&copy; CERN 2014</p>
-      </div>
-
-    </div> <!-- /container -->
-
-    <!-- Bootstrap core JavaScript
-    ================================================== -->
-    <!-- Latest compiled and minified JavaScript -->
+      <header class="header">
+        <nav>
+          <ul class="nav nav-pills pull-right">
+            <li class="active"><a href="/">Home</a></li>
+            {#<li><a href="http://github.com/inveniosoftware/invenio">GitHub</a></li>#}
+          </ul>
+        </nav>
+        <h1 class="text-muted">Invenio Kwalitee</h1>
+      </header>
+{% block body %}{% endblock body %}
+      <footer class="footer">
+        <p><a href="http://github.com/jirikuncar/invenio-kwalitee">GitHub</a> &copy; CERN 2014</p>
+      </footer>
+    </div>
     <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
-    <!-- Placed at the end of the document so the pages load faster -->
   </body>
 </html>
