@@ -23,7 +23,7 @@
 
 {%- extends 'page.html' -%}
 
-{% block body %}
+{%- block body -%}
 <div class="row">
   <div class="col-lg-12">
     <h2>
@@ -34,37 +34,54 @@
                                repository=repository.name ) }}">
         {{- repository.name -}}
       </a>
+      (<a href="{{ config.get("GITHUB_REPO").format(account=account.name,
+                                                    repository=repository.name) }}">
+        github
+      </a>)
     </h2>
     <ul>
 {%- for commit in commits -%}
       <li>
-        <a href="{{ commit.url }}">{{ commit.sha | truncate(7, True, end="") }}</a>:
-  {%- if commit.errors > 0 %}
+        <strong>{{ commit.sha | truncate(7, True, end="") }}</strong>
         <a href="{{ url_for("commit",
                             account=account.name,
                             repository=repository.name,
                             sha=commit.sha) }}">
-          {{- "{0.errors} errors".format(commit) -}}
-        </a>
-  {%- else %}
+  {%- if commit.is_pending() -%}
+          Pending
+  {%- elif commit.errors > 0 -%}
+          {{ "{0.errors} errors".format(commit) }}
+  {%- else -%}
           Everything is OK
-  {%- endif %}
+  {%- endif -%}
+        </a>
+        (<a href="{{ commit.url }}">github</a>)
+  {%- if commit.branch_statuses %}
         <ul>
-  {%- for branch in commit.branch_statuses %}
+    {%- for branch in commit.branch_statuses %}
           <li>
-    {%- if branch.errors > 0 -%}
-            <a href="{{ branch.url }}">
-              {{- "{0.name} has {0.errors} errors".format(branch) -}}
+            <a href="{{ url_for("branch_status",
+                                account=account.name,
+                                repository=repository.name,
+                                branch=branch.name,
+                                sha=commit.sha) }}">
+              {{ branch.name }}
             </a>
-    {%- else -%}
-            {{- branch.name -}} is OK
-    {%- endif -%}
+      {%- if branch.is_pending() %}
+            is in progress
+      {%- elif branch.errors > 0 %}
+              {{ "has {0.errors} errors".format(branch) }}
+      {%- else -%}
+              is OK
+      {%- endif -%}
+            (<a href="{{ branch.url }}">github</a>)
           </li>
-  {%- endfor %}
+    {%- endfor %}
         </ul>
+  {%- endif -%}
       </li>
-{%- endfor -%}
+{%- endfor %}
     </ul>
   </div>
 </div>
-{% endblock body %}
+{%- endblock body -%}

@@ -1,3 +1,4 @@
+alembic
 Flask
 Flask-Script
 Flask-SQLAlchemy

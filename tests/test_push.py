@@ -30,7 +30,8 @@ from unittest import TestCase
 from invenio_kwalitee import app, db
 from invenio_kwalitee.models import Account, Repository, CommitStatus
 from invenio_kwalitee.tasks import push
-from hamcrest import assert_that, equal_to, contains_string
+from hamcrest import (assert_that, equal_to, contains_string, has_length,
+                      has_item)
 
 from . import MyQueue, DatabaseMixin
 
@@ -65,7 +66,7 @@ class PushTest(TestCase, DatabaseMixin):
     def setUp(self):
         super(PushTest, self).setUp()
         self.databaseUp()
-        owner = Account.find_or_create("invenio")
+        owner = Account.find_or_create("invenio", token="DEADBEEF")
         self.repository = Repository.find_or_create(owner, "test")
 
     def tearDown(self):
@@ -107,14 +108,50 @@ class PushTest(TestCase, DatabaseMixin):
         (fn, commit_url, status_url, config) = queue.dequeue()
         assert_that(fn, equal_to(push))
         assert_that(config["repository"], equal_to(self.repository.id))
-        assert_that(commit_url, equal_to("https://github.com/commits/1"))
+        assert_that(commit_url, equal_to("https://api.github.com"
+                                         "/repos/invenio/test/commits/1"))
         assert_that(status_url, contains_string("/invenio/test/commits/1"))
 
         (fn, commit_url, status_url, config) = queue.dequeue()
         assert_that(fn, equal_to(push))
         assert_that(config["repository"], equal_to(self.repository.id))
-        assert_that(commit_url, equal_to("https://github.com/commits/2"))
+        assert_that(commit_url, equal_to("https://api.github.com"
+                                         "/repos/invenio/test/commits/2"))
         assert_that(status_url, contains_string("/invenio/test/commits/2"))
+
+    def test_push_with_auto_create(self):
+        """POST /payload (push) performs the checks"""
+        queue = MyQueue()
+        # Replace the default Redis queue
+        app.config["queue"] = queue
+        app.config["AUTO_CREATE"] = True
+
+        push_event = {
+            "commits": [{
+                "id": "1",
+                "url": "https://github.com/commits/1"
+            }],
+            "repository": {
+                "name": "doe",
+                "owner": {
+                    "name": "john"
+                }
+            }
+        }
+
+        tester = app.test_client(self)
+        response = tester.post("/payload", content_type="application/json",
+                               headers=(("X-GitHub-Event", "push"),
+                                        ("X-GitHub-Delivery", "1")),
+                               data=json.dumps(push_event))
+
+        assert_that(response.status_code, equal_to(200))
+        body = json.loads(response.data)
+        assert_that(body["payload"]["state"], equal_to("pending"))
+
+        repo = Repository.query.filter_by(name="doe").first()
+        assert_that(repo)
+        assert_that(repo.owner.name, equal_to("john"))
 
     def test_push_to_unknown_repository(self):
         """POST /payload (push) with unknown repository should fails."""
@@ -181,10 +218,13 @@ class PushTest(TestCase, DatabaseMixin):
                                body=json.dumps(status),
                                content_type="application/json")
 
+        CommitStatus.find_or_create(self.repository,
+                                    commit["sha"],
+                                    commit["url"])
+
         push("https://api.github.com/commits/1",
              "https://api.github.com/statuses/1",
-             {"ACCESS_TOKEN": "deadbeef",
-              "COMPONENTS": ["comp"],
+             {"COMPONENTS": ["comp"],
               "SIGNATURES": ["By"],
               "TRUSTED_DEVELOPERS": ["john.doe@example.org"],
               "CHECK_LICENSE": False,
@@ -201,9 +241,17 @@ class PushTest(TestCase, DatabaseMixin):
         for expected, request in zip(expected_requests, latest_requests):
             assert_that(str(request.parsed_body), contains_string(expected))
 
+        cs = CommitStatus.query.filter_by(repository_id=self.repository.id,
+                                          sha=commit["sha"]).first()
+        assert_that(cs)
+        assert_that(cs.state, equal_to("success"))
+        assert_that(cs.errors, equal_to(0))
+        assert_that(cs.content["files"]["spam/__init__.py"]["errors"],
+                    has_length(0))
+
     @httpretty.activate
-    def test_push_broken_commit(self):
-        """Worker push /commits/1 is invalid"""
+    def test_push_broken_commit_message(self):
+        """Worker push /commits/1 is invalid (message)"""
         commit = {
             "sha": 1,
             "url": "https://api.github.com/commits/1",
@@ -211,6 +259,66 @@ class PushTest(TestCase, DatabaseMixin):
             "comments_url": "https://api.github.com/commits/1/comments",
             "commit": {
                 "message": "Fix all the bugs!"
+            },
+            "files": [{
+                "filename": "spam/eggs.py",
+                "status": "modified",
+                "raw_url": "https://github.com/raw/1/spam/eggs.py"
+            }]
+        }
+        httpretty.register_uri(httpretty.GET,
+                               "https://api.github.com/commits/1",
+                               body=json.dumps(commit),
+                               content_type="application/json")
+        eggs_py = '"""Eggs are boiled."""\n'
+        httpretty.register_uri(httpretty.GET,
+                               "https://github.com/raw/1/spam/eggs.py",
+                               body=eggs_py,
+                               content_type="text/plain")
+        httpretty.register_uri(httpretty.POST,
+                               "https://api.github.com/commits/1/comments",
+                               status=201,
+                               body=json.dumps({"id": 1}),
+                               content_type="application/json")
+        status = {"id": 1, "state": "success"}
+        httpretty.register_uri(httpretty.POST,
+                               "https://api.github.com/statuses/1",
+                               status=201,
+                               body=json.dumps(status),
+                               content_type="application/json")
+
+        CommitStatus.find_or_create(self.repository,
+                                    commit["sha"],
+                                    commit["url"])
+
+        push("https://api.github.com/commits/1",
+             "https://api.github.com/statuses/1",
+             {"CHECK_LICENSE": False,
+              "repository": self.repository.id})
+
+        latest_requests = httpretty.HTTPretty.latest_requests
+        assert_that(len(latest_requests), equal_to(4), "2x GET, 2x POST")
+
+        expected_requests = [
+            "",
+            "needs more reviewers",
+            "",
+            "error"
+        ]
+        for expected, request in zip(expected_requests, latest_requests):
+            assert_that(str(request.parsed_body),
+                        contains_string(expected))
+
+    @httpretty.activate
+    def test_push_broken_files(self):
+        """Worker push /commits/1 is invalid (files)"""
+        commit = {
+            "sha": 1,
+            "url": "https://api.github.com/commits/1",
+            "html_url": "https://github.com/commits/1",
+            "comments_url": "https://api.github.com/commits/1/comments",
+            "commit": {
+                "message": "comp: bob\n\nBy: John <john.doe@example.org>"
             },
             "files": [{
                 "filename": "spam/eggs.py",
@@ -232,11 +340,6 @@ class PushTest(TestCase, DatabaseMixin):
                                status=201,
                                body=json.dumps({"id": 1}),
                                content_type="application/json")
-        httpretty.register_uri(httpretty.POST,
-                               "https://api.github.com/commits/1/comments",
-                               status=201,
-                               body=json.dumps({"id": 2}),
-                               content_type="application/json")
         status = {"id": 1, "state": "success"}
         httpretty.register_uri(httpretty.POST,
                                "https://api.github.com/statuses/1",
@@ -244,19 +347,24 @@ class PushTest(TestCase, DatabaseMixin):
                                body=json.dumps(status),
                                content_type="application/json")
 
+        CommitStatus.find_or_create(self.repository,
+                                    commit["sha"],
+                                    commit["url"])
+
         push("https://api.github.com/commits/1",
              "https://api.github.com/statuses/1",
-             {"ACCESS_TOKEN": "deadbeef",
+             {"COMPONENTS": ["comp"],
+              "SIGNATURES": ["By"],
+              "TRUSTED_DEVELOPERS": ["john.doe@example.org"],
               "repository": self.repository.id})
 
         latest_requests = httpretty.HTTPretty.latest_requests
-        assert_that(len(latest_requests), equal_to(5), "2x GET, 3x POST")
+        assert_that(len(latest_requests), equal_to(4), "2x GET, 2x POST")
 
         expected_requests = [
             "",
             "",
             "F821 undefined name 'foo'",
-            "needs more reviewers",
             "error"
         ]
         for expected, request in zip(expected_requests, latest_requests):
@@ -269,7 +377,7 @@ class PushTest(TestCase, DatabaseMixin):
         cs = CommitStatus(self.repository,
                           "1",
                           "https://github.com/commits/1",
-                          {"message": [], "files": []})
+                          {"message": [], "files": {}})
         db.session.add(cs)
         db.session.commit()
 
@@ -294,8 +402,7 @@ class PushTest(TestCase, DatabaseMixin):
 
         push("https://api.github.com/commits/1",
              "https://api.github.com/statuses/1",
-             {"ACCESS_TOKEN": "deadbeef",
-              "repository": self.repository.id})
+             {"repository": self.repository.id})
 
         latest_requests = httpretty.HTTPretty.latest_requests
         assert_that(len(latest_requests), equal_to(1), "1x GET")
@@ -347,8 +454,7 @@ class PushTest(TestCase, DatabaseMixin):
 
         push("https://api.github.com/commits/1",
              "https://api.github.com/statuses/1",
-             {"ACCESS_TOKEN": "deadbeef",
-              "repository": self.repository.id})
+             {"repository": self.repository.id})
 
         latest_requests = httpretty.HTTPretty.latest_requests
         assert_that(len(latest_requests), equal_to(4), "2x GET, 2x POST")
@@ -362,3 +468,9 @@ class PushTest(TestCase, DatabaseMixin):
         for expected, request in zip(expected_requests, latest_requests):
             assert_that(str(request.parsed_body),
                         contains_string(expected))
+
+        cs = CommitStatus.query.filter_by(id=cs.id).first()
+        assert_that(cs)
+        assert_that(cs.is_pending(), equal_to(False))
+        assert_that(cs.content["files"]["spam/eggs.py"]["errors"],
+                    has_item("1: D100 Docstring missing"))

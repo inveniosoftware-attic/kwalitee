@@ -7,6 +7,7 @@ Invenio-Kwalitee
 .. image:: https://coveralls.io/repos/jirikuncar/invenio-kwalitee/badge.png?branch=master
     :target: https://coveralls.io/r/jirikuncar/invenio-kwalitee
 
+
 Installation
 ============
 Invenio-Kwalitee is on PyPI so all you need is: ::
@@ -53,18 +54,25 @@ Kwalitee checks
      bulletted list. (using present tense).
    * Required signatures: ``Signed-off-by`` and ``Reviewed-by``.
 
+
 Testing
 =======
 Running the tests are as simple as: ::
 
-    python setup.py test
-
-or (to also show test coverage) ::
-
     python setup.py nosetests
+
 
 Deployment
 ==========
+
+Unless ``AUTO_CREATE`` is set to true, you'll have to enable the repositories
+individually to authorize events from Github.
+
+.. code-block:: console
+
+    $ kwalitee repository add invenio/test
+    invenio/test is now allowed to webhook kwalitee!
+
 
 Upstart (Ubuntu)
 ----------------

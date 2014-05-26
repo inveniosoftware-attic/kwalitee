@@ -1,5 +1,4 @@
 {#
-##
 ## This file is part of Invenio-Kwalitee
 ## Copyright (C) 2014 CERN.
 ##
@@ -25,26 +24,34 @@
 {%- extends 'page.html' -%}
 {%- import "helpers.html" as helpers -%}
 
-{% block body %}
+{%- block body -%}
 {%- set content = commit.content -%}
 <div class="row">
   <div class="col-lg-12">
     <h2>
       {{ helpers.repository(account, repository) -}}
-      /
-      {{- commit.sha | truncate(7, True, end="") }}
+      /<a href="{{ url_for("commit",
+                           account=account.name,
+                           repository=repository.name,
+                           sha=commit.sha) }}">
+        {{- commit.sha | truncate(7, True, end="") -}}
+      </a>
       (<a href="{{ commit.url }}">github</a>)
     </h2>
+  {%- if commit.is_pending() %}
+    <p>
+      Pending
+    <p>
+  {%- else %}
+    {%- if content["message"] %}
     <pre>
-      {%- for line in content["message"] -%}
+        {%- for line in content["message"] -%}
         {{- line }}
 {% endfor -%}
     </pre>
-    <pre>
-      {%- for line in content["files"] -%}
-        {{- line }}
-{% endfor -%}
-    </pre>
+    {%- endif %}
+    {{ helpers.files(content.get("files")) }}
   </div>
+  {%- endif %}
 </div>
-{% endblock body %}
+{%- endblock body -%}

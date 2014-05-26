@@ -24,15 +24,18 @@
 {%- extends 'page.html' -%}
 {%- import "helpers.html" as helpers -%}
 
-{% block body %}
+{%- block body -%}
 {%- set content = branch.content -%}
 <div class="row">
   <div class="col-lg-12">
     <h2>
       {{ helpers.repository(account, repository) -}}
-      /
-      {{- branch.name -}}
-      /
+      /<a href="{{ url_for("branch",
+                           account=account.name,
+                           repository=repository.name,
+                           branch=branch.name) }}">
+        {{- branch.name -}}
+      </a>/
       {{- commit.sha | truncate(7, True, end="") }}
       (<a href="{{ branch.url }}">github</a>)
     </h2>
@@ -49,16 +52,13 @@
       </li>
   {%- endfor %}
     </ul>
-    <h3>Files</h3>
-  {%- if content["files"] %}
-    <pre>
-      {%- for line in content["files"] -%}
-        {{- line }}
-{% endfor -%}
-    </pre>
-    {%- else %}
-    <p>Everything is okay.</p>
+  {%- if branch.is_pending() %}
+    <p>
+      Pending
+    </p>
+  {%- else %}
+    {{- helpers.files(content.get("files")) }}
   {%- endif %}
   </div>
 </div>
-{% endblock body %}
+{%- endblock body -%}

@@ -52,18 +52,18 @@ class AccountTest(TestCase, DatabaseMixin):
         """GET /{account} displays the repositories."""
 
         tester = app.test_client(self)
-        response = tester.get("/{0}".format(self.owner.name))
+        response = tester.get("/{0}/".format(self.owner.name))
 
         assert_that(response.status_code, equal_to(200))
         for repository in self.repositories:
             assert_that(response.get_data(as_text=True),
-                        contains_string("/{0}/{1}".format(self.owner.name,
-                                                          repository)))
+                        contains_string("/{0}/{1}/".format(self.owner.name,
+                                                           repository)))
 
     def test_get_account_doesnt_exist(self):
         """GET /{account} raise 404 if not found."""
 
         tester = app.test_client(self)
-        response = tester.get("/404")
+        response = tester.get("/404/")
 
         assert_that(response.status_code, equal_to(404))

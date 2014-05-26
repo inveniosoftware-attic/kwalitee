@@ -39,3 +39,27 @@
   {{- repository.name -}}
 </a>
 {%- endmacro -%}
+
+{%- macro files(content) -%}
+{# Build the file errors view.
+ #
+ # if content is empty then everything is ok
+ #}
+  {%- if content %}
+<h3>Files</h3>
+    {%- for filename, data in content.items() -%}
+      {%- if data["errors"] %}
+<h4>{{ filename }}</h4>
+<pre>
+      {%- for error in data["errors"] -%}
+  {{- error }}
+{% endfor -%}
+</pre>
+      {%- else %}
+        <!-- {{ filename}} was ok -->
+      {%- endif %}
+    {%- endfor %}
+  {%- else %}
+<p>Everything is OK.</p>
+  {%- endif %}
+{%- endmacro -%}

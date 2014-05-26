@@ -74,6 +74,7 @@ class PullRequestTest(TestCase, DatabaseMixin):
         self.databaseDown()
         super(PullRequestTest, self).tearDown()
 
+    @httpretty.activate
     def test_pull_request(self):
         """POST /payload (pull_request) performs the checks"""
         queue = MyQueue()
@@ -85,21 +86,47 @@ class PullRequestTest(TestCase, DatabaseMixin):
             "number": 1,
             "pull_request": {
                 "title": "Lorem ipsum",
-                "url": "https://github.com/pulls/1",
-                "commits_url": "https://github.com/pulls/1/commits",
-                "statuses_url": "https://github.com/pulls/1/statuses",
+                "url": "https://api.github.com/pulls/1",
+                "html_url": "https://github.com/pulls/1",
+                "commits_url": "https://api.github.com/pulls/1/commits",
+                "statuses_url": "https://api.github.com/pulls/1/statuses",
                 "head": {
-                    "sha": "1",
-                    "label": "test:my-branch"
+                    "sha": "2",
+                    "label": "spam:wip/my-branch",
+                    "ref": "wip/my-branch"
                 }
             },
             "repository": {
                 "name": "test",
                 "owner": {
-                    "name": "invenio"
+                    "login": "invenio"
                 }
             }
         }
+
+        commits = [
+            {
+                "url": "https://api.github.com/commits/1",
+                "sha": "1",
+                "html_url": "https://github.com/commits/1",
+                "comments_url": "https://api.github.com/commits/1/comments",
+                "commit": {
+                    "message": "herp derp"
+                }
+            }, {
+                "url": "https://api.github.com/commits/2",
+                "sha": "2",
+                "html_url": "https://github.com/commits/2",
+                "comments_url": "https://api.github.com/commits/2/comments",
+                "commit": {
+                    "message": "fix all the bugs!"
+                }
+            }
+        ]
+        httpretty.register_uri(httpretty.GET,
+                               "https://api.github.com/pulls/1/commits",
+                               body=json.dumps(commits),
+                               content_type="application/json")
 
         tester = app.test_client(self)
         response = tester.post("/payload", content_type="application/json",
@@ -114,7 +141,24 @@ class PullRequestTest(TestCase, DatabaseMixin):
         (fn, pull_request_url, status_url, config) = queue.dequeue()
         self.assertEquals(pull_request, fn)
         assert_that(fn, equal_to(pull_request))
-        assert_that(pull_request_url, equal_to("https://github.com/pulls/1"))
+        assert_that(pull_request_url,
+                    equal_to("https://api.github.com/pulls/1"))
+
+        cs = CommitStatus.query.filter_by(repository_id=self.repository.id,
+                                          sha="1").first()
+        assert_that(cs)
+        assert_that(cs.state, equal_to("pending"))
+
+        cs = CommitStatus.query.filter_by(repository_id=self.repository.id,
+                                          sha="2").first()
+        assert_that(cs)
+        assert_that(cs.state, equal_to("pending"))
+
+        bs = BranchStatus.query.filter_by(commit_id=cs.id,
+                                          name="spam:wip/my-branch").first()
+        assert_that(bs)
+        assert_that(bs.is_pending())
+        assert_that(bs.state, equal_to("pending"))
 
     @httpretty.activate
     def test_pull_request_task(self):
@@ -235,6 +279,11 @@ class PullRequestTest(TestCase, DatabaseMixin):
                                body=json.dumps(status),
                                content_type="application/json")
 
+        for commit in commits:
+            CommitStatus.find_or_create(self.repository,
+                                        commit["sha"],
+                                        commit["url"])
+
         pull_request("https://api.github.com/pulls/1",
                      "http://kwalitee.invenio-software.org/status/2",
                      {"ACCESS_TOKEN": "deadbeef",
@@ -248,7 +297,6 @@ class PullRequestTest(TestCase, DatabaseMixin):
         expected_requests = [
             "",
             "",
-            "",
             "missing component name",
             "signature is missing",
             "",
@@ -257,13 +305,14 @@ class PullRequestTest(TestCase, DatabaseMixin):
             "F821 undefined name",
             "I101 copyright is missing",
             "/status/2",
+            "",
             "in_review"
         ]
         for expected, request in zip(expected_requests, latest_requests):
             assert_that(str(request.body), contains_string(expected))
 
-        body = json.loads(latest_requests[-2].body)
-        assert_that(latest_requests[-2].headers["authorization"],
+        body = json.loads(latest_requests[-3].body)
+        assert_that(latest_requests[-3].headers["authorization"],
                     equal_to("token deadbeef"))
         assert_that(body["state"], equal_to("error"))
 
@@ -272,9 +321,9 @@ class PullRequestTest(TestCase, DatabaseMixin):
 
         assert_that(cs, has_length(2))
         assert_that(cs[0].content["message"],
-                    has_item("M110: 1: missing component name"))
+                    has_item("1: M110 missing component name"))
         assert_that(cs[1].content["message"],
-                    has_item("M100: 1: needs more reviewers"))
+                    has_item("1: M100 needs more reviewers"))
 
         bs = BranchStatus.query.filter_by(commit_id=cs[0].id,
                                           name="test:my-branch").first()
@@ -282,9 +331,9 @@ class PullRequestTest(TestCase, DatabaseMixin):
         assert_that(bs)
         assert_that(bs.content["commits"], has_items("1", "2"))
         assert_that(bs.errors, equal_to(12))
-        assert_that(bs.content["files"],
-                    has_item("2: spam/eggs.py:2:3: E111 indentation is not a "
-                             "multiple of four"))
+        assert_that(
+            bs.content["files"]["spam/eggs.py"]["errors"],
+            has_item("2:3: E111 indentation is not a multiple of four"))
 
     @httpretty.activate
     def test_wip_pull_request_task(self):
@@ -359,6 +408,11 @@ class PullRequestTest(TestCase, DatabaseMixin):
                                body=json.dumps(issue),
                                content_type="application/json")
 
+        for commit in commits:
+            CommitStatus.find_or_create(self.repository,
+                                        commit["sha"],
+                                        commit["url"])
+
         pull_request("https://api.github.com/pulls/1",
                      "http://kwalitee.invenio-software.org/status/2",
                      {"ACCESS_TOKEN": "deadbeef",
@@ -432,9 +486,9 @@ class PullRequestTest(TestCase, DatabaseMixin):
                                content_type="application/json")
         commits = [
             {
-                "url": "https://api.github.com/commits/1",
+                "url": "https://api.github.com/commits/2",
                 "sha": "2",
-                "html_url": "https://github.com/commits/1",
+                "html_url": "https://github.com/commits/2",
                 "comments_url": "https://api.github.com/commits/1/comments",
                 "commit": {
                     "message": "herp: derp\r\n\r\nSigned-off-by: John Doe "
@@ -478,6 +532,11 @@ class PullRequestTest(TestCase, DatabaseMixin):
                                body=json.dumps(status),
                                content_type="application/json")
 
+        for commit in commits:
+            CommitStatus.find_or_create(self.repository,
+                                        commit["sha"],
+                                        commit["url"])
+
         pull_request("https://api.github.com/pulls/1",
                      "http://kwalitee.invenio-software.org/status/1",
                      {"ACCESS_TOKEN": "deadbeef",
@@ -496,16 +555,16 @@ class PullRequestTest(TestCase, DatabaseMixin):
             "",
             "",
             "",
-            "",
             "F821 undefined name",
             "/status/1",
+            "",
             "in_review",
         ]
         for expected, request in zip(expected_requests, latest_requests):
             assert_that(str(request.body), contains_string(expected))
 
-        body = json.loads(latest_requests[-2].body)
-        assert_that(latest_requests[-2].headers["authorization"],
+        body = json.loads(latest_requests[-3].body)
+        assert_that(latest_requests[-3].headers["authorization"],
                     equal_to("token deadbeef"))
         assert_that(body["state"], equal_to("error"))
 
@@ -513,14 +572,16 @@ class PullRequestTest(TestCase, DatabaseMixin):
                                           ).all()
         assert_that(cs, has_length(1))
         assert_that(cs[0].content["files"] is None)
+        assert_that(cs[0].sha, equal_to("2"))
+        assert_that(cs[0].is_pending(), equal_to(False))
 
         bs = BranchStatus.query.filter_by(commit_id=cs[0].id,
                                           name="test:my-branch").first()
 
         assert_that(bs.errors, equal_to(5))
-        assert_that(bs.content["files"],
-                    has_item("1: spam/eggs.py:2:3: E111 indentation is not a "
-                             "multiple of four"))
+        assert_that(
+            bs.content["files"]["spam/eggs.py"]["errors"],
+            has_item("2:3: E111 indentation is not a multiple of four"))
 
     @httpretty.activate
     def test_okay_pull_request_task(self):
@@ -618,6 +679,11 @@ class PullRequestTest(TestCase, DatabaseMixin):
                                body=json.dumps(status),
                                content_type="application/json")
 
+        for commit in commits:
+            CommitStatus.find_or_create(self.repository,
+                                        commit["sha"],
+                                        commit["url"])
+
         pull_request("https://api.github.com/pulls/1",
                      "http://kwalitee.invenio-software.org/status/1",
                      {"ACCESS_TOKEN": "deadbeef",
@@ -637,15 +703,15 @@ class PullRequestTest(TestCase, DatabaseMixin):
             "",
             "",
             "",
-            "",
             "/status/1",
+            "",
             "in_integration",
         ]
         for expected, request in zip(expected_requests, latest_requests):
             assert_that(str(request.body), contains_string(expected))
 
-        body = json.loads(latest_requests[-2].body)
-        assert_that(latest_requests[-2].headers["authorization"],
+        body = json.loads(latest_requests[-3].body)
+        assert_that(latest_requests[-3].headers["authorization"],
                     equal_to("token deadbeef"))
         assert_that(body["state"], equal_to("success"))
 
@@ -653,13 +719,15 @@ class PullRequestTest(TestCase, DatabaseMixin):
                                           ).all()
         assert_that(cs, has_length(1))
         assert_that(cs[0].content["files"] is None)
+        assert_that(cs[0].is_pending(), equal_to(False))
 
         bs = BranchStatus.query.filter_by(commit_id=cs[0].id,
                                           name="test:my-branch").first()
 
         assert_that(bs.errors, equal_to(0))
         assert_that(bs.content["commits"], has_length(1))
-        assert_that(bs.content["files"], has_length(0))
+        assert_that(bs.content["files"]["eggs/__init__.py"]["errors"],
+                    has_length(0))
 
     @httpretty.activate
     def test_known_pull_request_task(self):
@@ -667,11 +735,11 @@ class PullRequestTest(TestCase, DatabaseMixin):
         cs1 = CommitStatus(self.repository,
                            "1",
                            "https://github.com/pulls/1",
-                           {"message": [], "files": []})
+                           {"message": [], "files": {}})
         cs2 = CommitStatus(self.repository,
                            "2",
-                           "https://github.com/pulls/1",
-                           {"message": [], "files": []})
+                           "https://github.com/pulls/2",
+                           {"message": [], "files": {}})
         db.session.add(cs1)
         db.session.add(cs2)
         db.session.commit()
@@ -679,7 +747,7 @@ class PullRequestTest(TestCase, DatabaseMixin):
         bs = BranchStatus(cs2,
                           "test:my-branch",
                           "https://github.com/pulls/1",
-                          {"commits": ["1", "2"], "files": []})
+                          {"commits": ["1", "2"], "files": {}})
         db.session.add(bs)
         db.session.commit()
 

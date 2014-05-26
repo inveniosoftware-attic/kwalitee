@@ -41,6 +41,34 @@ from .models import Repository, BranchStatus, CommitStatus
 LOGGER = logging.getLogger("rq.worker")
 
 
+def get_headers(repository, config):
+    """Get the HTTP headers for the GitHub api.
+
+    This is required to post comments on GitHub on your behalf.
+    Please update your configuration accordingly.
+
+    .. code-block:: python
+
+        ACCESS_TOKEN = "deadbeef..."
+
+    It can also be overwritten per user.
+
+    .. code-block:: console
+
+        $ kwalitee account add username --token=deadbeef...
+
+    :return: HTTP headers
+    :rtype: dict
+
+    """
+    token = repository.owner.token or config["ACCESS_TOKEN"]
+
+    return {
+        "Content-Type": "application/json",
+        "Authorization": "token {token}".format(token=token)
+    }
+
+
 def push(commit_url, status_url, config):
     """Performing all the tests on the commit.
 
@@ -49,18 +77,12 @@ def push(commit_url, status_url, config):
 
     """
     body = {}
-    errors = {"message": [], "files": []}
     length = 0
 
     repository = Repository.query.filter_by(id=config["repository"]).first()
 
     options = get_options(config)
-    headers = {
-        "Content-Type": "application/json",
-        # This is required to post comments on GitHub on yours behalf.
-        # Please update your configuration accordingly.
-        "Authorization": "token {0}".format(config["ACCESS_TOKEN"])
-    }
+    headers = get_headers(repository, config)
 
     check_commit_messages = config.get("CHECK_COMMIT_MESSAGES", True)
     check_pep8 = options["pep8"]
@@ -81,42 +103,48 @@ def push(commit_url, status_url, config):
         repository_id=repository.id,
         sha=sha).first()
 
+    if not commit_status:
+        raise AssertionError("Unknown commit: {repo.fullname}/{sha}"
+                             .format(repo=repository, sha=sha))
+
     # This commit might have been checked in a pull request, which skipped
     # the files check.
     is_new = False
     checked = False
-    if not commit_status or commit_status.content["files"] is None:
+    if commit_status.is_pending() or commit_status.content["files"] is None:
         is_new = True
 
-    if not commit_status and check_commit_messages:
+    if commit_status.is_pending() and check_commit_messages:
         errs, commit_status = _check_commit(repository, data, **options)
+        length = len(errs)
         checked = True
 
-    errors = commit_status.content
-
-    if is_new and check_files:
-        tmp = tempfile.mkdtemp()
-        filenames = _download_files_from_commit(files, sha, tmp)
-        errs, messages = _check_files(filenames, tmp, **options)
-        shutil.rmtree(tmp)
-
-        errors["files"] = errs
-        length += len(errs)
-
-        if len(errs):
-            _post_file_comments(comments_url, messages, headers)
-
-    db.session.add(commit_status)
-    db.session.commit()
-
     if checked and length:
-        body = "\n".join(errors["message"])
+        body = "\n".join(commit_status.content["message"])
         try:
             requests.post(comments_url,
                           data=json.dumps(dict(body=body.strip())),
                           headers=headers)
         except requests.RequestException:
             LOGGER.exception(comments_url)
+
+    if is_new and check_files:
+        tmp = tempfile.mkdtemp()
+        filenames = _download_files_from_commit(files, sha, tmp)
+        total, messages = _check_files(filenames, tmp, **options)
+        shutil.rmtree(tmp)
+
+        # Cannot modify it directly
+        content = commit_status.content
+        content["files"] = messages
+        commit_status.content = content
+        length += total
+
+        if total:
+            _post_file_comments(comments_url, messages, headers)
+
+    db.session.add(commit_status)
+    db.session.commit()
 
     state = "error" if length > 0 else "success"
     body = dict(state=state,
@@ -145,7 +173,7 @@ def pull_request(pull_request_url, status_url, config):
     :param config: configuration dictionary
     :return: status body and applied labels
     """
-    errors = {"message": [], "commits": [], "files": []}
+    errors = {"message": [], "commits": [], "files": {}}
     length = 0
 
     repository = Repository.query.filter_by(id=config["repository"]).first()
@@ -154,12 +182,7 @@ def pull_request(pull_request_url, status_url, config):
     data = json.loads(pull_request.content)
 
     options = get_options(config)
-    headers = {
-        "Content-Type": "application/json",
-        # This is required to post comments on GitHub on your behalf.
-        # Please update your configuration accordingly.
-        "Authorization": "token {0}".format(config["ACCESS_TOKEN"])
-    }
+    headers = get_headers(repository, config)
 
     commit_sha = data["head"]["sha"]
     issue_url = data["issue_url"]
@@ -191,12 +214,6 @@ def pull_request(pull_request_url, status_url, config):
     check_license = options["license"]
     check_files = check_pep8 or check_pep257 or check_license
 
-    labels, labels_url = _get_issue_labels(issue_url)
-    labels.discard(config.get("LABEL_WIP", "in_work"))
-    labels.discard(config.get("LABEL_REVIEW", "in_review"))
-    labels.discard(config.get("LABEL_READY", "in_integration"))
-    new_labels = set([])
-
     # Checking commits
     errs, new_labels, messages = _check_commits(repository,
                                                 commits_url,
@@ -223,15 +240,14 @@ def pull_request(pull_request_url, status_url, config):
     if check and check_files:
         tmp = tempfile.mkdtemp()
         filenames = _download_files_from_pull_request(files_url, tmp)
-        errs, messages = _check_files(filenames, tmp, **options)
+        total, messages = _check_files(filenames, tmp, **options)
         shutil.rmtree(tmp)
 
-        errors["files"] += errs
-        length += len(errs)
+        errors["files"].update(messages)
+        length += total
 
-        if len(errs):
+        if total:
             _post_file_comments(review_comments_url, messages, headers)
-
         state = "error" if length > 0 else "success"
         body = dict(state=state,
                     target_url=status_url,
@@ -258,6 +274,22 @@ def pull_request(pull_request_url, status_url, config):
             new_labels = set([config.get("LABEL_READY", "in_integration")])
         else:
             new_labels = set([config.get("LABEL_REVIEW", "in_review")])
+    labels = _update_labels(issue_url, new_labels, headers, config)
+
+    return dict(errors, labels=list(labels))
+
+
+def _update_labels(issue_url, new_labels, headers, config):
+    """Update the labels of an issue.
+
+    :param issue_url: url of the issue to read the existing labels from.
+    :param new_labels: set of new labels to be applied.
+    :return: set of updated labels of the issue.
+    """
+    labels, labels_url = _get_issue_labels(issue_url)
+    labels.discard(config.get("LABEL_WIP", "in_work"))
+    labels.discard(config.get("LABEL_REVIEW", "in_review"))
+    labels.discard(config.get("LABEL_READY", "in_integration"))
 
     labels.update(new_labels)
     try:
@@ -267,12 +299,16 @@ def pull_request(pull_request_url, status_url, config):
     except requests.RequestException:
         LOGGER.exception(labels_url)
 
-    return dict(errors, labels=list(labels))
+    return labels
 
 
 def _post_file_comments(comments_url, messages, headers):
     """Post comment on each file."""
-    for msg in messages:
+    # Sorting the filenames so the output is predictable and tests are easier.
+    filenames = list(messages.keys())
+    filenames.sort()
+    for filename in filenames:
+        msg = messages[filename]
         body = "\n".join(msg["errors"])
         if body is not "":
             # Comment on first line.
@@ -281,7 +317,7 @@ def _post_file_comments(comments_url, messages, headers):
                 requests.post(comments_url,
                               data=json.dumps(dict(body=body,
                                                    commit_id=msg["sha"],
-                                                   path=msg["path"],
+                                                   path=filename,
                                                    position=position)),
                               headers=headers)
             except requests.RequestException:
@@ -318,9 +354,8 @@ def _download_files_from_commit(files, sha, tmp):
     for f in files:
         filename = f["filename"]
 
-        _download_file(f["raw_url"], os.path.join(tmp, filename))
-
-        yield (sha, filename)
+        if _download_file(f["raw_url"], os.path.join(tmp, filename)):
+            yield (sha, filename)
 
 
 def _download_file(source, destination):
@@ -356,15 +391,19 @@ def _check_commit(repository, commit, **kwargs):
     """Check one commit message."""
     errs = None
     sha = commit["sha"]
-    url = commit["html_url"]
-    commit_status = CommitStatus.find_or_create(repository, sha, url)
+    commit_status = CommitStatus.query.filter_by(repository_id=repository.id,
+                                                 sha=sha).first()
 
-    if commit_status.id:
-        errs = commit_status.content["message"]
-    else:
+    if not commit_status:
+        raise AssertionError("Unknown commit: {repo.fullname}/{sha}"
+                             .format(repo=repository, sha=sha))
+
+    if commit_status.is_pending():
         errs = check_message(commit["commit"]["message"], **kwargs)
         commit_status.content = dict(commit_status.content,
                                      **{"message": errs})
+    else:
+        errs = commit_status.content["message"]
 
     return errs, commit_status
 
@@ -391,7 +430,7 @@ def _check_commits(repository, url, **kwargs):
         else:
             commit_status = CommitStatus.find_or_create(repository, sha, url)
 
-        # filter out the needs more reviewerss
+        # filter out the needs more reviewers
         e = list(filter(lambda x: not x.startswith("M100:"), errs))
 
         if len(errs) > len(e):
@@ -401,29 +440,45 @@ def _check_commits(repository, url, **kwargs):
             "sha": sha,
             "status": commit_status,
             "comments_url": commit["comments_url"],
-            "errors": {"message": e,
-                       "files": {}}
+            "errors": {
+                "message": e,
+                "files": {}
+            }
         })
         errors += list(map(lambda x: "{0}: {1}".format(sha, x), errs))
     return errors, labels, messages
 
 
-def _check_files(files, tmp, **kwargs):
-    """Download and runs the checks on the files of a pull request."""
-    errors = []
-    messages = []
+def _check_files(files, cwd, **kwargs):
+    """Download and runs the checks on the files of a pull request.
+
+    Format of the dict returned.
+
+    .. code-block:: json
+
+        {
+            "filename": {
+                "sha": ...
+                "errors": [...]
+            },
+            "filename2": { ... }
+        }
+
+    :param files: list of files ``(sha, filename)``.
+    :param cwd: directory where the files are located.
+    :param kwargs: arguments for :meth:`check_file`.
+    :return: tuple composed of the number of errors found and a dict with the
+             files checked.
+    """
+    total = 0
+    messages = {}
 
     for sha, filename in files:
-        path = os.path.join(tmp, filename)
-        errs = check_file(path, **kwargs)
+        errors = check_file(os.path.join(cwd, filename), **kwargs)
 
-        messages.append({
-            "path": filename,
+        messages[filename] = {
             "sha": sha,
-            "errors": errs
-        })
-
-        errors += list(map(lambda x: "{0}: {1}:{2}"
-                                     .format(sha, filename, x),
-                           errs))
-    return errors, messages
+            "errors": errors
+        }
+        total += len(errors)
+    return total, messages

@@ -30,12 +30,13 @@ import os
 from flask import Flask
 from flask.ext.sqlalchemy import SQLAlchemy
 from rq import Queue
+from werkzeug.routing import BaseConverter
 
 from .worker import conn
 
 
 __docformat__ = "restructuredtext en"
-__version__ = "0.2-dev"
+__version__ = "0.2.0a.20140604"
 __all__ = ("app", "db", "CommitStatus", "BranchStatus", "Repository",
            "Account")
 
@@ -67,14 +68,26 @@ if not os.path.exists(database):
 
 
 # Routing
+class ShaConverter(BaseConverter):
+
+    """Werkzeug routing converter for sha-1 (truncated or full)."""
+
+    regex = r'(?!/)(?:[a-fA-F0-9]{40}|[a-fA-F0-9]{7})'
+    weight = 150
+
+
+app.url_map.converters['sha'] = ShaConverter
+
 from . import views
 app.add_url_rule("/", "index", views.index, methods=["GET"])
-app.add_url_rule("/<account>", "account", views.account, methods=["GET"])
-app.add_url_rule("/<account>/<repository>", "repository", views.repository,
+app.add_url_rule("/<account>/", "account", views.account, methods=["GET"])
+app.add_url_rule("/<account>/<repository>/", "repository", views.repository,
                  methods=["GET"])
-app.add_url_rule("/<account>/<repository>/commits/<sha>", "commit",
+app.add_url_rule("/<account>/<repository>/commits/<sha:sha>/", "commit",
                  views.commit, methods=["GET"])
-app.add_url_rule("/<account>/<repository>/branches/<sha>/<branch>", "branch",
+app.add_url_rule("/<account>/<repository>/branches/<sha:sha>/<path:branch>",
+                 "branch_status", views.branch_status, methods=["GET"])
+app.add_url_rule("/<account>/<repository>/branches/<path:branch>", "branch",
                  views.branch, methods=["GET"])
 app.add_url_rule("/payload", "payload", views.payload, methods=["POST"])
 # legacy

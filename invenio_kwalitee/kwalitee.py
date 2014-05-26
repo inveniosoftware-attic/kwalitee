@@ -211,10 +211,11 @@ def check_message(message, **kwargs):
     errors += _check_signatures(signature_lines, **kwargs)
 
     def _format(code, lineno, args):
-        return "{0}: {1}: {2}".format(code,
-                                      lineno,
-                                      _messages_codes[code].format(*args))
+        return "{0}: {1} {2}".format(lineno,
+                                     code,
+                                     _messages_codes[code].format(*args))
 
+    errors.sort()
     return list(map(lambda x: _format(x[0], x[1], x[2:]), errors))
 
 
@@ -314,7 +315,11 @@ def check_pep257(filename, **kwargs):
         try:
             for error in checker.check_source(fp.read(), filename):
                 if ignore is None or error.code not in ignore:
-                    errors.append("{0}:{1}".format(error.line, error.message))
+                    # Removing the colon ':' after the error code
+                    message = re.sub("(D[0-9]{3}): ?(.*)",
+                                     r"\1 \2",
+                                     error.message)
+                    errors.append("{0}: {1}".format(error.line, message))
         except tokenize.TokenError as e:
             errors.append("{0}:{1}:{2}".format(e.args[0], *e.args[1]))
         except pep257.AllError as e:
@@ -421,6 +426,7 @@ def check_file(filename, **kwargs):
         errors += check_license(filename, **kwargs)
     elif filename.endswith(".js") or filename.endswith(".css"):
         errors += check_license(filename, python_style=False, **kwargs)
+    errors.sort()
     return errors
 
 
@@ -429,6 +435,7 @@ def get_options(config):
     return {
         "components": config.get("COMPONENTS"),
         "signatures": config.get("SIGNATURES"),
+        "alt_signatures": config.get("ALT_SIGNATURES"),
         "trusted": config.get("TRUSTED_DEVELOPERS"),
         "pep8": config.get("CHECK_PEP8", True),
         "pep257": config.get("CHECK_PEP257", True),
@@ -436,4 +443,6 @@ def get_options(config):
         "pyflakes": config.get("CHECK_PYFLAKES", True),
         "ignore": config.get("IGNORE"),
         "select": config.get("SELECT"),
+        "match": config.get("PEP257_MATCH"),
+        "match_dir": config.get("PEP257_MATCH_DIR")
     }

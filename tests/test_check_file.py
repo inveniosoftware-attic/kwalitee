@@ -92,12 +92,13 @@ class TestCheckPep257(TestCheckFile):
     def test_missing(self):
         """invalid.py has no docstring"""
         errors = check_pep257(self.invalid)
-        assert_that(errors, has_item("1:D100: Docstring missing"))
+        assert_that(errors, has_item("1: D100 Docstring missing"))
 
     def test_ignore(self):
         """ignored PEP257 codes are ignored"""
         errors = check_pep257(self.invalid, ignore=('D100'))
         assert_that(errors, has_length(0))
+
 
 
 class TestCheckLicense(TestCheckFile):

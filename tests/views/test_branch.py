@@ -34,14 +34,14 @@ from .. import DatabaseMixin
 
 class BranchTest(TestCase, DatabaseMixin):
 
-    """Integration tests for the branch page."""
+    """Integration tests for the branch status page."""
 
     commits = [
-        {"sha": 3},
-        {"sha": 2},
-        {"sha": 1},
+        {"sha": "ef01234"},
+        {"sha": "789abcd"},
+        {"sha": "0123456"},
     ]
-    branch = "test:my-branch"
+    branch = "test:wip/my-branch"
     url_template = "https://github.com/invenio/test/commits/{sha}"
 
     def setUp(self):
@@ -61,7 +61,7 @@ class BranchTest(TestCase, DatabaseMixin):
         bs = BranchStatus(commits[0],
                           self.branch,
                           "http://github.com/pulls/1",
-                          {"commits": commits, "files": []})
+                          {"commits": commits, "files": {}})
         db.session.add(bs)
         db.session.commit()
 
@@ -69,8 +69,8 @@ class BranchTest(TestCase, DatabaseMixin):
         self.databaseDown()
         super(BranchTest, self).tearDown()
 
-    def test_get_branch(self):
-        """GET /{account}/{repository} displays the recent commits."""
+    def test_get_pull_request(self):
+        """GET /{account}/{repository}/branches/{sha}/{branch}."""
 
         tester = app.test_client(self)
         response = tester.get("/{0}/{1}/branches/{2}/{3}".format(
@@ -82,26 +82,26 @@ class BranchTest(TestCase, DatabaseMixin):
         assert_that(response.status_code, equal_to(200))
         body = response.get_data(as_text=True)
         assert_that(body,
-                    contains_string("/{0}/{1}".format(
+                    contains_string("/{0}/{1}/".format(
                                     self.owner.name,
                                     self.repository.name)))
 
         for commit in self.commits:
             assert_that(body,
-                        contains_string("/commits/{0}".format(commit["sha"])))
-        assert_that(body, contains_string("Everything is okay"))
+                        contains_string("/commits/{0}/".format(commit["sha"])))
+        assert_that(body, contains_string("Everything is OK."))
 
-    def test_get_branch_commit_doesnt_exist(self):
-        """GET /{account}/{repository}/branches/4/b raise 404 if not found."""
+    def test_get_pull_request_sha_doesnt_exist(self):
+        """GET /{account}/{repository}/branches/404/{branch} raise 404."""
 
         tester = app.test_client(self)
-        response = tester.get("/invenio/test/branches/404/{0}".format(
+        response = tester.get("/invenio/test/branches/0000000/{0}".format(
                               self.branch))
 
         assert_that(response.status_code, equal_to(404))
 
-    def test_get_branch_doesnt_exist(self):
-        """GET /{account}/{repository}/branches/1/b raise 404 if not found."""
+    def test_get_pull_request_doesnt_exist(self):
+        """GET /{account}/{repository}/branches/{sha}/404 raise 404."""
 
         tester = app.test_client(self)
         response = tester.get("/invenio/test/branches/{0}/404".format(

@@ -25,6 +25,7 @@
 
 from __future__ import unicode_literals
 
+import requests
 from flask import (current_app, render_template, make_response, json, jsonify,
                    request, url_for)
 from werkzeug.exceptions import NotFound
@@ -106,7 +107,31 @@ def commit(account, repository, sha):
                            commit=commit)
 
 
-def branch(account, repository, branch, sha):
+def branch(account, repository, branch):
+    """Display the statuses of a branch.
+
+    :param account: name of the owner
+    :param repository: name of the repository
+    :param branch: name of the branch
+    """
+    acc = _get_account(account)
+    repo = _get_repository(acc, repository)
+    all = BranchStatus.query.join(BranchStatus.commit) \
+                            .filter(CommitStatus.repository_id == repo.id) \
+                            .filter(BranchStatus.name == branch) \
+                            .all()
+
+    if not all:
+        raise NotFound("{0.fullname} as no branches called {1}"
+                       .format(repo, branch))
+
+    return render_template("branches.html",
+                           account=acc,
+                           repository=repo,
+                           branches=all)
+
+
+def branch_status(account, repository, branch, sha):
     """Display the status of a pull request.
 
     :param account: name of the owner
@@ -150,11 +175,14 @@ def payload():
         elif event in events:
             config = dict(current_app.config)
             config.pop("queue")
+            timeout = config.pop("WORKER_TIMEOUT")
+            auto_create = config.pop("AUTO_CREATE", False)
 
             data = json.loads(request.data)
 
             repository_name = data["repository"]["name"]
-            owner_name = data["repository"]["owner"]["name"]
+            keyname = "name" if event == "push" else "login"
+            owner_name = data["repository"]["owner"][keyname]
 
             payload = {
                 "state": "pending",
@@ -167,52 +195,84 @@ def payload():
                     name=repository_name,
                     owner_id=owner.id).first()
 
-                if repository:
-                    config["repository"] = repository.id
-
             if not owner or not repository:
-                payload["state"] = "error"
-                payload["description"] = "{0}/{1} is not yet registered" \
-                                         .format(owner_name,
-                                                 repository_name)
+                if auto_create:
+                    owner = Account.find_or_create(owner_name)
+                    repository = Repository.find_or_create(owner,
+                                                           repository_name)
+                else:
+                    payload["state"] = "error"
+                    payload["description"] = "{0}/{1} is not yet registered" \
+                                             .format(owner_name,
+                                                     repository_name)
 
-            elif event == "push":
-                status_url = ""
-                for commit in reversed(data["commits"]):
-                    status_url = url_for("commit",
+            if owner and repository:
+                config["repository"] = repository.id
+                if event == "push":
+                    status_url = ""
+                    commit_url = "https://api.github.com/repos/{owner}" \
+                                 "/{repo}/commits/{sha}"
+                    for commit in reversed(data["commits"]):
+                        cs = CommitStatus.find_or_create(repository,
+                                                         commit["id"],
+                                                         commit["url"])
+
+                        status_url = url_for("commit",
+                                             account=owner.name,
+                                             repository=repository.name,
+                                             sha=cs.sha,
+                                             _external=True)
+
+                        url = commit_url.format(
+                            commit_url,
+                            owner=owner.name,
+                            repo=repository.name,
+                            sha=cs.sha)
+
+                        q.enqueue(push, url, status_url, config,
+                                  timeout=timeout)
+
+                    payload["target_url"] = status_url
+                    payload["description"] = "commits queues"
+
+                elif event == "pull_request":
+                    data = data["pull_request"]
+                    pull_request_url = data["url"]
+                    commit_sha = data["head"]["sha"]
+                    commits = []
+                    response = requests.get(data["commits_url"])
+                    d = json.loads(response.content)
+                    for commit in d:
+                        cs = CommitStatus.find_or_create(repository,
+                                                         commit["sha"],
+                                                         commit["html_url"])
+                        commits.append(cs)
+
+                    bs = BranchStatus.find_or_create(commits[-1],
+                                                     data["head"]["label"],
+                                                     data["html_url"],
+                                                     {"commits": commits})
+                    status_url = url_for("branch_status",
                                          account=owner.name,
                                          repository=repository.name,
-                                         sha=commit["id"],
+                                         branch=bs.name,
+                                         sha=commit_sha,
                                          _external=True)
 
-                    q.enqueue(push, commit["url"], status_url, config)
+                    q.enqueue(pull_request, pull_request_url, status_url,
+                              config, timeout=timeout)
 
-                payload["target_url"] = status_url
-                payload["description"] = "commits queues"
-
-            elif event == "pull_request":
-                pull_request_url = data["pull_request"]["url"]
-                commit_sha = data["pull_request"]["head"]["sha"]
-                branch = data["pull_request"]["head"]["label"]
-                status_url = url_for("branch",
-                                     account=owner.name,
-                                     repository=repository.name,
-                                     branch=branch,
-                                     sha=commit_sha,
-                                     _external=True)
-
-                q.enqueue(pull_request, pull_request_url, status_url, config)
-
-                payload["target_url"] = status_url
-                payload["description"] = "pull request queued"
+                    payload["target_url"] = status_url
+                    payload["description"] = "pull request {0} queued" \
+                                             .format(bs.name)
         else:
             raise ValueError("Event {0} is not supported".format(event))
 
         return jsonify(payload=payload)
     except Exception as e:
         import traceback
-        # Uncomment to help you debugging
-        #traceback.print_exc()
+        # Uncomment to help you debugging the tests
+        # raise e
         return make_response(jsonify(status="failure",
                                      stacktrace=traceback.format_exc(),
                                      exception=str(e)),

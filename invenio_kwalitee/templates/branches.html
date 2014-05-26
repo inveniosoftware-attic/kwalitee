@@ -22,25 +22,38 @@
 #}
 
 {%- extends 'page.html' -%}
+{%- import "helpers.html" as helpers -%}
 
 {%- block body -%}
 <div class="row">
   <div class="col-lg-12">
-    <h2>Repositories of {{ account.name }}</h2>
+    <h2>
+      {{ helpers.repository(account, repository) -}}
+      /<a href="{{ url_for("branch",
+                           account=account.name,
+                           repository=repository.name,
+                           branch=branches[0].name) }}">
+        {{- branches[0].name -}}
+      </a>
+    </h2>
     <ul>
-  {%- for repository in repositories %}
+  {%- for branch in branches %}
       <li>
-        <a href="{{ url_for("repository", account=account.name,
-                                          repository=repository.name) }}">
-          {{- repository.name -}}
+        <a href="{{ url_for("branch_status",
+                            account=account.name,
+                            repository=repository.name,
+                            branch=branch.name,
+                            sha=branch.commit.sha) }}">
+          {{ branch.commit.sha | truncate(7, True, end="")}}
         </a>
-        (<a href="{{ config.get("GITHUB_REPO").format(account=account.name,
-                                                      repository=repository.name) }}">
-          github
-        </a>)
+    {%- if branch.errors %}
+        {{ "{0} errors.".format(branch.errors) }}
+    {%- else %}
+        Everything is OK.
+    {%- endif %}
+        (<a href="{{ branch.url }}">github</a>)
       </li>
   {%- endfor %}
-    </ul>
   </div>
 </div>
 {%- endblock body -%}

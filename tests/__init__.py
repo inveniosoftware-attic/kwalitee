@@ -54,8 +54,12 @@ class MyQueue(object):
         """Remove one item from the queue."""
         return self.queue.pop()
 
-    def enqueue(self, *args):
-        """Add items to the queue."""
+    def enqueue(self, *args, **kwargs):
+        """Add items to the queue.
+
+        :param args: tuple is appended to list
+        :param kwargs: are ignored.
+        """
         self.queue.append(args)
 
 
@@ -63,7 +67,7 @@ class DatabaseMixin(object):
 
     """Mixin to work with a disposable database."""
 
-    in_memory = True
+    in_memory = False
     """Flag to use a real file or in memory database."""
 
     def databaseUp(self):

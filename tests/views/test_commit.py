@@ -35,7 +35,7 @@ class CommitTest(TestCase, DatabaseMixin):
 
     """Integration tests for the commit page."""
 
-    sha = "deadbeef"
+    sha = "060fcc4e4856b1bc7dc0eba0b07d3c734bbf24fd"
     url_template = "https://github.com/invenio/test/commits/{sha}"
 
     def setUp(self):
@@ -47,7 +47,8 @@ class CommitTest(TestCase, DatabaseMixin):
                                    self.sha,
                                    self.url_template.format(sha=self.sha),
                                    {"message": ["foo", "bar"],
-                                    "files": ["spam", "eggs"]})
+                                    "files": {"spam": {"errors": ["spam"]},
+                                              "eggs": {"errors": ["eggs"]}}})
         db.session.add(self.commit)
         db.session.commit()
 
@@ -59,7 +60,7 @@ class CommitTest(TestCase, DatabaseMixin):
         """GET /{account}/{repository}/commits/{sha} displays the commit."""
 
         tester = app.test_client(self)
-        response = tester.get("/{0}/{1}/commits/{2}".format(
+        response = tester.get("/{0}/{1}/commits/{2}/".format(
                               self.owner.name,
                               self.repository.name,
                               self.sha))
@@ -67,7 +68,7 @@ class CommitTest(TestCase, DatabaseMixin):
         assert_that(response.status_code, equal_to(200))
         body = response.get_data(as_text=True)
         assert_that(body,
-                    contains_string("/{0}/{1}".format(
+                    contains_string("/{0}/{1}/".format(
                                     self.owner.name,
                                     self.repository.name)))
         assert_that(body,
@@ -79,6 +80,6 @@ class CommitTest(TestCase, DatabaseMixin):
         """GET /{account}/{repository}/commits/404 raise 404 if not found."""
 
         tester = app.test_client(self)
-        response = tester.get("/invenio/test/commits/404")
+        response = tester.get("/invenio/test/commits/404/")
 
         assert_that(response.status_code, equal_to(404))
