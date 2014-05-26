@@ -28,6 +28,19 @@ import os
 import re
 import sys
 
+
+def reqs(filename):
+    """Read the requirements from a file."""
+    return [r.strip() for r in open(filename, 'r').readlines()]
+
+
+install_requires = reqs('requirements.txt')
+test_requires = reqs('requirements-test.txt')
+
+if tuple(sys.version_info) < (2, 7):
+    install_requires.append('importlib')
+
+
 # Get the version string.  Cannot be done with import!
 with open(os.path.join('invenio_kwalitee', 'version.py'), 'rt') as f:
     version = re.search(
@@ -35,25 +48,6 @@ with open(os.path.join('invenio_kwalitee', 'version.py'), 'rt') as f:
         f.read()
     ).group('version')
 
-install_requires = [
-    'Flask',
-    'Flask-Script',
-    'pep8',
-    'pep257',
-    'pyflakes',
-    'requests',
-    'rq'
-]
-test_requires = [
-    'coverage',
-    'httpretty',
-    'mock',
-    'nose',
-    'pyhamcrest'
-]
-
-if tuple(sys.version_info) < (2, 7):
-    install_requires.append('importlib')
 
 setup(
     name='Invenio-Kwalitee',
@@ -81,6 +75,7 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules'
     ],
