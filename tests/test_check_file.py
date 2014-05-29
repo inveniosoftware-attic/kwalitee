@@ -24,6 +24,7 @@
 from __future__ import unicode_literals
 
 import os
+import tempfile
 from invenio_kwalitee.kwalitee import check_pep8, check_pep257, check_license
 from unittest import TestCase
 from hamcrest import assert_that, has_length, has_item, is_not
@@ -99,6 +100,26 @@ class TestCheckPep257(TestCheckFile):
         errors = check_pep257(self.invalid, ignore=('D100'))
         assert_that(errors, has_length(0))
 
+    def test_match(self):
+        """test only the file that are matched by the regex"""
+        errors = check_pep257("test_bar.py", match="(?!test_).*\.py")
+        assert_that(errors, has_length(0))
+
+    def test_match_dir(self):
+        """test only the directories that are matched by the regex"""
+        errors = check_pep257("foo/.hidden/spam/eggs/bar.py",
+                              match_dir="[^\.].*")
+        assert_that(errors, has_length(0))
+
+    def test_match_absolute_dir(self):
+        fp, path = tempfile.mkstemp(text=True)
+        os.write(fp, "# -*- coding: utf-8 -*-\n".encode("ascii"))
+        os.close(fp)
+
+        errors = check_pep257(path, match_dir="[^\.].*")
+        assert_that(errors, has_length(1))
+
+        os.unlink(path)
 
 
 class TestCheckLicense(TestCheckFile):

@@ -555,7 +555,7 @@ class PullRequestTest(TestCase, DatabaseMixin):
             "",
             "",
             "",
-            "F821 undefined name",
+            "D100 Docstring missing",
             "/status/1",
             "",
             "in_review",

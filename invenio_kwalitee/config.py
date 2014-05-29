@@ -126,6 +126,10 @@ TRUSTED_DEVELOPERS = []
 IGNORE = ['E123', 'E226', 'E24', 'E501', 'E265']
 #SELECT = []
 
+# Apply the tests only to the files matching those criteria.
+PEP257_MATCH = "(?!test_).*\.py"
+PEP257_MATCH_DIR = "[^\.].*"
+
 # Labels applied to the pull request in case we are in the following states:
 # - wip, the wip label has been found in the title
 # - review, some commit need more reviewers

@@ -25,6 +25,7 @@
 
 from __future__ import unicode_literals
 
+import os
 import re
 import pep8
 import codecs
@@ -305,11 +306,29 @@ def check_pep257(filename, **kwargs):
     """Perform static analysis on the given file docstrings.
 
     :param ignore: list of codes to ignore, e.g. ('D400')
+    :param match: filename has to match this to be checked
+    :param match_dir: everydir in path should match this to be checked
     :return: list of errors
     """
     ignore = kwargs.get("ignore")
+    match = kwargs.get("match", "")
+    match_dir = kwargs.get("match_dir", "")
 
     errors = []
+
+    if match and not re.match(match, os.path.basename(filename)):
+        return errors
+
+    if match_dir:
+        # FIXME here the full path is checked, be sure, if match_dir doesn't
+        # match the path (usually temporary) before the actual application path
+        # it may not run the checks when it should have.
+        path = os.path.split(os.path.abspath(filename))[0]
+        while path != "/":
+            path, dirname = os.path.split(path)
+            if not re.match(match_dir, dirname):
+                return errors
+
     checker = pep257.PEP257Checker()
     with open(filename) as fp:
         try:
