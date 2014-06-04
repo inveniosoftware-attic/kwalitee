@@ -47,12 +47,18 @@ class Account(db.Model):
     """Github account."""
 
     id = db.Column(db.Integer(), primary_key=True)
+    """Identifier"""
     name = db.Column(db.UnicodeText(), unique=True, nullable=False)
+    """Username."""
     email = db.Column(db.UnicodeText())
+    """Email."""
     token = db.Column(db.UnicodeText())
+    """API Token."""
     created_at = db.Column(db.DateTime(), nullable=False, default=datetime.now)
+    """Date of creation."""
     updated_at = db.Column(db.DateTime(), nullable=False, default=datetime.now,
                            onupdate=datetime.now)
+    """Date of last modification."""
 
     def __init__(self, name, email=None, token=None):
         """Initialize the account."""

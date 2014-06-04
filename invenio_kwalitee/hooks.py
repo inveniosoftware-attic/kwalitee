@@ -26,17 +26,15 @@
 from __future__ import print_function, unicode_literals
 
 import os
+import re
 import sys
 import shutil
-import operator
 from codecs import open
 from tempfile import mkdtemp
 from subprocess import Popen, PIPE
 
-from .kwalitee import check_file, check_message, get_options
+from .kwalitee import check_file, check_message, get_options, SUPPORTED_FILES
 
-
-SUPPORTED_FILES = '.py', '.html', '.rst', '.js', '.css'
 
 
 def _get_files_modified():
@@ -44,8 +42,9 @@ def _get_files_modified():
     cmd = "git diff-index --cached --name-only --diff-filter=ACMRTUXB HEAD"
     _, files_modified, _ = run(cmd)
 
-    test = operator.methodcaller('endswith', SUPPORTED_FILES)
-    return list(filter(lambda f: test(f), files_modified))
+    extensions = [re.escape(ext) for ext in list(SUPPORTED_FILES) + [".rst"]]
+    test = "(?:{0})$".format("|".join(extensions))
+    return list(filter(lambda f: re.search(test, f), files_modified))
 
 
 def _get_git_author():
@@ -262,14 +261,17 @@ def pre_commit_hook(argv=None):
 def run(command, raw_output=False):
     """Run a command using subprocess.
 
-    raw_output: does not attempt to convert the output as unicode
+    :param command: command line to be run
+    :type command: str
+    :param raw_output: does not attempt to convert the output as unicode
+    :type raw_output: bool
+    :return: error code, output (``stdout``) and error (``stderr``)
+    :rtype: tuple
+
     """
     p = Popen(command.split(), stdout=PIPE, stderr=PIPE)
     (stdout, stderr) = p.communicate()
-    # On python 3, subprocess.Popen returns bytes objects which expect
-    # endswith to be given a bytes object or a tuple of bytes but not native
-    # string objects. This is simply less mysterious than using b'.py' in the
-    # endswith method. That should work but might still fail horribly.
+    # On python 3, subprocess.Popen returns bytes objects.
     if not raw_output:
         return (
             p.returncode,

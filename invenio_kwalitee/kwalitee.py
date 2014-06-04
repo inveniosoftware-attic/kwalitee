@@ -36,8 +36,8 @@ import tokenize
 from datetime import datetime
 
 
-# Max number of errors to be sent back
-MAX = 130
+SUPPORTED_FILES = '.py', '.html', '.tpl', '.js', '.jsx', '.css', '.less'
+"""Supported file types."""
 
 _re_copyright_year = re.compile(r"^Copyright\s+(?:\([Cc]\)|\xa9)\s+"
                                 r"(?:\d{4},\s+)*"
@@ -78,12 +78,25 @@ _licenses_codes = {
 }
 
 
-def _check_1st_line(line, components, max_first_line=50, **kwargs):
+def _check_1st_line(line, **kwargs):
     """First line check.
 
     Check that the first line has a known component name followed by a colon
     and then a short description of the commit.
+
+    :param line: first line
+    :type line: str
+    :param components: list of known component names
+    :type line: list
+    :param max_first_line: maximum length of the first line
+    :type max_first_line: int
+    :return: errors as in (code, line number, *args)
+    :rtype: list
+
     """
+    components = kwargs.get("components", ())
+    max_first_line = kwargs.get("max_first_line", 50)
+
     errors = []
     lineno = 1
     if len(line) > max_first_line:
@@ -102,14 +115,23 @@ def _check_1st_line(line, components, max_first_line=50, **kwargs):
     return errors
 
 
-def _check_bullets(lines, max_length=72, **kwargs):
+def _check_bullets(lines, **kwargs):
     """Check that the bullet point list is well formatted.
 
     Each bullet point shall have one space before and after it. The bullet
     character is the "*" and there is no space before it but one after it
     meaning the next line are starting with two blanks spaces to respect the
-    identation.
+    indentation.
+
+    :param lines: all the lines of the message
+    :type lines: list
+    :param max_lengths: maximum length of any line. (Default 72)
+    :return: errors as in (code, line number, *args)
+    :rtype: list
+
     """
+    max_length = kwargs.get("max_length", 72)
+
     errors = []
     missed_lines = []
     skipped = []
@@ -136,8 +158,7 @@ def _check_bullets(lines, max_length=72, **kwargs):
     return errors, missed_lines
 
 
-def _check_signatures(lines, signatures, alt_signatures=None, trusted=None,
-                      **kwargs):
+def _check_signatures(lines, **kwargs):
     """Check that the signatures are valid.
 
     There should be at least three signatures. If not, one of them should be a
@@ -145,17 +166,27 @@ def _check_signatures(lines, signatures, alt_signatures=None, trusted=None,
 
     Formatting supported being: [signature] full name <email@address>
 
-    :param lines: list of lines (lineno, content) to verify.
-    :param signatures: list of supported signature, e.g. Signed-off-by
+    :param lines: lines (lineno, content) to verify.
+    :type lines: list
+    :param signatures: list of supported signature
+    :type signatures: list
     :param alt_signatures: list of alternative signatures, not counted
+    :type alt_signatures: list
     :param trusted: list of trusted reviewers, the e-mail address.
-    :return: list of errors
+    :type trusted: list
+    :param min_reviewers: minimal number of reviewers needed. (Default 3)
+    :type min_reviewers: int
+    :return: errors as in (code, line number, *args)
+    :rtype: list
+
     """
+    trusted = kwargs.get("trusted", ())
+    signatures = tuple(kwargs.get("signatures", ()))
+    alt_signatures = tuple(kwargs.get("alt_signatures", ()))
+    min_reviewers = kwargs.get("min_reviewers", 3)
+
     matching = []
     errors = []
-    trusted = trusted or []
-    signatures = tuple(signatures) if signatures else []
-    alt_signatures = tuple(alt_signatures) if alt_signatures else tuple()
     signatures += alt_signatures
 
     test_signatures = re.compile("^({0})".format("|".join(signatures)))
@@ -169,10 +200,10 @@ def _check_signatures(lines, signatures, alt_signatures=None, trusted=None,
         else:
             errors.append(("M102", i))
 
-    if len(matching) == 0:
+    if not matching:
         errors.append(("M101", 1))
         errors.append(("M100", 1))
-    elif len(matching) <= 2:
+    elif len(matching) < min_reviewers:
         pattern = re.compile('|'.join(map(lambda x: '<' + re.escape(x) + '>',
                                           trusted)))
         trusted_matching = list(filter(None, map(pattern.search, matching)))
@@ -186,20 +217,29 @@ def check_message(message, **kwargs):
     """Check the message format.
 
     Rules:
-    * the first line must start by a component name
-    * and a short description (52 chars),
-    * then bullet points are expected
-    * and finally signatures.
 
-    Required kwargs:
-    :param components: list of compontents, e.g. ('auth', 'utils', 'misc')
-    :param signatures: list of signatrues, e.g. ('Signed-off-by',
-                       'Reviewed-by')
-    :param trusted: optional list of reviewers, e.g. ('john.doe@example.org',)
-    :param max_length: optional maximum line length (by default 72)
-    :param max_first_line: optional maximum first line length (by default 50)
-    :param allow_empty: optional way to allow empty message (by default False)
-    :return: list of errors found
+    - the first line must start by a component name
+    - and a short description (52 chars),
+    - then bullet points are expected
+    - and finally signatures.
+
+    :param components: compontents, e.g. ``('auth', 'utils', 'misc')``
+    :type components: list
+    :type components: list
+    :param signatures: signatures, e.g. ``('Signed-off-by', 'Reviewed-by')``
+    :type signatures: list
+    :param alt_signatures: alternative signatures, e.g. ``('Tested-by',)``
+    :type alt_signatures: list
+    :param trusted: optional list of reviewers, e.g. ``('john.doe@foo.org',)``
+    :type trusted: list
+    :param max_length: optional maximum line length (by default: 72)
+    :type max_length: int
+    :param max_first_line: optional maximum first line length (by default: 50)
+    :type max_first_line: int
+    :param allow_empty: optional way to allow empty message (by default: False)
+    :type allow_empty: bool
+    :return: errors sorted by line number
+    :rtype: list
     """
     if kwargs.pop("allow_empty", False):
         if not message or message.isspace():
@@ -267,10 +307,12 @@ class _Report(pep8.BaseReport):
     """
 
     def __init__(self, options):
+        """Initialize the reporter"""
         super(_Report, self).__init__(options)
         self.errors = []
 
     def error(self, line_number, offset, text, check):
+        """Run the checks and collect the errors."""
         code = super(_Report, self).error(line_number, offset, text, check)
         if code:
             self.errors.append((line_number, offset + 1, code, text, check))
@@ -279,10 +321,19 @@ class _Report(pep8.BaseReport):
 def check_pep8(filename, **kwargs):
     """Perform static analysis on the given file.
 
-    :param ignore: list of codes to ignore, e.g. ('E111', 'E123')
-    :param select: list of codes to explicitly select.
-    :param pyflakes: run the pyflakes checks too (default True)
-    :return: list of errors
+    :param filename: path of file to check.
+    :type filename: str
+    :param ignore: codes to ignore, e.g. ``('E111', 'E123')``
+    :type ignore: list
+    :param select: codes to explicitly select.
+    :type select: list
+    :param pyflakes: run the pyflakes checks too (default ``True``)
+    :type pyflakes: bool
+    :return: errors
+    :rtype: list
+
+    .. seealso:: :py:class:`pep8.Checker`
+
     """
     options = {
         "ignore": kwargs.get("ignore"),
@@ -305,14 +356,23 @@ def check_pep8(filename, **kwargs):
 def check_pep257(filename, **kwargs):
     """Perform static analysis on the given file docstrings.
 
-    :param ignore: list of codes to ignore, e.g. ('D400')
-    :param match: filename has to match this to be checked
-    :param match_dir: everydir in path should match this to be checked
-    :return: list of errors
+    :param filename: path of file to check.
+    :type filename: str
+    :param ignore: codes to ignore, e.g. ('D400',)
+    :type ignore: list
+    :param match: regex the filename has to match to be checked
+    :type match: str
+    :param match_dir: regex everydir in path should match to be checked
+    :type match_dir: str
+    :return: errors
+    :rtype: list
+
+    .. seealso:: `GreenSteam/pep257 <https://github.com/GreenSteam/pep257/>`_
+
     """
     ignore = kwargs.get("ignore")
-    match = kwargs.get("match", "")
-    match_dir = kwargs.get("match_dir", "")
+    match = kwargs.get("match", None)
+    match_dir = kwargs.get("match_dir", None)
 
     errors = []
 
@@ -353,12 +413,17 @@ def check_license(filename, **kwargs):
     The license format should be commented using ## and live at the top of the
     file. Also, the year should be the current one.
 
-    Supported filetypes: python, jinja, javascript
-
+    :param filename: path of file to check.
+    :type filename: str
     :param year: default current year
-    :param ignore: list of codes to ignore, e.g. ('L100', 'L101')
+    :type year: int
+    :param ignore: codes to ignore, e.g. ``('L100', 'L101')``
+    :type ignore: list
     :param python_style: False for JavaScript or CSS files
-    :return: list of errors
+    :type python_style: bool
+    :return: errors
+    :rtype: list
+
     """
     year = kwargs.pop("year", datetime.now().year)
     python_style = kwargs.pop("python_style", True)
@@ -431,7 +496,18 @@ def check_license(filename, **kwargs):
 def check_file(filename, **kwargs):
     """Perform static analysis on the given file.
 
-    See: check_pep8 and check_license
+    .. seealso::
+
+        - :data:`.SUPPORTED_FILES`
+        - :func:`.check_pep8`
+        - :func:`.check_pep257`
+        - and :func:`.check_license`
+
+    :param filename: path of file to check.
+    :type filename: str
+    :return: errors sorted by line number
+    :rtype: list
+
     """
     errors = []
     if filename.endswith(".py"):
@@ -441,9 +517,9 @@ def check_file(filename, **kwargs):
             errors += check_pep257(filename, **kwargs)
         if kwargs.get("license", True):
             errors += check_license(filename, **kwargs)
-    elif filename.endswith(".html"):
+    elif re.search("\.(tpl|html)$", filename):
         errors += check_license(filename, **kwargs)
-    elif filename.endswith(".js") or filename.endswith(".css"):
+    elif re.search("\.(js|jsx|css|less)$", filename):
         errors += check_license(filename, python_style=False, **kwargs)
     errors.sort()
     return errors
@@ -451,7 +527,7 @@ def check_file(filename, **kwargs):
 
 def get_options(config):
     """Build the options from the Flask config."""
-    return {
+    base = {
         "components": config.get("COMPONENTS"),
         "signatures": config.get("SIGNATURES"),
         "alt_signatures": config.get("ALT_SIGNATURES"),
@@ -463,5 +539,11 @@ def get_options(config):
         "ignore": config.get("IGNORE"),
         "select": config.get("SELECT"),
         "match": config.get("PEP257_MATCH"),
-        "match_dir": config.get("PEP257_MATCH_DIR")
+        "match_dir": config.get("PEP257_MATCH_DIR"),
+        "min_reviewers": config.get("MIN_REVIEWERS")
     }
+    options = {}
+    for k, v in base.items():
+        if v is not None:
+            options[k] = v
+    return options

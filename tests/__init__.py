@@ -37,9 +37,7 @@ class MyQueue(object):
 
     """Queue mock to use in place of the RQ queue.
 
-    .. seealso::
-
-        `RQ <http://python-rq.org/docs/>`
+    .. seealso:: `RQ <http://python-rq.org/docs/>`_
     """
 
     def __init__(self):
@@ -101,7 +99,9 @@ class CaptureMixin(object):
     """
     Mixin to capture things from stderr/stdout in tests.
 
-    How to activate it?::
+    How to activate it?
+
+    .. code-block:: python
 
         def setUp(self):
             self.captureUp()
@@ -115,15 +115,20 @@ class CaptureMixin(object):
             self.stdoutDown()
             self.stderrDown()
 
-    How to print (for real)?::
+    How to print (for real)?
+
+    .. code-block:: python
 
         print(..., file=self._stdout)
 
 
-    How to read the content from stdout/stderr?::
+    How to read the content from stdout/stderr?
+
+    .. code-block:: python
 
         sys.stdout.getvalue()
         sys.stderr.getvalue()
+
     """
 
     def captureUp(self):
