@@ -21,4 +21,4 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
-__version__ = "0.2.0a20140607"
+__version__ = "0.2.0c1"

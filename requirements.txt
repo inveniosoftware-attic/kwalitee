@@ -1,9 +1,1 @@
-alembic
-Flask
-Flask-Script
-Flask-SQLAlchemy
-pep8
-pep257
-pyflakes
-requests
-rq>=0.4.6
+-e .

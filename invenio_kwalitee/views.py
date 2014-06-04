@@ -175,7 +175,7 @@ def payload():
         elif event in events:
             config = dict(current_app.config)
             config.pop("queue")
-            timeout = config.pop("WORKER_TIMEOUT")
+            timeout = config.pop("WORKER_TIMEOUT", None)
             auto_create = config.pop("AUTO_CREATE", False)
 
             data = json.loads(request.data)

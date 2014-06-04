@@ -25,9 +25,10 @@
 
 from setuptools import setup
 import os
-import re
 import sys
 
+# Where the requirements files are located.
+requirements_dir = "requirements"
 
 install_requires = [
     'alembic',
@@ -75,6 +76,7 @@ setup(
     platforms='any',
     install_requires=install_requires,
     classifiers=[
+        'Development Status :: 3 - Alpha',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
