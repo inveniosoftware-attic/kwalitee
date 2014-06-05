@@ -47,6 +47,7 @@ class TestCheckFile(TestCase):
 
 
 class TestCheckPep8(TestCheckFile):
+
     """Unit tests of the PEP8 check."""
 
     def test_valid(self):
@@ -123,6 +124,7 @@ class TestCheckPep257(TestCheckFile):
 
 
 class TestCheckLicense(TestCheckFile):
+
     """Unit tests of the license validation."""
 
     def test_license(self):

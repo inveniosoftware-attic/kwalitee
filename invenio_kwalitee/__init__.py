@@ -36,7 +36,7 @@ from .worker import conn
 
 
 __docformat__ = "restructuredtext en"
-__version__ = "0.2.0a.20140604"
+__version__ = "0.2.0a.20140605"
 __all__ = ("app", "db", "CommitStatus", "BranchStatus", "Repository",
            "Account")
 
