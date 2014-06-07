@@ -207,7 +207,6 @@ def payload():
                                                      repository_name)
 
             if owner and repository:
-                config["repository"] = repository.id
                 if event == "push":
                     status_url = ""
                     commit_url = "https://api.github.com/repos/{owner}" \
@@ -229,7 +228,7 @@ def payload():
                             repo=repository.name,
                             sha=cs.sha)
 
-                        q.enqueue(push, url, status_url, config,
+                        q.enqueue(push, cs.id, url, status_url, config,
                                   timeout=timeout)
 
                     payload["target_url"] = status_url
@@ -259,8 +258,8 @@ def payload():
                                          sha=commit_sha,
                                          _external=True)
 
-                    q.enqueue(pull_request, pull_request_url, status_url,
-                              config, timeout=timeout)
+                    q.enqueue(pull_request, bs.id, pull_request_url,
+                              status_url, config, timeout=timeout)
 
                     payload["target_url"] = status_url
                     payload["description"] = "pull request {0} queued" \

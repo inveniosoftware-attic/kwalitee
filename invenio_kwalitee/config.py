@@ -103,7 +103,7 @@ COMPONENTS = [
     'workflows',
 ]
 
-SIGNATURES = 'Signed-off-by', 'Tested-by', 'Reviewed-by'
+SIGNATURES = 'Signed-off-by', 'Tested-by', 'Reviewed-by', 'Co-authored-by'
 ALT_SIGNATURES = 'Reported-by',
 
 # RQ default timeout is 180 seconds

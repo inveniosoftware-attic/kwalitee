@@ -27,7 +27,7 @@ import os
 import tempfile
 from invenio_kwalitee.kwalitee import check_pep8, check_pep257, check_license
 from unittest import TestCase
-from hamcrest import assert_that, has_length, has_item, is_not
+from hamcrest import assert_that, has_length, has_item, is_not, contains_string
 
 
 class TestCheckFile(TestCase):
@@ -36,6 +36,8 @@ class TestCheckFile(TestCase):
         fixtures = os.path.join(os.path.dirname(__file__), "fixtures", "")
         self.valid = "{0}valid.py.test".format(fixtures)
         self.invalid = "{0}invalid.py.test".format(fixtures)
+        self.invalid_token = "{0}invalid_token.py.test".format(fixtures)
+        self.invalid_all = "{0}invalid_all.py.test".format(fixtures)
         self.error = "{0}error.py.test".format(fixtures)
         self.empty = "{0}empty.py.test".format(fixtures)
         self.invalid_license = "{0}invalid_license.py.test".format(fixtures)
@@ -87,7 +89,6 @@ class TestCheckPep257(TestCheckFile):
 
     def test_valid(self):
         """valid.py is correctly formatted (according to pep257)"""
-        print(self.valid)
         errors = check_pep257(self.valid)
         assert_that(errors, has_length(0))
 
@@ -95,6 +96,18 @@ class TestCheckPep257(TestCheckFile):
         """invalid.py has no docstring"""
         errors = check_pep257(self.invalid)
         assert_that(errors, has_item("1: D100 Docstring missing"))
+
+    def test_invalid_token(self):
+        """invalid_token.py has a tokenization error"""
+        errors = check_pep257(self.invalid_token)
+        assert_that(errors, has_item("6:0 EOF in multi-line string"))
+
+    def test_invalid_all(self):
+        """invalid_all.py has a mutable all"""
+        errors = check_pep257(self.invalid_all)
+        assert_that(errors, has_length(1))
+        assert_that(errors[0], contains_string("Could not evaluate contents of"
+                                               " __all__. That means pep257"))
 
     def test_ignore(self):
         """ignored PEP257 codes are ignored"""

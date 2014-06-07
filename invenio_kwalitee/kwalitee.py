@@ -340,7 +340,7 @@ def check_pep257(filename, **kwargs):
                                      error.message)
                     errors.append("{0}: {1}".format(error.line, message))
         except tokenize.TokenError as e:
-            errors.append("{0}:{1}:{2}".format(e.args[0], *e.args[1]))
+            errors.append("{1}:{2} {0}".format(e.args[0], *e.args[1]))
         except pep257.AllError as e:
             errors.append(str(e))
 

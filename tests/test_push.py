@@ -105,16 +105,22 @@ class PushTest(TestCase, DatabaseMixin):
         body = json.loads(response.data)
         assert_that(body["payload"]["state"], equal_to("pending"))
 
-        (fn, commit_url, status_url, config) = queue.dequeue()
+        cs = CommitStatus.query.filter_by(repository_id=self.repository.id,
+                                          sha="1").first()
+
+        (fn, commit_id, commit_url, status_url, config) = queue.dequeue()
         assert_that(fn, equal_to(push))
-        assert_that(config["repository"], equal_to(self.repository.id))
+        assert_that(commit_id, equal_to(cs.id))
         assert_that(commit_url, equal_to("https://api.github.com"
                                          "/repos/invenio/test/commits/1"))
         assert_that(status_url, contains_string("/invenio/test/commits/1"))
 
-        (fn, commit_url, status_url, config) = queue.dequeue()
+        cs = CommitStatus.query.filter_by(repository_id=self.repository.id,
+                                          sha="2").first()
+
+        (fn, commit_id, commit_url, status_url, config) = queue.dequeue()
         assert_that(fn, equal_to(push))
-        assert_that(config["repository"], equal_to(self.repository.id))
+        assert_that(commit_id, equal_to(cs.id))
         assert_that(commit_url, equal_to("https://api.github.com"
                                          "/repos/invenio/test/commits/2"))
         assert_that(status_url, contains_string("/invenio/test/commits/2"))
@@ -218,11 +224,13 @@ class PushTest(TestCase, DatabaseMixin):
                                body=json.dumps(status),
                                content_type="application/json")
 
-        CommitStatus.find_or_create(self.repository,
-                                    commit["sha"],
-                                    commit["url"])
+        cs = CommitStatus.find_or_create(self.repository,
+                                         commit["sha"],
+                                         commit["url"])
+        assert_that(cs.is_pending())
 
-        push("https://api.github.com/commits/1",
+        push(cs.id,
+             "https://api.github.com/commits/1",
              "https://api.github.com/statuses/1",
              {"COMPONENTS": ["comp"],
               "SIGNATURES": ["By"],
@@ -287,11 +295,13 @@ class PushTest(TestCase, DatabaseMixin):
                                body=json.dumps(status),
                                content_type="application/json")
 
-        CommitStatus.find_or_create(self.repository,
-                                    commit["sha"],
-                                    commit["url"])
+        cs = CommitStatus.find_or_create(self.repository,
+                                         commit["sha"],
+                                         commit["url"])
+        assert_that(cs.is_pending())
 
-        push("https://api.github.com/commits/1",
+        push(cs.id,
+             "https://api.github.com/commits/1",
              "https://api.github.com/statuses/1",
              {"CHECK_LICENSE": False,
               "repository": self.repository.id})
@@ -347,11 +357,13 @@ class PushTest(TestCase, DatabaseMixin):
                                body=json.dumps(status),
                                content_type="application/json")
 
-        CommitStatus.find_or_create(self.repository,
-                                    commit["sha"],
-                                    commit["url"])
+        cs = CommitStatus.find_or_create(self.repository,
+                                         commit["sha"],
+                                         commit["url"])
+        assert_that(cs.is_pending())
 
-        push("https://api.github.com/commits/1",
+        push(cs.id,
+             "https://api.github.com/commits/1",
              "https://api.github.com/statuses/1",
              {"COMPONENTS": ["comp"],
               "SIGNATURES": ["By"],
@@ -374,13 +386,6 @@ class PushTest(TestCase, DatabaseMixin):
     @httpretty.activate
     def test_push_known_commit(self):
         """Worker push /commits/1 is not rechecked if known"""
-        cs = CommitStatus(self.repository,
-                          "1",
-                          "https://github.com/commits/1",
-                          {"message": [], "files": {}})
-        db.session.add(cs)
-        db.session.commit()
-
         commit = {
             "sha": 1,
             "url": "https://api.github.com/commits/1",
@@ -400,23 +405,28 @@ class PushTest(TestCase, DatabaseMixin):
                                body=json.dumps(commit),
                                content_type="application/json")
 
-        push("https://api.github.com/commits/1",
+        cs = CommitStatus(self.repository,
+                          "1",
+                          "https://github.com/commits/1",
+                          {"message": ["error 1", "error 2"], "files": {}})
+        db.session.add(cs)
+        db.session.commit()
+        assert_that(cs.is_pending(), equal_to(False))
+
+        body = push(cs.id,
+             "https://api.github.com/commits/1",
              "https://api.github.com/statuses/1",
              {"repository": self.repository.id})
 
         latest_requests = httpretty.HTTPretty.latest_requests
         assert_that(len(latest_requests), equal_to(1), "1x GET")
 
+        assert_that(body["description"],
+                    contains_string("[error] 2 errors"))
+
     @httpretty.activate
     def test_push_half_known_commit(self):
         """Worker push /commits/1 checks the files if none"""
-        cs = CommitStatus(self.repository,
-                          "1",
-                          "https://github.com/commits/1",
-                          {"message": [], "files": None})
-        db.session.add(cs)
-        db.session.commit()
-
         commit = {
             "sha": "1",
             "url": "https://api.github.com/commits/1",
@@ -452,7 +462,16 @@ class PushTest(TestCase, DatabaseMixin):
                                body=json.dumps(status),
                                content_type="application/json")
 
-        push("https://api.github.com/commits/1",
+        cs = CommitStatus(self.repository,
+                          "1",
+                          "https://github.com/commits/1",
+                          {"message": [], "files": None})
+        db.session.add(cs)
+        db.session.commit()
+        assert_that(cs.is_pending(), equal_to(False))
+
+        push(cs.id,
+             "https://api.github.com/commits/1",
              "https://api.github.com/statuses/1",
              {"repository": self.repository.id})
 
