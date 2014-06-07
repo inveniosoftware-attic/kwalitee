@@ -211,7 +211,9 @@ class CommitStatus(db.Model):
 
     def __repr__(self):
         """String representation of the commit status."""
-        return "<CommitStatus ({0.id}, {0.sha}, {0.state})>".format(self)
+        return "<CommitStatus ({0.id}, {0.repository_id}, {0.sha}, " \
+               "{0.state})>" \
+               .format(self)
 
     def is_pending(self):
         """Return True is the commit status hasn't been checked yet."""
@@ -272,7 +274,7 @@ class BranchStatus(db.Model):
         """Set the content of the status."""
         c = {"commits": [],
              "files": value.get("files", {})}
-        if "files" in value:
+        if "files" in value and value["files"]:
             for ferrors in value["files"].values():
                 self._errors += len(ferrors["errors"])
         for commit in value["commits"]:
@@ -285,7 +287,7 @@ class BranchStatus(db.Model):
             self._errors += len(commit.content["message"])
             c["commits"].append(commit.sha)
 
-        if "files" not in value:
+        if "files" not in value or value["files"] is None:
             self._state = STATE_PENDING
         elif self._errors:
             self._state = STATE_ERROR

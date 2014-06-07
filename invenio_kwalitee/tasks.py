@@ -35,7 +35,7 @@ from flask import json
 
 from . import db
 from .kwalitee import get_options, check_message, check_file
-from .models import Repository, BranchStatus, CommitStatus
+from .models import BranchStatus, CommitStatus
 
 # Worker logger
 LOGGER = logging.getLogger("rq.worker")
@@ -69,20 +69,25 @@ def get_headers(repository, config):
     }
 
 
-def push(commit_url, status_url, config):
+def push(commit_status_id, commit_url, status_url, config):
     """Performing all the tests on the commit.
 
+    :param commit_status_id: identifier of the branch status
     :param commit_url: github api commit url
+    :param status_url: github api status url
     :param config: configuration dictionary
 
     """
     body = {}
     length = 0
 
-    repository = Repository.query.filter_by(id=config["repository"]).first()
+    commit_status = CommitStatus.query.filter_by(id=commit_status_id).first()
+    if not commit_status:
+        raise AssertionError("Unknown commit: {0} ({1})"
+                         .format(commit_status_id, commit_url))
 
     options = get_options(config)
-    headers = get_headers(repository, config)
+    headers = get_headers(commit_status.repository, config)
 
     check_commit_messages = config.get("CHECK_COMMIT_MESSAGES", True)
     check_pep8 = options["pep8"]
@@ -99,14 +104,6 @@ def push(commit_url, status_url, config):
     sha = data["sha"]
     files = data["files"]
 
-    commit_status = CommitStatus.query.filter_by(
-        repository_id=repository.id,
-        sha=sha).first()
-
-    if not commit_status:
-        raise AssertionError("Unknown commit: {repo.fullname}/{sha}"
-                             .format(repo=repository, sha=sha))
-
     # This commit might have been checked in a pull request, which skipped
     # the files check.
     is_new = False
@@ -114,12 +111,12 @@ def push(commit_url, status_url, config):
     if commit_status.is_pending() or commit_status.content["files"] is None:
         is_new = True
 
-    if commit_status.is_pending() and check_commit_messages:
-        errs, commit_status = _check_commit(repository, data, **options)
+    if check_commit_messages:
+        errs = _check_commit(commit_status, data, **options)
         length = len(errs)
         checked = True
 
-    if checked and length:
+    if is_new and checked and length:
         body = "\n".join(commit_status.content["message"])
         try:
             requests.post(comments_url,
@@ -134,10 +131,7 @@ def push(commit_url, status_url, config):
         total, messages = _check_files(filenames, tmp, **options)
         shutil.rmtree(tmp)
 
-        # Cannot modify it directly
-        content = commit_status.content
-        content["files"] = messages
-        commit_status.content = content
+        commit_status.content = dict(commit_status.content, files=messages)
         length += total
 
         if total:
@@ -163,46 +157,45 @@ def push(commit_url, status_url, config):
     return body
 
 
-def pull_request(pull_request_url, status_url, config):
+def pull_request(branch_status_id, pull_request_url, status_url, config):
     """Performing all the tests on the pull request.
 
     Then pings back the given status_url and update the issue labels.
 
+    :param branch_status_id: identifier of the branch status.
+    :type branch_status_id: int
     :param pull_request_url: github api pull request
+    :type pull_request_url: str
     :param status_url: github api status url
+    :type status_url: str
     :param config: configuration dictionary
+    :type config: dict
     :return: status body and applied labels
+    :rtype: dict
+
     """
     errors = {"message": [], "commits": [], "files": {}}
     length = 0
 
-    repository = Repository.query.filter_by(id=config["repository"]).first()
+    branch_status = BranchStatus.query.filter_by(id=branch_status_id).first()
+
+    if not branch_status:
+        raise AssertionError("Unknown branch: {0} ({1})"
+                         .format(branch_status_id, pull_request_url))
+    if not branch_status.is_pending():
+        LOGGER.info("Known pull request, skipping.")
+        return branch_status.errors
 
     pull_request = requests.get(pull_request_url)
     data = json.loads(pull_request.content)
 
     options = get_options(config)
-    headers = get_headers(repository, config)
+    headers = get_headers(branch_status.commit.repository, config)
 
-    commit_sha = data["head"]["sha"]
     issue_url = data["issue_url"]
     commits_url = data["commits_url"]
     files_url = data["commits_url"].replace("/commits", "/files")
     review_comments_url = data["review_comments_url"]
-
-    # Find existing BranchStatus
-    commits = CommitStatus.query.filter_by(repository_id=repository.id,
-                                           sha=commit_sha).all()
-
-    bs = None
-    if len(commits):
-        bs = BranchStatus.query.filter(
-            BranchStatus.commit_id.in_([c.id for c in commits]),
-            BranchStatus.name == data["head"]["label"]
-        ).first()
-
-    if bs:
-        return "Known branch {0.name} skipped".format(bs)
 
     # Check only if the title does not contain 'wip'.
     is_wip = bool(re.match(r"\bwip\b", data["title"], re.IGNORECASE))
@@ -215,9 +208,12 @@ def pull_request(pull_request_url, status_url, config):
     check_files = check_pep8 or check_pep257 or check_license
 
     # Checking commits
-    errs, new_labels, messages = _check_commits(repository,
-                                                commits_url,
-                                                **options)
+    errs, messages = _check_commits(
+        branch_status.commit.repository,
+        commits_url,
+        **options
+    )
+
     errors["message"] += errs
     length += len(errs)
 
@@ -260,13 +256,11 @@ def pull_request(pull_request_url, status_url, config):
         except requests.RequestException:
             LOGGER.exception(data["statuses_url"])
 
-    branch_status = BranchStatus(errors["commits"][0],
-                                 data["head"]["label"],
-                                 data["html_url"],
-                                 errors)
+    branch_status.content = errors
     db.session.add(branch_status)
     db.session.commit()
 
+    new_labels = set()
     if is_wip:
         new_labels = set([config.get("LABEL_WIP", "in_work")])
     if not new_labels:
@@ -387,32 +381,33 @@ def _get_issue_labels(issue_url):
     return labels, issue["labels_url"]
 
 
-def _check_commit(repository, commit, **kwargs):
-    """Check one commit message."""
-    errs = None
-    sha = commit["sha"]
-    commit_status = CommitStatus.query.filter_by(repository_id=repository.id,
-                                                 sha=sha).first()
+def _check_commit(commit_status, commit, **kwargs):
+    """Check one commit message.
 
-    if not commit_status:
-        raise AssertionError("Unknown commit: {repo.fullname}/{sha}"
-                             .format(repo=repository, sha=sha))
+    Does nothing if the commit has already been checked in the past.
+
+    :param commit_status: commit status
+    :type: CommitStatus
+    :param commit: json object
+    :type commit: dict
+    :return: errors
+    :rtype: list
+    """
+    errs = None
 
     if commit_status.is_pending():
         errs = check_message(commit["commit"]["message"], **kwargs)
-        commit_status.content = dict(commit_status.content,
-                                     **{"message": errs})
+        commit_status.content = dict(commit_status.content, message=errs)
     else:
         errs = commit_status.content["message"]
 
-    return errs, commit_status
+    return errs
 
 
 def _check_commits(repository, url, **kwargs):
     """Check the commit messages of a pull request."""
     errors = []
     messages = []
-    labels = set()
 
     check = kwargs.get("CHECK")
     check_commit_messages = kwargs.get("CHECK_COMMIT_MESSAGES", True)
@@ -421,20 +416,22 @@ def _check_commits(repository, url, **kwargs):
     commits = json.loads(response.content)
     for commit in reversed(commits):
         errs = []
-        commit_status = None
         sha = commit["sha"]
         url = commit["html_url"]
 
+        commit_status = CommitStatus.query.filter_by(
+            repository_id=repository.id,
+            sha=sha).first()
+
+        if not commit_status:
+            raise AssertionError("CommitStatus not found for {0.fullname} {sha}"
+                             .format(repo=repository, sha=sha))
+
         if check and check_commit_messages:
-            errs, commit_status = _check_commit(repository, commit, **kwargs)
-        else:
-            commit_status = CommitStatus.find_or_create(repository, sha, url)
+            errs = _check_commit(commit_status, commit, **kwargs)
 
         # filter out the needs more reviewers
         e = list(filter(lambda x: not x.startswith("M100:"), errs))
-
-        if len(errs) > len(e):
-            labels.add(kwargs.get("LABEL_REVIEW", "in_review"))
 
         messages.append({
             "sha": sha,
@@ -446,7 +443,7 @@ def _check_commits(repository, url, **kwargs):
             }
         })
         errors += list(map(lambda x: "{0}: {1}".format(sha, x), errs))
-    return errors, labels, messages
+    return errors, messages
 
 
 def _check_files(files, cwd, **kwargs):

@@ -33,7 +33,7 @@ from invenio_kwalitee.models import (Account, Repository, BranchStatus,
                                      CommitStatus)
 from invenio_kwalitee.tasks import pull_request
 from hamcrest import (assert_that, equal_to, contains_string, has_length,
-                      has_item, has_items, is_not)
+                      has_item, has_items, is_not, greater_than)
 
 from . import MyQueue, DatabaseMixin
 
@@ -138,9 +138,10 @@ class PullRequestTest(TestCase, DatabaseMixin):
         body = json.loads(response.data)
         assert_that(body["payload"]["state"], equal_to("pending"))
 
-        (fn, pull_request_url, status_url, config) = queue.dequeue()
+        (fn, bs_id, pull_request_url, status_url, config) = queue.dequeue()
         self.assertEquals(pull_request, fn)
         assert_that(fn, equal_to(pull_request))
+        assert_that(bs_id, greater_than(0))
         assert_that(pull_request_url,
                     equal_to("https://api.github.com/pulls/1"))
 
@@ -210,18 +211,18 @@ class PullRequestTest(TestCase, DatabaseMixin):
                                content_type="application/json")
         commits = [
             {
-                "url": "https://api.github.com/commits/2",
-                "sha": "2",
-                "html_url": "https://github.com/commits/2",
-                "comments_url": "https://api.github.com/commits/2/comments",
+                "url": "https://api.github.com/commits/1",
+                "sha": "1",
+                "html_url": "https://github.com/commits/1",
+                "comments_url": "https://api.github.com/commits/1/comments",
                 "commit": {
                     "message": "fix all the bugs!"
                 }
             }, {
 
-                "url": "https://api.github.com/commits/1",
-                "sha": "1",
-                "html_url": "https://github.com/commits/1",
+                "url": "https://api.github.com/commits/2",
+                "sha": "2",
+                "html_url": "https://github.com/commits/2",
                 "comments_url": "https://api.github.com/commits/1/comments",
                 "commit": {
                     "message": "herp derp"
@@ -279,12 +280,25 @@ class PullRequestTest(TestCase, DatabaseMixin):
                                body=json.dumps(status),
                                content_type="application/json")
 
+        css = []
         for commit in commits:
-            CommitStatus.find_or_create(self.repository,
-                                        commit["sha"],
-                                        commit["url"])
+            css.append(CommitStatus.find_or_create(self.repository,
+                                                   commit["sha"],
+                                                   commit["url"]))
 
-        pull_request("https://api.github.com/pulls/1",
+        bs = BranchStatus(css[-1],
+                          "test:my-branch",
+                          "https://github.com/pulls/1",
+                          {"commits": css, "files": None})
+        db.session.add(bs)
+        db.session.commit()
+
+        assert_that(css[0].is_pending())
+        assert_that(css[1].is_pending())
+        assert_that(bs.is_pending())
+
+        pull_request(bs.id,
+                     "https://api.github.com/pulls/1",
                      "http://kwalitee.invenio-software.org/status/2",
                      {"ACCESS_TOKEN": "deadbeef",
                       "repository": self.repository.id})
@@ -325,7 +339,7 @@ class PullRequestTest(TestCase, DatabaseMixin):
         assert_that(cs[1].content["message"],
                     has_item("1: M100 needs more reviewers"))
 
-        bs = BranchStatus.query.filter_by(commit_id=cs[0].id,
+        bs = BranchStatus.query.filter_by(commit_id=cs[1].id,
                                           name="test:my-branch").first()
 
         assert_that(bs)
@@ -343,7 +357,7 @@ class PullRequestTest(TestCase, DatabaseMixin):
             "url": "https://api.github.com/pulls/1",
             "html_url": "https://github.com/pulls/1",
             "commits_url": "https://api.github.com/pulls/1/commits",
-            "statuses_url": "https://api.github.com/statuses/2",
+            "statuses_url": "https://api.github.com/statuses/1",
             "review_comments_url": "https://api.github.com/pulls/1/comments",
             "issue_url": "https://api.github.com/issues/1",
             "head": {
@@ -357,19 +371,19 @@ class PullRequestTest(TestCase, DatabaseMixin):
                                content_type="application/json")
         commits = [
             {
-                "url": "https://api.github.com/commits/2",
-                "sha": "2",
-                "html_url": "https://github.com/commits/2",
-                "comments_url": "https://api.github.com/commits/2/comments",
+                "url": "https://api.github.com/commits/1",
+                "sha": "1",
+                "html_url": "https://github.com/commits/1",
+                "comments_url": "https://api.github.com/commits/1/comments",
                 "commit": {
                     "message": "fix all the bugs!"
                 }
             }, {
 
-                "url": "https://api.github.com/commits/1",
-                "sha": "1",
-                "html_url": "https://github.com/commits/1",
-                "comments_url": "https://api.github.com/commits/1/comments",
+                "url": "https://api.github.com/commits/2",
+                "sha": "2",
+                "html_url": "https://github.com/commits/2",
+                "comments_url": "https://api.github.com/commits/2/comments",
                 "commit": {
                     "message": "herp derp"
                 }
@@ -408,13 +422,22 @@ class PullRequestTest(TestCase, DatabaseMixin):
                                body=json.dumps(issue),
                                content_type="application/json")
 
+        css = []
         for commit in commits:
-            CommitStatus.find_or_create(self.repository,
-                                        commit["sha"],
-                                        commit["url"])
+            css.append(CommitStatus.find_or_create(self.repository,
+                                                   commit["sha"],
+                                                   commit["url"]))
+        bs = BranchStatus(css[-1],
+                          "test:my-branch",
+                          "https://github.com/pulls/1",
+                          {"commits": css, "files": None})
+        db.session.add(bs)
+        db.session.commit()
+        assert_that(bs.is_pending())
 
-        pull_request("https://api.github.com/pulls/1",
-                     "http://kwalitee.invenio-software.org/status/2",
+        pull_request(bs.id,
+                     "https://api.github.com/pulls/1",
+                     "http://kwalitee.invenio-software.org/status/1",
                      {"ACCESS_TOKEN": "deadbeef",
                       "repository": self.repository.id})
 
@@ -532,18 +555,27 @@ class PullRequestTest(TestCase, DatabaseMixin):
                                body=json.dumps(status),
                                content_type="application/json")
 
+        cs = []
         for commit in commits:
-            CommitStatus.find_or_create(self.repository,
-                                        commit["sha"],
-                                        commit["url"])
+            cs.append(CommitStatus.find_or_create(self.repository,
+                                                  commit["sha"],
+                                                  commit["url"]))
 
-        pull_request("https://api.github.com/pulls/1",
+        bs = BranchStatus(cs[0],
+                          "test:my-branch",
+                          "https://github.com/pulls/1",
+                          {"commits": cs, "files": None})
+        db.session.add(bs)
+        db.session.commit()
+        assert_that(bs.is_pending())
+
+        pull_request(bs.id,
+                     "https://api.github.com/pulls/1",
                      "http://kwalitee.invenio-software.org/status/1",
                      {"ACCESS_TOKEN": "deadbeef",
                       "TRUSTED_DEVELOPERS": ["john.doe@example.org"],
                       "COMPONENTS": ["herp"],
-                      "SIGNATURES": ["Signed-off-by"],
-                      "repository": self.repository.id})
+                      "SIGNATURES": ["Signed-off-by"]})
 
         latest_requests = httpretty.HTTPretty.latest_requests
         # 5x GET pull, issue, commits, 1 file, spam/eggs.py
@@ -578,6 +610,7 @@ class PullRequestTest(TestCase, DatabaseMixin):
         bs = BranchStatus.query.filter_by(commit_id=cs[0].id,
                                           name="test:my-branch").first()
 
+        assert_that(bs)
         assert_that(bs.errors, equal_to(5))
         assert_that(
             bs.content["files"]["spam/eggs.py"]["errors"],
@@ -679,19 +712,26 @@ class PullRequestTest(TestCase, DatabaseMixin):
                                body=json.dumps(status),
                                content_type="application/json")
 
+        cs = []
         for commit in commits:
-            CommitStatus.find_or_create(self.repository,
-                                        commit["sha"],
-                                        commit["url"])
+            cs.append(CommitStatus.find_or_create(self.repository,
+                                                  commit["sha"],
+                                                  commit["url"]))
+        bs = BranchStatus(cs[-1],
+                          "test:my-branch",
+                          "http://github.com/pulls/1",
+                          {"commits": cs, "files": None})
+        db.session.add(bs)
+        db.session.commit()
 
-        pull_request("https://api.github.com/pulls/1",
+        pull_request(bs.id,
+                     "https://api.github.com/pulls/1",
                      "http://kwalitee.invenio-software.org/status/1",
                      {"ACCESS_TOKEN": "deadbeef",
                       "TRUSTED_DEVELOPERS": ["john.doe@example.org"],
                       "COMPONENTS": ["herp"],
                       "SIGNATURES": ["Signed-off-by"],
-                      "IGNORE": ["E265", "D100"],
-                      "repository": self.repository.id})
+                      "IGNORE": ["E265", "D100"]})
 
         latest_requests = httpretty.HTTPretty.latest_requests
         # 5x GET pull, issue, commits, 1 file, spam/eggs.py
@@ -747,32 +787,16 @@ class PullRequestTest(TestCase, DatabaseMixin):
         bs = BranchStatus(cs2,
                           "test:my-branch",
                           "https://github.com/pulls/1",
-                          {"commits": ["1", "2"], "files": {}})
+                          {"commits": [cs1, cs2], "files": {}})
         db.session.add(bs)
         db.session.commit()
+        assert_that(bs.is_pending(), equal_to(False))
 
-        pull = {
-            "title": "Lorem ipsum",
-            "url": "https://api.github.com/pulls/1",
-            "html_url": "https://github.com/pulls/1",
-            "commits_url": "https://api.github.com/pulls/1/commits",
-            "statuses_url": "https://api.github.com/statuses/2",
-            "review_comments_url": "https://api.github.com/pulls/1/comments",
-            "issue_url": "https://api.github.com/issues/1",
-            "head": {
-                "sha": "2",
-                "label": "test:my-branch"
-            }
-        }
-        httpretty.register_uri(httpretty.GET,
-                               "https://api.github.com/pulls/1",
-                               body=json.dumps(pull),
-                               content_type="application/json")
-
-        pull_request("https://api.github.com/pulls/1",
+        pull_request(bs.id,
+                     "https://api.github.com/pulls/1",
                      "http://kwalitee.invenio-software.org/status/2",
-                     {"ACCESS_TOKEN": "deadbeef",
-                      "repository": self.repository.id})
+                     {"ACCESS_TOKEN": "deadbeef"})
 
         latest_requests = httpretty.HTTPretty.latest_requests
-        assert_that(len(latest_requests), equal_to(1), "1x GET + 0x POST")
+        assert_that(len(latest_requests), equal_to(0),
+                    "No requests are expected")
