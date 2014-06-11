@@ -23,20 +23,18 @@
 
 """Git hooks."""
 
-from __future__ import print_function, absolute_import
+from __future__ import print_function, unicode_literals
 
 import os
+import re
 import sys
 import shutil
-import operator
 from codecs import open
 from tempfile import mkdtemp
 from subprocess import Popen, PIPE
 
-from .kwalitee import check_file, check_message, get_options
+from .kwalitee import check_file, check_message, get_options, SUPPORTED_FILES
 
-
-SUPPORTED_FILES = '.py', '.html', '.rst', '.js', '.css'
 
 
 def _get_files_modified():
@@ -44,8 +42,9 @@ def _get_files_modified():
     cmd = "git diff-index --cached --name-only --diff-filter=ACMRTUXB HEAD"
     _, files_modified, _ = run(cmd)
 
-    test = operator.methodcaller('endswith', SUPPORTED_FILES)
-    return list(filter(lambda f: test(f), files_modified))
+    extensions = [re.escape(ext) for ext in list(SUPPORTED_FILES) + [".rst"]]
+    test = "(?:{0})$".format("|".join(extensions))
+    return list(filter(lambda f: re.search(test, f), files_modified))
 
 
 def _get_git_author():
@@ -56,20 +55,20 @@ def _get_git_author():
     return git_author[:git_author.find(">") + 1]
 
 
-def _get_component(filename, default=u"global"):
+def _get_component(filename, default="global"):
     """Get component name from filename."""
     if hasattr(filename, "decode"):
         filename = filename.decode()
     parts = filename.split(os.path.sep)
 
     if len(parts) >= 3:
-        if parts[1] in u"modules legacy ext".split():
+        if parts[1] in "modules legacy ext".split():
             return parts[2]
     if len(parts) >= 2:
-        if parts[1] in u"base celery utils".split():
+        if parts[1] in "base celery utils".split():
             return parts[1]
     if len(parts) >= 1:
-        if parts[0] in u"grunt docs".split():
+        if parts[0] in "grunt docs".split():
             return parts[0]
     return default
 
@@ -99,7 +98,7 @@ def _prepare_commit_msg(tmp_file, author, files_modified=None, template=None):
         if len(list(msg)):
             return
 
-    component = u"unknown"
+    component = "unknown"
     components = _get_components(files_modified)
 
     if len(components) == 1:
@@ -107,14 +106,14 @@ def _prepare_commit_msg(tmp_file, author, files_modified=None, template=None):
     elif len(components) > 1:
         component = "/".join(components)
         contents.append(
-            u"# WARNING: Multiple components detected - consider splitting "
-            u"commit.\r\n"
+            "# WARNING: Multiple components detected - consider splitting "
+            "commit.\r\n"
         )
 
     with open(tmp_file, "w", "utf-8") as fh:
         fh.write(template.format(component=component,
                                  author=author,
-                                 extra=u"".join(contents)))
+                                 extra="".join(contents)))
 
 
 def _check_message(message, options):
@@ -155,8 +154,8 @@ def commit_msg_hook(argv):
     options = {"allow_empty": True}
 
     if not _check_message(message, options):
-        print(u"Aborting commit due to commit message errors (override with "
-              u"'git commit --no-verify').", file=sys.stderr)
+        print("Aborting commit due to commit message errors (override with "
+              "'git commit --no-verify').", file=sys.stderr)
         return False
 
 
@@ -167,7 +166,7 @@ def post_commit_hook(argv=None):
     options = {"allow_empty": True}
 
     if not _check_message(message, options):
-        print(u"Commit message errors (fix with 'git commit --amend').",
+        print("Commit message errors (fix with 'git commit --amend').",
               file=sys.stderr)
 
         return False
@@ -253,8 +252,8 @@ def pre_commit_hook(argv=None):
         print(error, file=sys.stderr)
 
     if errors:
-        print(u"Aborting commit due to kwalitee errors (override with "
-              u"'git commit --no-verify').",
+        print("Aborting commit due to kwalitee errors (override with "
+              "'git commit --no-verify').",
               file=sys.stderr)
         return False
 
@@ -262,14 +261,17 @@ def pre_commit_hook(argv=None):
 def run(command, raw_output=False):
     """Run a command using subprocess.
 
-    raw_output: does not attempt to convert the output as unicode
+    :param command: command line to be run
+    :type command: str
+    :param raw_output: does not attempt to convert the output as unicode
+    :type raw_output: bool
+    :return: error code, output (``stdout``) and error (``stderr``)
+    :rtype: tuple
+
     """
     p = Popen(command.split(), stdout=PIPE, stderr=PIPE)
     (stdout, stderr) = p.communicate()
-    # On python 3, subprocess.Popen returns bytes objects which expect
-    # endswith to be given a bytes object or a tuple of bytes but not native
-    # string objects. This is simply less mysterious than using b'.py' in the
-    # endswith method. That should work but might still fail horribly.
+    # On python 3, subprocess.Popen returns bytes objects.
     if not raw_output:
         return (
             p.returncode,

@@ -21,34 +21,39 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
-import os
-import shutil
-import tempfile
+from __future__ import unicode_literals
+
 from unittest import TestCase
 from invenio_kwalitee import app
-from hamcrest import assert_that, equal_to, is_in
+from invenio_kwalitee.models import Account
+from hamcrest import assert_that, equal_to, contains_string
+
+from .. import DatabaseMixin
 
 
-class IndexTest(TestCase):
-    """Integration tests for the homepage"""
+class IndexTest(TestCase, DatabaseMixin):
+
+    """Integration tests for the homepage."""
+
+    accounts = "invenio", "test", "bob"
+
+    def setUp(self):
+        super(IndexTest, self).setUp()
+        self.databaseUp()
+        for account in self.accounts:
+            Account.find_or_create(account)
+
+    def tearDown(self):
+        self.databaseDown()
+        super(IndexTest, self).tearDown()
+
     def test_simple_status(self):
-        """GET / displays some recent statuses"""
-        instance_path = tempfile.mkdtemp()
-        app.instance_path = instance_path
-        filenames = []
-        for sha in range(10):
-            filename = os.path.join(app.instance_path,
-                                    "status_{0}.txt".format(sha))
-            with open(filename, "w+") as f:
-                f.write("\n".join(["{0}: Signature missing",
-                                   "{0}: Needs more reviewers"]).format(sha))
-            filenames.append(filename)
+        """GET / displays the accounts"""
 
         tester = app.test_client(self)
         response = tester.get("/")
 
         assert_that(response.status_code, equal_to(200))
-        for sha in range(10):
-            assert_that("/status/{0}".format(sha), is_in(str(response.data)))
-
-        shutil.rmtree(instance_path)
+        body = response.get_data(as_text=True)
+        for account in self.accounts:
+            assert_that(body, contains_string(account))

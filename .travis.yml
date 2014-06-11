@@ -32,12 +32,11 @@ python:
 install:
   - pip install --upgrade pip  --use-mirrors
   - travis_retry pip install -r requirements.txt
-  - travis_retry pip install -r requirements-test.txt
-  - pip install -e .
-  - pip install coveralls --use-mirrors
+  - travis_retry pip install -r requirements-docs.txt
+  - travis_retry pip install coverage coveralls httpretty mock nose pyhamcrest --use-mirrors
 
 script:
-  - coverage run --source=invenio_kwalitee setup.py test
+  - coverage run --source=invenio_kwalitee setup.py test && sphinx-build -vnNW docs _build
 
 after_success:
   - coveralls

@@ -30,7 +30,12 @@ from hamcrest import assert_that, equal_to, contains_string
 
 
 class StatusTest(TestCase):
-    """Integration tests for the status page"""
+
+    """Integration tests for the status page.
+
+    Legacy view: that will eventually be dropped.
+    """
+
     def test_simple_status(self):
         """GET /status/sha1 displays the associated text file"""
         sha = "deadbeef"
@@ -49,5 +54,18 @@ class StatusTest(TestCase):
         assert_that(str(response.data), contains_string("Signature missing"))
         assert_that(str(response.data),
                     contains_string("Needs more reviewers"))
+
+        shutil.rmtree(instance_path)
+
+    def test_missing_status(self):
+        """GET /status/sha2 404"""
+        sha = "deadbeef"
+        instance_path = tempfile.mkdtemp()
+        app.instance_path = instance_path
+
+        tester = app.test_client(self)
+        response = tester.get("status/{0}".format(sha))
+
+        assert_that(response.status_code, equal_to(404))
 
         shutil.rmtree(instance_path)

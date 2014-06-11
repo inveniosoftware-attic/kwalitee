@@ -7,11 +7,11 @@ Invenio-Kwalitee
 .. image:: https://coveralls.io/repos/jirikuncar/invenio-kwalitee/badge.png?branch=master
     :target: https://coveralls.io/r/jirikuncar/invenio-kwalitee
 
+
 Installation
 ============
-Invenio-Kwalitee is on PyPI so all you need is: ::
 
-    pip install Invenio-Kwalitee
+.. seealso:: :ref:`_installation`
 
 Git Hooks
 =========
@@ -41,8 +41,9 @@ Kwalitee checks
 ===============
 
 * Static analysis of files:
-   * pyflake
-   * PEP8
+   * `pyflakes <https://launchpad.net/pyflakes>`_
+   * `PEP8 <http://legacy.python.org/dev/peps/pep-0008/>`_
+   * `PEP257 <http://legacy.python.org/dev/peps/pep-0257/>`_
    * Copyright year in license
 
 * Commit message analysis:
@@ -52,49 +53,6 @@ Kwalitee checks
      bulletted list. (using present tense).
    * Required signatures: ``Signed-off-by`` and ``Reviewed-by``.
 
-Testing
-=======
-Running the tests are as simple as: ::
-
-    python setup.py test
-
-or (to also show test coverage) ::
-
-    python setup.py nosetests
-
-Deployment
-==========
-
-Upstart (Ubuntu)
-----------------
-
-The web application can be served using nginx_ + uWSGI_ or gunicorn_ and the
-worker can also be handled using upstart_. Here is the configuration for it.
-VirtualEnv_ is a clean way to set everything up and is recommended.::
-
-    # /etc/init/<myservice>.conf
-    description "Kwalitee RQ worker"
-
-    respawn
-    respawn limit 15 5
-    console log
-    setuid <USER>
-    setgid <GROUP>
-
-    exec /usr/bin/python -m invenio_kwalitee.worker
-    # Or if you've set it up in a virtualenv
-    #exec <VIRTUALENV>/bin/python -m invenio_kwalitee.worker
-
-Then, you can manage it using upstart like anything else.::
-
-    $ sudo start <myservice>
-    $ sudo stop <myservice>
-
-.. _nginx: http://gunicorn-docs.readthedocs.org/en/latest/deploy.html
-.. _uWSGI: http://uwsgi-docs.readthedocs.org/en/latest/Upstart.html
-.. _gunicorn: http://gunicorn-docs.readthedocs.org/en/latest/deploy.html#upstart
-.. _upstart: http://upstart.ubuntu.com/
-.. _VirtualEnv: http://virtualenv.readthedocs.org/en/latest/virtualenv.html
 
 License
 =======
