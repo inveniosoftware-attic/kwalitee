@@ -1,5 +1,6 @@
 [run]
-source = invenio_kwalitee
+branch = True
+omit = docs/*
 
 [report]
 # Regexes for lines to exclude from consideration

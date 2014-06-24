@@ -23,9 +23,10 @@
 
 """Invenio-Kwalitee setuptools configuration."""
 
-from setuptools import setup
 import os
 import sys
+from setuptools import setup
+from setuptools.command.test import test as TestCommand
 
 # Where the requirements files are located.
 requirements_dir = "requirements"
@@ -46,10 +47,10 @@ if tuple(sys.version_info) < (2, 7):
     install_requires.append('importlib')
 
 test_requires = [
-    'coverage',
+    'pytest',
+    'pytest-cov',
     'httpretty',
     'mock',
-    'nose',
     'pyhamcrest'
 ]
 
@@ -58,6 +59,31 @@ test_requires = [
 version = {}
 with open(os.path.join('invenio_kwalitee', 'version.py'), 'r') as fp:
     exec(fp.read(), version)
+
+
+class PyTest(TestCommand):
+
+    """
+    PyTest test runner.
+
+    See: http://pytest.org/latest/goodpractises.html?highlight=setuptools
+    """
+
+    user_options = [('pytest-args=', 'a', 'Arguments to pass to py.test')]
+
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.pytest_args = ["tests"]
+
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.test_args = []
+        self.test_suite = True
+
+    def run_tests(self):
+        import pytest
+        errno = pytest.main(self.pytest_args)
+        sys.exit(errno)
 
 
 setup(
@@ -75,6 +101,7 @@ setup(
     include_package_data=True,
     platforms='any',
     install_requires=install_requires,
+    tests_require=test_requires,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Web Environment',
@@ -96,6 +123,7 @@ setup(
             'kwalitee = invenio_kwalitee.cli:main',
         ],
     },
-    test_suite='nose.collector',
-    tests_require=test_requires,
+    cmdclass={
+        'test': PyTest
+    },
 )

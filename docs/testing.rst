@@ -8,9 +8,15 @@ Running the tests are as simple as:
 
 .. code-block:: console
 
-    $ python setup.py nosetests
+    $ python setup.py test
 
-This will output the coverage
+The code coverage can be outputted by passing some arguments to py.test.
+
+.. code-block:: console
+
+    $ python setup.py test -a "tests --cov invenio_kwalitee --cov-config .coveragerc"
+    # html report
+    $ python setup.py test -a "tests --cov invenio_kwalitee --cov-report html"
 
 Writing tests
 =============
