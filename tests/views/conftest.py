@@ -25,12 +25,12 @@
 
 import pytest
 
-from invenio_kwalitee.models import (Account, Repository, CommitStatus,
-                                     BranchStatus)
+from invenio_kwalitee.models import Repository, CommitStatus, BranchStatus
 
 
 @pytest.fixture(scope="function")
 def repositories(owner, session, request):
+    """Create a couple of repositories for a test."""
     repos = []
     names = "invenio", "test", "bob"
     for name in names:
@@ -44,9 +44,10 @@ def repositories(owner, session, request):
     request.addfinalizer(teardown)
     return repos
 
+
 @pytest.fixture(scope="function")
 def commits(owner, repository, session, request):
-
+    """Create a couple of commits for a test."""
     cs = [
         {"sha": "ef01234"},
         {"sha": "789abcd"},
@@ -72,8 +73,10 @@ def commits(owner, repository, session, request):
     request.addfinalizer(teardown)
     return commits
 
+
 @pytest.fixture(scope="function")
 def branch(owner, repository, commits, session, request):
+    """Create a branch status for a test."""
     branch_name = "test:wip/my-branch"
 
     bs = BranchStatus(commits[-1],

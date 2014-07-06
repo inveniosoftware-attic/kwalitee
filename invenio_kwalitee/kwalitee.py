@@ -307,7 +307,7 @@ class _Report(pep8.BaseReport):
     """
 
     def __init__(self, options):
-        """Initialize the reporter"""
+        """Initialize the reporter."""
         super(_Report, self).__init__(options)
         self.errors = []
 

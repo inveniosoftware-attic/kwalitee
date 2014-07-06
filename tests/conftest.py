@@ -26,13 +26,11 @@
 from __future__ import unicode_literals
 
 import os
-import sys
 import pytest
-import tempfile
 
-from io import StringIO
 from invenio_kwalitee import create_app
 from invenio_kwalitee.models import db as _db, Account, Repository
+
 
 @pytest.fixture(scope="session")
 def app(request):
@@ -92,6 +90,7 @@ def session(db, request):
 
 @pytest.fixture(scope="function")
 def owner(session, request):
+    """Create an account for a test."""
     owner = Account.find_or_create("invenio", token="DEADBEEF")
 
     def teardown():
@@ -104,6 +103,7 @@ def owner(session, request):
 
 @pytest.fixture(scope="function")
 def repository(owner, session, request):
+    """Create a repository for a test."""
     repo = (Repository.find_or_create(owner, "test"))
 
     def teardown():
@@ -112,5 +112,3 @@ def repository(owner, session, request):
 
     request.addfinalizer(teardown)
     return repo
-
-

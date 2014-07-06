@@ -55,6 +55,7 @@ def test_simple_status(app):
 
     shutil.rmtree(instance_path)
 
+
 def test_missing_status(app):
     """GET /status/sha2 404"""
     sha = "deadbeef"

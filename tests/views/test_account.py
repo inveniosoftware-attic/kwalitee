@@ -23,9 +23,7 @@
 
 from __future__ import unicode_literals
 
-import pytest
 from hamcrest import assert_that, equal_to, contains_string
-from invenio_kwalitee.models import Account, Repository
 
 
 def test_get_account(app, owner, repositories):
@@ -39,6 +37,7 @@ def test_get_account(app, owner, repositories):
         assert_that(response.get_data(as_text=True),
                     contains_string("/{0}/{1}/".format(owner.name,
                                                        repository.name)))
+
 
 def test_get_account_doesnt_exist(app):
     """GET /{account} raise 404 if not found."""

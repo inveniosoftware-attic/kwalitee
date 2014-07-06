@@ -293,7 +293,6 @@ texinfo_documents = [
 
 
 intersphinx_mapping = {
-    'http://docs.python.org/': None,
     'http://pythonhosted.org/Flask-SQLAlchemy/': None,
     'http://docs.sqlalchemy.org/en/latest/': None,
     'http://sphinx-doc.org': None,
@@ -301,5 +300,11 @@ intersphinx_mapping = {
     'http://flask-script.readthedocs.org/en/latest/': None,
     'http://pep8.readthedocs.org/en/latest/': None,
     'http://www.voidspace.org.uk/python/mock/': None,
-    'http://pytest.org/latest/': None
+    'http://pytest.org/latest/': None,
+    'http://werkzeug.pocoo.org/docs/': None
 }
+
+if sys.version_info < (3,):
+    intersphinx_mapping['http://docs.python.org/2.7/'] = None
+else:
+    intersphinx_mapping['http://docs.python.org/3.4/'] = None

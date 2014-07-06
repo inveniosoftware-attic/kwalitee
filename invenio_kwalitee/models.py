@@ -46,7 +46,7 @@ db = SQLAlchemy()
 
 
 def init_app(app):
-    """Initializes Flask app."""
+    """Initialize the Flask app with db."""
     db.app = app
     db.init_app(app)
     return db

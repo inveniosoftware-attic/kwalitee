@@ -40,6 +40,7 @@ from invenio_kwalitee.hooks import (_get_component, _get_components,
                                     _pre_commit, _prepare_commit_msg,
                                     post_commit_hook, pre_commit_hook)
 
+
 class GetComponentTest(TestCase):
     """Testing _get_component and _get_components."""
 

@@ -23,9 +23,6 @@
 
 from __future__ import unicode_literals
 
-import sys
-import pytest
-
 from hamcrest import (assert_that, equal_to, contains_string,
                       string_contains_in_order)
 from invenio_kwalitee.models import Account, Repository
@@ -41,6 +38,7 @@ def test_add(capsys, session):
     assert_that(Repository.query.filter_by(name="kwalitee").count(),
                 equal_to(1))
 
+
 def test_add_existing(session):
     add("invenio/kwalitee")
     add("invenio/kwalitee")
@@ -49,10 +47,12 @@ def test_add_existing(session):
     assert_that(Repository.query.filter_by(name="kwalitee").count(),
                 equal_to(1))
 
+
 def test_add_invalid_name(capsys, session):
     assert_that(add("foo"), equal_to(1))
     _, err = capsys.readouterr()
     assert_that(err, contains_string("foo is not a valid repository"))
+
 
 def test_remove(session):
     add("invenio/kwalitee")
@@ -64,10 +64,12 @@ def test_remove(session):
     assert_that(Repository.query.filter_by(name="kwalitee").count(),
                 equal_to(0))
 
+
 def test_remove_invalid_name(capsys, session):
     assert_that(remove("foo"), equal_to(1))
     _, err = capsys.readouterr()
     assert_that(err, contains_string("foo is not a valid repository"))
+
 
 def test_list(capsys, session):
     repos = ["a/a", "bcd/def", "foo-bar/spam-and-eggs", "foo-bar/zoo"]

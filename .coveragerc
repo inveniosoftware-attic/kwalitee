@@ -1,6 +1,9 @@
 [run]
 branch = True
-omit = docs/*
+omit =
+    docs/*
+    *.html
+    *.test
 
 [report]
 # Regexes for lines to exclude from consideration

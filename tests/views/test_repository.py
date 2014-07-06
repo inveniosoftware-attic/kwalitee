@@ -23,8 +23,8 @@
 
 from __future__ import unicode_literals
 
-import pytest
 from hamcrest import assert_that, equal_to, contains_string
+
 
 def test_get_repository(app, owner, repository, commits, branch):
     """GET /{account}/{repository} displays the recent commits."""
@@ -46,6 +46,7 @@ def test_get_repository(app, owner, repository, commits, branch):
                     contains_string("/commits/{0}".format(commit.sha)))
         assert_that(body,
                     contains_string("Everything is OK"))
+
 
 def test_get_repository_doesnt_exist(app):
     """GET /{account}/{repository} raise 404 if not found."""

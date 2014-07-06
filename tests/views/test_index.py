@@ -24,6 +24,7 @@
 from __future__ import unicode_literals
 
 import pytest
+
 from invenio_kwalitee.models import Account
 from hamcrest import assert_that, equal_to, contains_string
 
@@ -43,6 +44,7 @@ def accounts(session, request):
 
     request.addfinalizer(teardown)
     return a
+
 
 def test_simple_status(app, accounts):
     """GET / displays the accounts"""

@@ -25,14 +25,11 @@
 
 from __future__ import unicode_literals, absolute_import
 
-import pytest
 import httpretty
 
 from flask import json
 from datetime import datetime
-from unittest import TestCase
-from invenio_kwalitee.models import (Account, Repository, BranchStatus,
-                                     CommitStatus)
+from invenio_kwalitee.models import BranchStatus, CommitStatus
 from invenio_kwalitee.tasks import pull_request
 from hamcrest import (assert_that, equal_to, contains_string, has_length,
                       has_item, has_items, is_not, greater_than)
@@ -40,10 +37,9 @@ from hamcrest import (assert_that, equal_to, contains_string, has_length,
 from utils import MyQueue, GPL
 
 
-
-@httpretty.activate
 def test_pull_request(app, owner, repository):
     """POST /payload (pull_request) performs the checks"""
+    httpretty.reset()
     queue = MyQueue()
     # Replace the default Redis queue
     app.config["queue"] = queue
@@ -96,10 +92,12 @@ def test_pull_request(app, owner, repository):
                            content_type="application/json")
 
     tester = app.test_client()
+    httpretty.enable()
     response = tester.post("/payload", content_type="application/json",
                            headers=(("X-GitHub-Event", "pull_request"),
                                     ("X-GitHub-Delivery", "1")),
                            data=json.dumps(pull_request_event))
+    httpretty.disable()
 
     assert_that(response.status_code, equal_to(200))
     body = json.loads(response.data)
@@ -128,9 +126,9 @@ def test_pull_request(app, owner, repository):
     assert_that(bs.state, equal_to("pending"))
 
 
-@httpretty.activate
 def test_pull_request_task(app, owner, repository, session):
     """Task pull_request /pulls/1"""
+    httpretty.reset()
     pull = {
         "title": "Lorem ipsum",
         "url": "https://api.github.com/pulls/1",
@@ -264,10 +262,12 @@ def test_pull_request_task(app, owner, repository, session):
     assert_that(css[1].is_pending())
     assert_that(bs.is_pending())
 
+    httpretty.enable()
     pull_request(bs.id,
                  "https://api.github.com/pulls/1",
                  "http://kwalitee.invenio-software.org/status/2",
                  {"repository": repository.id})
+    httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
     # 6x GET pull, issue, commits, 2xfiles, spam/eggs.py
@@ -315,9 +315,9 @@ def test_pull_request_task(app, owner, repository, session):
         has_item("2:3: E111 indentation is not a multiple of four"))
 
 
-@httpretty.activate
 def test_wip_pull_request_task(app, owner, repository, session):
     """Task pull_request /pulls/1 is work in progress"""
+    httpretty.reset()
     pull = {
         "title": "WIP Lorem ipsum",
         "url": "https://api.github.com/pulls/1",
@@ -401,10 +401,12 @@ def test_wip_pull_request_task(app, owner, repository, session):
     session.commit()
     assert_that(bs.is_pending())
 
+    httpretty.enable()
     pull_request(bs.id,
                  "https://api.github.com/pulls/1",
                  "http://kwalitee.invenio-software.org/status/1",
                  {"repository": repository.id})
+    httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
     # 3x GET pull, commits, issue
@@ -424,9 +426,10 @@ def test_wip_pull_request_task(app, owner, repository, session):
     assert_that(labels, has_items("in_work", "foo"))
     assert_that(labels, is_not(has_item("in_review")))
 
-@httpretty.activate
+
 def test_pep8_pull_request_task(app, owner, repository, session):
     """Task pull_request /pulls/1 with pep8 errors"""
+    httpretty.reset()
     pull = {
         "title": "Lorem ipsum",
         "url": "https://api.github.com/pulls/1",
@@ -534,12 +537,14 @@ def test_pep8_pull_request_task(app, owner, repository, session):
     session.commit()
     assert_that(bs.is_pending())
 
+    httpretty.enable()
     pull_request(bs.id,
                  "https://api.github.com/pulls/1",
                  "http://kwalitee.invenio-software.org/status/1",
                  {"TRUSTED_DEVELOPERS": ["john.doe@example.org"],
                   "COMPONENTS": ["herp"],
                   "SIGNATURES": ["Signed-off-by"]})
+    httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
     # 5x GET pull, issue, commits, 1 file, spam/eggs.py
@@ -580,9 +585,10 @@ def test_pep8_pull_request_task(app, owner, repository, session):
         bs.content["files"]["spam/eggs.py"]["errors"],
         has_item("2:3: E111 indentation is not a multiple of four"))
 
-@httpretty.activate
+
 def test_okay_pull_request_task(app, owner, repository, session):
     """Task pull_request /pulls/1 with pep8 errors"""
+    httpretty.reset()
     pull = {
         "title": "Lorem ipsum",
         "url": "https://api.github.com/pulls/1",
@@ -688,6 +694,7 @@ def test_okay_pull_request_task(app, owner, repository, session):
     session.add(bs)
     session.commit()
 
+    httpretty.enable()
     pull_request(bs.id,
                  "https://api.github.com/pulls/1",
                  "http://kwalitee.invenio-software.org/status/1",
@@ -695,6 +702,7 @@ def test_okay_pull_request_task(app, owner, repository, session):
                   "COMPONENTS": ["herp"],
                   "SIGNATURES": ["Signed-off-by"],
                   "IGNORE": ["E265", "D100"]})
+    httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
     # 5x GET pull, issue, commits, 1 file, spam/eggs.py
@@ -731,9 +739,10 @@ def test_okay_pull_request_task(app, owner, repository, session):
     assert_that(bs.content["files"]["eggs/__init__.py"]["errors"],
                 has_length(0))
 
-@httpretty.activate
+
 def test_known_pull_request_task(app, owner, repository, session):
     """Task pull_request /pulls/1 that already exists."""
+    httpretty.reset()
     cs1 = CommitStatus(repository,
                        "1",
                        "https://github.com/pulls/1",
@@ -754,10 +763,12 @@ def test_known_pull_request_task(app, owner, repository, session):
     session.commit()
     assert_that(bs.is_pending(), equal_to(False))
 
+    httpretty.enable()
     pull_request(bs.id,
                  "https://api.github.com/pulls/1",
                  "http://kwalitee.invenio-software.org/status/2",
                  {"ACCESS_TOKEN": "deadbeef"})
+    httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
     assert_that(len(latest_requests), equal_to(0),

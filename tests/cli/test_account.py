@@ -23,8 +23,6 @@
 
 from __future__ import unicode_literals
 
-import sys
-import pytest
 from hamcrest import (assert_that, equal_to, contains_string,
                       string_contains_in_order)
 
@@ -42,6 +40,7 @@ def test_add(capsys, session):
                                         token="123").count(),
                 equal_to(1))
 
+
 def test_add_existing(session):
     add("invenio", "test@example.org", "123")
     add("invenio", "invenio@example.org")
@@ -50,6 +49,7 @@ def test_add_existing(session):
                                         email="invenio@example.org",
                                         token="456").count(),
                 equal_to(1))
+
 
 def test_remove(session):
     """remove {account} drops everything tied to it"""
@@ -75,12 +75,14 @@ def test_remove(session):
     assert_that(BranchStatus.query.filter_by(commit_id=commit.id).count(),
                 equal_to(0))
 
+
 def test_double_remove(session):
     add("invenio")
     remove("invenio")
     remove("invenio")
     assert_that(Account.query.filter_by(name="invenio").count(),
                 equal_to(0))
+
 
 def test_list(capsys, session):
     repos = ["a", "bc", "def", "ghijklmop"]

@@ -25,16 +25,16 @@
 
 from __future__ import unicode_literals, absolute_import
 
-import pytest
 import httpretty
 
 from flask import json
-from invenio_kwalitee.models import Account, Repository, CommitStatus
+from invenio_kwalitee.models import Repository, CommitStatus
 from invenio_kwalitee.tasks import push
 from hamcrest import (assert_that, equal_to, contains_string, has_length,
                       has_item)
 
-from utils import MyQueue, GPL
+from utils import MyQueue
+
 
 def test_push(app, repository):
     """POST /payload (push) performs the checks"""
@@ -162,9 +162,9 @@ def test_push_to_unknown_repository(app):
     app.config = config
 
 
-@httpretty.activate
 def test_push_valid_commit(app, repository):
     """Worker push /commits/1 is valid"""
+    httpretty.reset()
     commit = {
         "sha": 1,
         "url": "https://api.github.com/commits/1",
@@ -204,6 +204,7 @@ def test_push_valid_commit(app, repository):
                                      commit["url"])
     assert_that(cs.is_pending())
 
+    httpretty.enable()
     push(cs.id,
          "https://api.github.com/commits/1",
          "https://api.github.com/statuses/1",
@@ -212,6 +213,7 @@ def test_push_valid_commit(app, repository):
           "TRUSTED_DEVELOPERS": ["john.doe@example.org"],
           "CHECK_LICENSE": False,
           "repository": repository.id})
+    httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
     assert_that(len(latest_requests), equal_to(3), "2x GET, 1x POST")
@@ -233,9 +235,9 @@ def test_push_valid_commit(app, repository):
                 has_length(0))
 
 
-@httpretty.activate
 def test_push_wip_commit(app, repository):
     """Worker push /commits/1 has wip as a component and is ignored"""
+    httpretty.reset()
     commit = {
         "sha": 1,
         "url": "https://api.github.com/commits/1",
@@ -266,6 +268,7 @@ def test_push_wip_commit(app, repository):
                                      commit["url"])
     assert_that(cs.is_pending())
 
+    httpretty.enable()
     push(cs.id,
          "https://api.github.com/commits/1",
          "https://api.github.com/statuses/1",
@@ -274,6 +277,7 @@ def test_push_wip_commit(app, repository):
           "TRUSTED_DEVELOPERS": ["john.doe@example.org"],
           "CHECK_LICENSE": False,
           "repository": repository.id})
+    httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
     assert_that(len(latest_requests), equal_to(2), "1x GET, 1x POST")
@@ -292,10 +296,9 @@ def test_push_wip_commit(app, repository):
     assert_that(cs.errors, equal_to(0))
 
 
-
-@httpretty.activate
 def test_push_broken_commit_message(app, repository):
     """Worker push /commits/1 is invalid (message)"""
+    httpretty.reset()
     commit = {
         "sha": 1,
         "url": "https://api.github.com/commits/1",
@@ -336,11 +339,13 @@ def test_push_broken_commit_message(app, repository):
                                      commit["url"])
     assert_that(cs.is_pending())
 
+    httpretty.enable()
     push(cs.id,
          "https://api.github.com/commits/1",
          "https://api.github.com/statuses/1",
          {"CHECK_LICENSE": False,
           "repository": repository.id})
+    httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
     assert_that(len(latest_requests), equal_to(4), "2x GET, 2x POST")
@@ -356,9 +361,9 @@ def test_push_broken_commit_message(app, repository):
                     contains_string(expected))
 
 
-@httpretty.activate
 def test_push_broken_files(repository):
     """Worker push /commits/1 is invalid (files)"""
+    httpretty.reset()
     commit = {
         "sha": 1,
         "url": "https://api.github.com/commits/1",
@@ -399,6 +404,7 @@ def test_push_broken_files(repository):
                                      commit["url"])
     assert_that(cs.is_pending())
 
+    httpretty.enable()
     push(cs.id,
          "https://api.github.com/commits/1",
          "https://api.github.com/statuses/1",
@@ -406,6 +412,7 @@ def test_push_broken_files(repository):
           "SIGNATURES": ["By"],
           "TRUSTED_DEVELOPERS": ["john.doe@example.org"],
           "repository": repository.id})
+    httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
     assert_that(len(latest_requests), equal_to(4), "2x GET, 2x POST")
@@ -421,9 +428,9 @@ def test_push_broken_files(repository):
                     contains_string(expected))
 
 
-@httpretty.activate
 def test_push_known_commit(repository, session):
     """Worker push /commits/1 is not rechecked if known"""
+    httpretty.reset()
     commit = {
         "sha": 1,
         "url": "https://api.github.com/commits/1",
@@ -451,10 +458,12 @@ def test_push_known_commit(repository, session):
     session.commit()
     assert_that(cs.is_pending(), equal_to(False))
 
+    httpretty.enable()
     body = push(cs.id,
-         "https://api.github.com/commits/1",
-         "https://api.github.com/statuses/1",
-         {"repository": repository.id})
+                "https://api.github.com/commits/1",
+                "https://api.github.com/statuses/1",
+                {"repository": repository.id})
+    httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
     assert_that(len(latest_requests), equal_to(1), "1x GET")
@@ -463,9 +472,9 @@ def test_push_known_commit(repository, session):
                 contains_string("[error] 2 errors"))
 
 
-@httpretty.activate
 def test_push_half_known_commit(repository, session):
     """Worker push /commits/1 checks the files if none"""
+    httpretty.reset()
     commit = {
         "sha": "1",
         "url": "https://api.github.com/commits/1",
@@ -509,10 +518,12 @@ def test_push_half_known_commit(repository, session):
     session.commit()
     assert_that(cs.is_pending(), equal_to(False))
 
+    httpretty.enable()
     push(cs.id,
          "https://api.github.com/commits/1",
          "https://api.github.com/statuses/1",
          {"repository": repository.id})
+    httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
     assert_that(len(latest_requests), equal_to(4), "2x GET, 2x POST")

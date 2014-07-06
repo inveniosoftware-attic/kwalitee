@@ -25,8 +25,6 @@
 
 from __future__ import unicode_literals
 
-import pytest
-
 from flask import json
 from hamcrest import assert_that, equal_to
 

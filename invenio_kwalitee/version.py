@@ -21,4 +21,6 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+"""Invenio Kwalitee version number."""
+
 __version__ = "0.2.0c2"

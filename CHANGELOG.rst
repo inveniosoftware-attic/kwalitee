@@ -38,6 +38,8 @@ Incompatibilities
 
     * the commit statuses are still accessible but are not migrated to
       the database.
+    * previously created git hooks will have to be uninstalled and re-installed
+      as the Flask application is not always created.
 
 
 Release 0.1.0: *The playground*

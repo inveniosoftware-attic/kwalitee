@@ -25,8 +25,6 @@
 
 from __future__ import unicode_literals
 
-import pytest
-from invenio_kwalitee.models import CommitStatus, BranchStatus
 from hamcrest import assert_that, equal_to, contains_string
 
 

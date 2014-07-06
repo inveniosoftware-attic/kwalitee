@@ -41,6 +41,14 @@ invenio_kwalitee.config module
     :undoc-members:
     :show-inheritance:
 
+invenio_kwalitee.factory module
+-------------------------------
+
+.. automodule:: invenio_kwalitee.factory
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 invenio_kwalitee.hooks module
 -----------------------------
 

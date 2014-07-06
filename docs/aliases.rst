@@ -43,3 +43,9 @@ had to create local references here.
 .. py:class:: flask_sqlalchemy.Model
 
    Flask SQLAlchemy model: :py:class:`flask.ext.sqlalchemy.Model`
+
+.. py:class:: werkzeug.routing.BaseConverter
+
+    Werkzeug base converter.
+
+    .. seealso:: Werkzeug URL Routing: :py:mod:`werkzeug.routing`
