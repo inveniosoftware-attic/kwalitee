@@ -345,10 +345,11 @@ def _download_files_from_commit(files, sha, tmp):
     :returns: filenames
     """
     for f in files:
-        filename = f["filename"]
+        if f["status"] != "removed":
+            filename = f["filename"]
 
-        if _download_file(f["raw_url"], os.path.join(tmp, filename)):
-            yield (sha, filename)
+            if _download_file(f["raw_url"], os.path.join(tmp, filename)):
+                yield (sha, filename)
 
 
 def _download_file(source, destination):

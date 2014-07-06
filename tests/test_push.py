@@ -177,6 +177,10 @@ def test_push_valid_commit(app, repository):
             "filename": "spam/__init__.py",
             "status": "added",
             "raw_url": "https://github.com/raw/1/spam/__init__.py"
+        }, {
+            "filename": "spam/deleted_files.py",
+            "status": "removed",
+            "raw_url": "https://github.com/raw/1/spam/deleted_files.py"
         }]
     }
     httpretty.register_uri(httpretty.GET,
