@@ -10,13 +10,23 @@ Running the tests are as simple as:
 
     $ python setup.py test
 
-The code coverage can be outputted by passing some arguments to py.test.
+The code coverage can be output by passing some arguments to `py.test
+<http://pytest.org/latest/>`_.
 
 .. code-block:: console
 
     $ python setup.py test -a "tests --cov invenio_kwalitee --cov-config .coveragerc"
     # html report
     $ python setup.py test -a "tests --cov invenio_kwalitee --cov-report html"
+
+Ditto for running only one test or debugging with pdb.
+
+.. code-block:: console
+
+    $ python setup.py test -a tests/tests_ping.py
+    $ python setup.py test -a tests/tests_ping.py::test_ping
+    $ python setup.py test -a "tests --pdb"
+
 
 Writing tests
 =============
@@ -25,24 +35,11 @@ The tests are using PyHamcrest_ for its richness and the nice default output
 provided. To be consistent, avoid using :py:mod:`unittest` or bare ``assert``.
 
 
-Mixins
-======
+Fixtures
+========
 
-Writing tests, there is two **mixins** you have to be aware of before
-reinventing them.
-
-:py:class:`~tests.CaptureMixin`
--------------------------------
-
-The capture mixin monkeypatches :py:data:`sys.stdout` and :py:data:`sys.stderr`
-so nothing gets printed to the console and you can evaluate what should have
-been printed there.
-
-:py:class:`~tests.DatabaseMixin`
---------------------------------
-
-The database mixin creates a temporary (and empty) disposable database.
-
+Fixtures are provided by the very powerful py.test. Take a look at the fixtures
+defined in the :ref:`conftest.py <conftest>` files.
 
 Other tools
 ===========

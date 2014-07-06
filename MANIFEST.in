@@ -33,8 +33,6 @@ recursive-include docs/_templates *.html
 
 recursive-include invenio_kwalitee *
 
-recursive-include tests *
-
 include alembic.ini
 recursive-include alembic *
 

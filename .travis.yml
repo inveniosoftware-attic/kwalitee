@@ -36,7 +36,8 @@ install:
   - travis_retry pip install coveralls pytest --use-mirrors
 
 script:
-    - python setup.py test -a "tests --cov-config .coveragerc --cov-report term-missing" && sphinx-build -vnNW docs _build
+  - python setup.py test -a "tests --cov-config .coveragerc --cov-report term-missing"
+  -sphinx-build -vnNW docs _build
 
 after_success:
   - coveralls

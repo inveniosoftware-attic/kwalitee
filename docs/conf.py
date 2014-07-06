@@ -42,7 +42,7 @@ import os
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
 sys.path.append(os.path.abspath('../invenio_kwalitee'))
-sys.path.append(os.path.abspath('../tests'))
+
 
 # -- General configuration ------------------------------------------------
 
@@ -300,5 +300,6 @@ intersphinx_mapping = {
     'http://uwsgi-docs.readthedocs.org/en/latest/': None,
     'http://flask-script.readthedocs.org/en/latest/': None,
     'http://pep8.readthedocs.org/en/latest/': None,
-    'http://www.voidspace.org.uk/python/mock/': None
+    'http://www.voidspace.org.uk/python/mock/': None,
+    'http://pytest.org/latest/': None
 }
