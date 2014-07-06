@@ -25,6 +25,7 @@ from __future__ import unicode_literals
 
 import os
 import sys
+import pytest
 import shutil
 import tempfile
 import subprocess
@@ -34,6 +35,7 @@ from hamcrest import assert_that, has_length, is_not
 from invenio_kwalitee.cli.githooks import install, uninstall, HOOK_PATH
 
 
+@pytest.mark.usefixtures("session")
 class GithookCliTest(TestCase):
 
     def setUp(self):

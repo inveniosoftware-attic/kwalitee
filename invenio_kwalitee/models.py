@@ -25,10 +25,10 @@
 
 from __future__ import unicode_literals
 
-from flask import json
 from datetime import datetime
+from flask import json
+from flask.ext.sqlalchemy import SQLAlchemy
 
-from . import db
 
 # Storing states as integers so string can be changed/l10n later
 STATE_PENDING = 0
@@ -40,6 +40,16 @@ STATES = {
     STATE_SUCCESS: "success",
     STATE_ERROR: "error"
 }
+
+
+db = SQLAlchemy()
+
+
+def init_app(app):
+    """Initializes Flask app."""
+    db.app = app
+    db.init_app(app)
+    return db
 
 
 class Account(db.Model):

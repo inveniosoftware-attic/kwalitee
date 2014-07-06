@@ -244,7 +244,7 @@ TRUSTED_DEVELOPERS = []
 # List of recognized signatures
 #
 #
-SIGNATURES = 'Signed-off-by', 'Tested-by', 'Reviewed-by', 'Co-authored-by'
+SIGNATURES = 'Signed-off-by', 'Co-authored-by', 'Tested-by', 'Reviewed-by'
 """Authors and reviewers signatures."""
 ALT_SIGNATURES = 'Reported-by',
 """Alternative signatures recognized but not counted as reviewers."""
@@ -275,9 +275,11 @@ Signed-off-by: {author}
 HOOK_TEMPLATE = """#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import sys
+from invenio_kwalitee import create_app
 from invenio_kwalitee.hooks import {hook}
 
 if __name__ == "__main__":
-    sys.exit({hook}(sys.argv))
+    with create_app().app_context():
+        sys.exit({hook}(sys.argv))
 """
 """Template used to generate the git hooks, customize at will."""

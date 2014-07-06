@@ -120,9 +120,9 @@ def _check_message(message, options):
     """Checking the message and printing the errors."""
     options = options or dict()
 
-    from invenio_kwalitee import app
-    with app.app_context():
-        options.update(get_options(app.config))
+    from flask import current_app
+    with current_app.app_context():
+        options.update(get_options(current_app.config))
 
     errors = check_message(message, **options)
 
@@ -136,9 +136,9 @@ def _check_message(message, options):
 
 def prepare_commit_msg_hook(argv):
     """Hook: prepare a commit message."""
-    from invenio_kwalitee import app
-    with app.app_context():
-        template = app.config["COMMIT_MSG_TEMPLATE"]
+    from flask import current_app
+    with current_app.app_context():
+        template = current_app.config["COMMIT_MSG_TEMPLATE"]
 
     _prepare_commit_msg(argv[1],
                         _get_git_author(),
@@ -232,9 +232,9 @@ def _pre_commit(files, options):
 
 def pre_commit_hook(argv=None):
     """Hook: checking the staged files."""
-    from invenio_kwalitee import app
-    with app.app_context():
-        options = get_options(app.config)
+    from flask import current_app
+    with current_app.app_context():
+        options = get_options(current_app.config)
 
     files = []
     for filename in _get_files_modified():

@@ -30,9 +30,8 @@ from flask import (current_app, render_template, make_response, json, jsonify,
                    request, url_for)
 from werkzeug.exceptions import NotFound
 
-from . import db
 from .tasks import pull_request, push
-from .models import Account, BranchStatus, CommitStatus, Repository
+from .models import db, Account, BranchStatus, CommitStatus, Repository
 
 
 def status(sha):

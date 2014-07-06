@@ -23,10 +23,9 @@
 
 """WSGI application with debug middleware if in debug mode."""
 
-from invenio_kwalitee import app as application
+from __future__ import absolute_import
+
+from . import create_app
 
 
-if application.debug:
-    from werkzeug.debug import DebuggedApplication
-    application.wsgi_app = DebuggedApplication(application.wsgi_app,
-                                               evalex=True)
+application = create_app()

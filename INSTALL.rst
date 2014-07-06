@@ -35,6 +35,12 @@ Invenio-Kwalitee is on PyPI so all you need is:
 
     $ pip install --user Invenio-Kwalitee
 
+To install kwalitee as a web service:
+
+.. code-block:: console
+
+    $ pip install --user Invenio-Kwalitee[web]
+
 
 Development version
 -------------------

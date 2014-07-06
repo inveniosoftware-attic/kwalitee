@@ -23,47 +23,27 @@
 
 from __future__ import unicode_literals
 
-from unittest import TestCase
-from invenio_kwalitee import app
-from invenio_kwalitee.models import Account, Repository
+import pytest
 from hamcrest import assert_that, equal_to, contains_string
+from invenio_kwalitee.models import Account, Repository
 
-from .. import DatabaseMixin
 
+def test_get_account(app, owner, repositories):
+    """GET /{account} displays the repositories."""
 
-class AccountTest(TestCase, DatabaseMixin):
+    tester = app.test_client()
+    response = tester.get("/{0}/".format(owner.name))
 
-    """Integration tests for the account page."""
+    assert_that(response.status_code, equal_to(200))
+    for repository in repositories:
+        assert_that(response.get_data(as_text=True),
+                    contains_string("/{0}/{1}/".format(owner.name,
+                                                       repository.name)))
 
-    repositories = "invenio", "test", "bob"
+def test_get_account_doesnt_exist(app):
+    """GET /{account} raise 404 if not found."""
 
-    def setUp(self):
-        super(AccountTest, self).setUp()
-        self.databaseUp()
-        self.owner = Account.find_or_create("invenio")
-        for repository in self.repositories:
-            Repository.find_or_create(self.owner, repository)
+    tester = app.test_client()
+    response = tester.get("/404/")
 
-    def tearDown(self):
-        self.databaseDown()
-        super(AccountTest, self).tearDown()
-
-    def test_get_account(self):
-        """GET /{account} displays the repositories."""
-
-        tester = app.test_client(self)
-        response = tester.get("/{0}/".format(self.owner.name))
-
-        assert_that(response.status_code, equal_to(200))
-        for repository in self.repositories:
-            assert_that(response.get_data(as_text=True),
-                        contains_string("/{0}/{1}/".format(self.owner.name,
-                                                           repository)))
-
-    def test_get_account_doesnt_exist(self):
-        """GET /{account} raise 404 if not found."""
-
-        tester = app.test_client(self)
-        response = tester.get("/404/")
-
-        assert_that(response.status_code, equal_to(404))
+    assert_that(response.status_code, equal_to(404))

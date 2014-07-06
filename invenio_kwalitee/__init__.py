@@ -25,70 +25,9 @@
 
 from __future__ import unicode_literals
 
-import os
-
-from flask import Flask
-from flask.ext.sqlalchemy import SQLAlchemy
-from rq import Queue
-from werkzeug.routing import BaseConverter
-
-from .worker import conn
+from .factory import create_app
 from .version import __version__
 
 
 __docformat__ = "restructuredtext en"
-__all__ = ("__version__", "app", "db", "CommitStatus", "BranchStatus",
-           "Repository", "Account")
-
-app = Flask(__name__, template_folder="templates", static_folder="static",
-            instance_relative_config=True)
-
-# Load default configuration
-app.config.from_object("invenio_kwalitee.config")
-
-# Load invenio_kwalitee.cfg from instance folder
-app.config.from_pyfile("invenio_kwalitee.cfg", silent=True)
-app.config.from_envvar("INVENIO_KWALITEE_CONFIG", silent=True)
-app.config["queue"] = Queue(connection=conn)
-
-database = os.path.join(app.instance_path,
-                        app.config.get("DATABASE_NAME", "database.db"))
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///{0}".format(database)
-db = SQLAlchemy(app)
-
-# Create instance path
-if not os.path.exists(app.instance_path):
-    os.makedirs(app.instance_path)
-
-# Create db
-# the models are here so the db.create_all knows about them.
-from .models import CommitStatus, BranchStatus, Repository, Account
-if not os.path.exists(database):
-    db.create_all()
-
-
-# Routing
-class ShaConverter(BaseConverter):
-
-    """Werkzeug routing converter for sha-1 (truncated or full)."""
-
-    regex = r'(?!/)(?:[a-fA-F0-9]{40}|[a-fA-F0-9]{7})'
-    weight = 150
-
-
-app.url_map.converters['sha'] = ShaConverter
-
-from . import views
-app.add_url_rule("/", "index", views.index, methods=["GET"])
-app.add_url_rule("/<account>/", "account", views.account, methods=["GET"])
-app.add_url_rule("/<account>/<repository>/", "repository", views.repository,
-                 methods=["GET"])
-app.add_url_rule("/<account>/<repository>/commits/<sha:sha>/", "commit",
-                 views.commit, methods=["GET"])
-app.add_url_rule("/<account>/<repository>/branches/<sha:sha>/<path:branch>",
-                 "branch_status", views.branch_status, methods=["GET"])
-app.add_url_rule("/<account>/<repository>/branches/<path:branch>", "branch",
-                 views.branch, methods=["GET"])
-app.add_url_rule("/payload", "payload", views.payload, methods=["POST"])
-# legacy
-app.add_url_rule("/status/<sha>", "status", views.status, methods=["GET"])
+__all__ = ("__version__", "create_app")

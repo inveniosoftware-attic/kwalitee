@@ -23,78 +23,34 @@
 
 from __future__ import unicode_literals
 
-from unittest import TestCase
-from invenio_kwalitee import app, db
-from invenio_kwalitee.models import (Account, Repository, CommitStatus,
-                                     BranchStatus)
+import pytest
 from hamcrest import assert_that, equal_to, contains_string
 
-from .. import DatabaseMixin
+def test_get_repository(app, owner, repository, commits, branch):
+    """GET /{account}/{repository} displays the recent commits."""
 
+    tester = app.test_client()
+    response = tester.get("/{0}/{1}/".format(owner.name,
+                                             repository.name))
 
-class RepositoryTest(TestCase, DatabaseMixin):
+    assert_that(response.status_code, equal_to(200))
+    body = response.get_data(as_text=True)
+    assert_that(body, contains_string(branch.name))
+    for commit in commits:
+        assert_that(body,
+                    contains_string("/{0}/{1}/commits/{2}/".format(
+                                    owner.name,
+                                    repository.name,
+                                    commit.sha)))
+        assert_that(body,
+                    contains_string("/commits/{0}".format(commit.sha)))
+        assert_that(body,
+                    contains_string("Everything is OK"))
 
-    """Integration tests for the repository page."""
+def test_get_repository_doesnt_exist(app):
+    """GET /{account}/{repository} raise 404 if not found."""
 
-    commits = [
-        {"sha": 1},
-        {"sha": 2},
-        {"sha": 3},
-    ]
-    branch = "test:my-branch"
-    url_template = "https://github.com/invenio/test/commits/{sha}"
+    tester = app.test_client()
+    response = tester.get("/invenio/404/")
 
-    def setUp(self):
-        super(RepositoryTest, self).setUp()
-        self.databaseUp()
-        self.owner = Account.find_or_create("invenio")
-        self.repository = Repository.find_or_create(self.owner, "test")
-        commits = []
-        for commit in self.commits:
-            cs = CommitStatus(self.repository,
-                              commit["sha"],
-                              self.url_template.format(**commit),
-                              {"message": [], "files": None})
-            commits.append(cs)
-            db.session.add(cs)
-        db.session.commit()
-
-        bs = BranchStatus(commits[-1],
-                          self.branch,
-                          "http://github.com/pulls/1",
-                          {"commits": commits, "files": {}})
-        db.session.add(bs)
-        db.session.commit()
-
-    def tearDown(self):
-        self.databaseDown()
-        super(RepositoryTest, self).tearDown()
-
-    def test_get_repository(self):
-        """GET /{account}/{repository} displays the recent commits."""
-
-        tester = app.test_client(self)
-        response = tester.get("/{0}/{1}/".format(self.owner.name,
-                                                 self.repository.name))
-
-        assert_that(response.status_code, equal_to(200))
-        body = response.get_data(as_text=True)
-        assert_that(body, contains_string(self.branch))
-        for commit in self.commits:
-            assert_that(body,
-                        contains_string("/{0}/{1}/commits/{sha}/".format(
-                                        self.owner.name,
-                                        self.repository.name,
-                                        **commit)))
-            assert_that(body,
-                        contains_string(self.url_template.format(**commit)))
-            assert_that(body,
-                        contains_string("Everything is OK"))
-
-    def test_get_repository_doesnt_exist(self):
-        """GET /{account}/{repository} raise 404 if not found."""
-
-        tester = app.test_client(self)
-        response = tester.get("/invenio/404/")
-
-        assert_that(response.status_code, equal_to(404))
+    assert_that(response.status_code, equal_to(404))

@@ -23,37 +23,34 @@
 
 from __future__ import unicode_literals
 
-from unittest import TestCase
-from invenio_kwalitee import app
+import pytest
 from invenio_kwalitee.models import Account
 from hamcrest import assert_that, equal_to, contains_string
 
-from .. import DatabaseMixin
 
+@pytest.fixture(scope="function")
+def accounts(session, request):
+    names = "invenio", "test", "bob"
 
-class IndexTest(TestCase, DatabaseMixin):
+    a = []
+    for name in names:
+        a.append(Account.find_or_create(name))
 
-    """Integration tests for the homepage."""
+    def teardown():
+        for account in a:
+            session.delete(account)
+        session.commit()
 
-    accounts = "invenio", "test", "bob"
+    request.addfinalizer(teardown)
+    return a
 
-    def setUp(self):
-        super(IndexTest, self).setUp()
-        self.databaseUp()
-        for account in self.accounts:
-            Account.find_or_create(account)
+def test_simple_status(app, accounts):
+    """GET / displays the accounts"""
 
-    def tearDown(self):
-        self.databaseDown()
-        super(IndexTest, self).tearDown()
+    tester = app.test_client()
+    response = tester.get("/")
 
-    def test_simple_status(self):
-        """GET / displays the accounts"""
-
-        tester = app.test_client(self)
-        response = tester.get("/")
-
-        assert_that(response.status_code, equal_to(200))
-        body = response.get_data(as_text=True)
-        for account in self.accounts:
-            assert_that(body, contains_string(account))
+    assert_that(response.status_code, equal_to(200))
+    body = response.get_data(as_text=True)
+    for account in accounts:
+        assert_that(body, contains_string(account.name))

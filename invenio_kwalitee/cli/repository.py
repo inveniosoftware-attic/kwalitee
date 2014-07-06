@@ -27,8 +27,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 
-from .. import db
-from ..models import Account, Repository
+from ..models import db, Account, Repository
 
 from flask.ext.script import Manager
 

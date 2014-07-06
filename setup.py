@@ -28,8 +28,6 @@ import sys
 from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
-# Where the requirements files are located.
-requirements_dir = "requirements"
 
 install_requires = [
     'alembic',
@@ -39,6 +37,7 @@ install_requires = [
     'pep8',
     'pep257',
     'pyflakes',
+    'pytest',
     'requests',
     'rq>=0.4.6'
 ]
@@ -47,7 +46,6 @@ if tuple(sys.version_info) < (2, 7):
     install_requires.append('importlib')
 
 test_requires = [
-    'pytest',
     'pytest-cov',
     'httpretty',
     'mock',

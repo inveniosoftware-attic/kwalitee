@@ -21,86 +21,87 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+"""Integration tests for the branch page."""
+
 from __future__ import unicode_literals
 
-from unittest import TestCase
-from invenio_kwalitee import app, db
-from invenio_kwalitee.models import (Account, Repository, CommitStatus,
-                                     BranchStatus)
+import pytest
+from invenio_kwalitee.models import CommitStatus, BranchStatus
 from hamcrest import assert_that, equal_to, contains_string
 
-from .. import DatabaseMixin
 
-
-class BranchesTest(TestCase, DatabaseMixin):
-
-    """Integration tests for the branch page."""
-
-    commits = [
+@pytest.fixture(scope="function")
+def branch(owner, repository, session, request):
+    cs = [
         {"sha": "ef01234"},
         {"sha": "789abcd"},
         {"sha": "0123456"},
     ]
-    branch = "spam:wip/my-branch"
+    name = "spam:wip/my-branch"
     url_template = "https://github.com/invenio/test/commits/{sha}"
 
-    def setUp(self):
-        super(BranchesTest, self).setUp()
-        self.databaseUp()
-        self.owner = Account.find_or_create("invenio")
-        self.repository = Repository.find_or_create(self.owner, "test")
-        commits = []
-        for commit in self.commits:
-            cs = CommitStatus(self.repository,
-                              commit["sha"],
-                              self.url_template.format(**commit))
-            commits.append(cs)
-            db.session.add(cs)
-            db.session.commit()
+    commits = []
+    branches = []
+    for commit in cs:
+        cs = CommitStatus(repository,
+                          commit["sha"],
+                          url_template.format(**commit))
+        commits.append(cs)
+        session.add(cs)
+        session.commit()
 
-            # FIXME commits ordering!?
-            bs = BranchStatus(commits[-1],
-                              self.branch,
-                              "http://github.com/pulls/1",
-                              {"commits": commits, "files": {}})
-            db.session.add(bs)
-            db.session.commit()
+        bs = BranchStatus(commits[-1],
+                          name,
+                          "http://github.com/pulls/1",
+                          {"commits": commits, "files": {}})
+        branches.append(bs)
+        session.add(bs)
+        session.commit()
 
-    def tearDown(self):
-        self.databaseDown()
-        super(BranchesTest, self).tearDown()
+    def teardown():
+        for bs in branches:
+            session.delete(bs)
+        session.commit()
+        for commit in commits:
+            session.delete(commit)
+        session.commit()
 
-    def test_get_branch(self):
-        """GET /{account}/{repository} displays the recent commits."""
+    request.addfinalizer(teardown)
+    return branches[-1]
 
-        tester = app.test_client(self)
-        response = tester.get("/{0}/{1}/branches/{2}".format(
-                              self.owner.name,
-                              self.repository.name,
-                              self.branch))
 
-        assert_that(response.status_code, equal_to(200))
-        body = response.get_data(as_text=True)
+def test_get_branch(app, owner, repository, branch):
+    """GET /{account}/{repository} displays the recent commits."""
+
+    tester = app.test_client()
+    response = tester.get("/{0}/{1}/branches/{2}".format(
+                          owner.name,
+                          repository.name,
+                          branch.name))
+
+    assert_that(response.status_code, equal_to(200))
+    body = response.get_data(as_text=True)
+    assert_that(body,
+                contains_string("/{0}/{1}/".format(
+                                owner.name,
+                                repository.name)))
+
+    for commit in branch.content["commits"]:
         assert_that(body,
-                    contains_string("/{0}/{1}/".format(
-                                    self.owner.name,
-                                    self.repository.name)))
+                    contains_string("/{0}/{1}/branches/{2}/{3}"
+                                    .format(owner.name,
+                                            repository.name,
+                                            commit,
+                                            branch.name)))
+    assert_that(body, contains_string("Everything is OK."))
 
-        for commit in self.commits:
-            assert_that(body,
-                        contains_string("/{0}/{1}/branches/{2}/{3}"
-                                        .format(self.owner.name,
-                                                self.repository.name,
-                                                commit["sha"],
-                                                self.branch)))
-        assert_that(body, contains_string("Everything is OK."))
 
-    def test_get_branch_doesnt_exist(self):
-        """GET /{account}/{repository}/branches/404 raise 404 if not found."""
+def test_get_branch_doesnt_exist(app, owner, repository):
+    """GET /{account}/{repository}/branches/404 raise 404 if not found."""
 
-        tester = app.test_client(self)
-        response = tester.get("/{0}/{1}/branches/404".format(
-                              self.owner.name,
-                              self.repository.name))
+    tester = app.test_client()
+    response = tester.get("/{0}/{1}/branches/404".format(
+                          owner.name,
+                          repository.name))
 
-        assert_that(response.status_code, equal_to(404))
+    assert_that(response.status_code, equal_to(404))

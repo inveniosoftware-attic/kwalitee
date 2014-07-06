@@ -33,9 +33,8 @@ import tempfile
 import requests
 from flask import json
 
-from . import db
 from .kwalitee import get_options, check_message, check_file
-from .models import BranchStatus, CommitStatus
+from .models import db, BranchStatus, CommitStatus
 
 # Worker logger
 LOGGER = logging.getLogger("rq.worker")

@@ -25,6 +25,7 @@ from __future__ import unicode_literals
 
 import os
 import sys
+import pytest
 import shutil
 import tempfile
 import subprocess
@@ -34,12 +35,10 @@ from mock import patch, mock_open, MagicMock
 from hamcrest import (assert_that, equal_to, has_length, has_item, has_items,
                       is_not, contains_string)
 
-from invenio_kwalitee import app
 from invenio_kwalitee.hooks import (_get_component, _get_components,
                                     _get_git_author, _get_files_modified,
                                     _pre_commit, _prepare_commit_msg,
                                     post_commit_hook, pre_commit_hook)
-
 
 class GetComponentTest(TestCase):
     """Testing _get_component and _get_components."""
@@ -160,90 +159,98 @@ class PrepareCommitMsgTest(TestCase):
             assert_that(new_commit_msg, equal_to(commit_msg))
 
 
-class GitHooksTest(TestCase):
-    def setUp(self):
-        commit_msg = "dummy: test\n\n" \
-                     "* foo\n" \
-                     "  bar\n\n" \
-                     "Signed-off-by: John Doe <john.doe@example.org>"
-        cmds = (
-            "git init",
-            "git config user.name 'Jürg Müller'",
-            "git config user.email juerg.mueller@example.org",
-            "touch empty.py",
-            "git add empty.py",
-            "git commit -m '{0}'".format(commit_msg),
-            "touch README.rst",
-            "git add README.rst",
-            "mkdir -p invenio/modules/testmod1/",
-            "mkdir invenio/modules/testmod2/",
-            "echo pass > invenio/modules/testmod1/test.py",
-            "echo pass > invenio/modules/testmod2/test.py",
-            "touch invenio/modules/testmod1/script.js",
-            "touch invenio/modules/testmod1/style.css",
-            "git add invenio/modules/testmod1/test.py",
-            "git add invenio/modules/testmod2/test.py",
-            "git add invenio/modules/testmod1/script.js",
-            "git add invenio/modules/testmod1/style.css",
-        )
+@pytest.fixture(scope="function")
+def github(app, session, request):
+    commit_msg = "dummy: test\n\n" \
+                 "* foo\n" \
+                 "  bar\n\n" \
+                 "Signed-off-by: John Doe <john.doe@example.org>"
+    cmds = (
+        "git init",
+        "git config user.name 'Jürg Müller'",
+        "git config user.email juerg.mueller@example.org",
+        "touch empty.py",
+        "git add empty.py",
+        "git commit -m '{0}'".format(commit_msg),
+        "touch README.rst",
+        "git add README.rst",
+        "mkdir -p invenio/modules/testmod1/",
+        "mkdir invenio/modules/testmod2/",
+        "echo pass > invenio/modules/testmod1/test.py",
+        "echo pass > invenio/modules/testmod2/test.py",
+        "touch invenio/modules/testmod1/script.js",
+        "touch invenio/modules/testmod1/style.css",
+        "git add invenio/modules/testmod1/test.py",
+        "git add invenio/modules/testmod2/test.py",
+        "git add invenio/modules/testmod1/script.js",
+        "git add invenio/modules/testmod1/style.css",
+    )
 
-        self.config = app.config
-        app.config.update({
-            "COMPONENTS": ["dummy"],
-            "TRUSTED_DEVELOPERS": ["john.doe@example.org"]
-        })
+    config = app.config
 
-        self.path = tempfile.mkdtemp()
-        self.cwd = os.getcwd()
-        os.chdir(self.path)
-        for command in cmds:
-            proc = subprocess.Popen(command.encode("utf-8"),
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
-                                    shell=True,
-                                    cwd=self.path)
-            (stdout, stderr) = proc.communicate()
-            assert_that(proc.returncode, equal_to(0),
-                        "{0}: {1}".format(command, stderr))
+    app.config.update({
+        "COMPONENTS": ["dummy"],
+        "TRUSTED_DEVELOPERS": ["john.doe@example.org"]
+    })
 
-    def tearDown(self):
-        shutil.rmtree(self.path)
-        os.chdir(self.cwd)
-        app.config = self.config
+    path = tempfile.mkdtemp()
+    cwd = os.getcwd()
+    os.chdir(path)
+    for command in cmds:
+        proc = subprocess.Popen(command.encode("utf-8"),
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                shell=True,
+                                cwd=path)
+        (stdout, stderr) = proc.communicate()
+        assert_that(proc.returncode, equal_to(0),
+                    "{0}: {1}".format(command, stderr))
 
-    def test_get_files_modified(self):
-        assert_that(_get_files_modified(), is_not(has_item("empty.py")))
-        assert_that(_get_files_modified(),
-                    has_items("README.rst",
-                              "invenio/modules/testmod1/test.py",
-                              "invenio/modules/testmod2/test.py",
-                              "invenio/modules/testmod1/script.js",
-                              "invenio/modules/testmod1/style.css"))
+    def teardown():
+        shutil.rmtree(path)
+        os.chdir(cwd)
+        app.config = config
 
-    def test_get_git_author(self):
-        assert_that(_get_git_author(),
-                    equal_to("Jürg Müller <juerg.mueller@example.org>"))
+    request.addfinalizer(teardown)
+    return path
 
-    def test_post_commit_hook(self):
-        """Hook: post-commit doesn't fail"""
-        stderr = sys.stderr
 
-        sys.stderr = StringIO()
-        assert_that(not post_commit_hook())
-        sys.stderr.seek(0)
-        output = "\n".join(sys.stderr.readlines())
-        sys.stderr = stderr
+def test_get_files_modified(github):
+    assert_that(_get_files_modified(), is_not(has_item("empty.py")))
+    assert_that(_get_files_modified(),
+                has_items("README.rst",
+                          "invenio/modules/testmod1/test.py",
+                          "invenio/modules/testmod2/test.py",
+                          "invenio/modules/testmod1/script.js",
+                          "invenio/modules/testmod1/style.css"))
 
-        assert_that(output, has_length(0))
 
-    def test_pre_commit_hook(self):
-        """Hook: pre-commit fails because some copyrights are missing"""
-        stderr = sys.stderr
+def test_get_git_author(github):
+    assert_that(_get_git_author(),
+                equal_to("Jürg Müller <juerg.mueller@example.org>"))
 
-        sys.stderr = StringIO()
-        assert_that(not pre_commit_hook())
-        sys.stderr.seek(0)
-        output = "\n".join(sys.stderr.readlines())
-        sys.stderr = stderr
 
-        assert_that(output, contains_string("kwalitee errors"))
+def test_post_commit_hook(github):
+    """Hook: post-commit doesn't fail"""
+    stderr = sys.stderr
+
+    sys.stderr = StringIO()
+    assert_that(not post_commit_hook())
+    sys.stderr.seek(0)
+    output = "\n".join(sys.stderr.readlines())
+    sys.stderr = stderr
+
+    assert_that(output, has_length(0))
+
+
+def test_pre_commit_hook(github):
+    """Hook: pre-commit fails because some copyrights are missing"""
+    stderr = sys.stderr
+
+    sys.stderr = StringIO()
+    assert_that(not pre_commit_hook())
+    sys.stderr.seek(0)
+    output = "\n".join(sys.stderr.readlines())
+    sys.stderr = stderr
+
+    assert_that(output, contains_string("kwalitee errors"))

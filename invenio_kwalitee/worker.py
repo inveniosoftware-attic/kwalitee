@@ -31,6 +31,13 @@ from rq import Worker, Queue, Connection
 conn = Redis()
 
 
+def init_app(app):
+    """Initialize the RQ queue."""
+    queue = Queue(connection=conn)
+    app.config["queue"] = queue
+    return app
+
+
 if __name__ == "__main__":
     if tuple(sys.version_info) < (2, 7):
         logger = logging.getLogger("rq.worker")

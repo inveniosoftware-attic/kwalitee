@@ -21,51 +21,53 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+"""Tests for the ping event."""
+
 from __future__ import unicode_literals
 
+import pytest
+
 from flask import json
-from unittest import TestCase
-from invenio_kwalitee import app
 from hamcrest import assert_that, equal_to
 
 
-class PingTest(TestCase):
-    """Integration tests for the ping event."""
-    def test_ping(self):
-        """POST /payload (ping) is ignored by kwalitee"""
-        tester = app.test_client(self)
-        response = tester.post("/payload", content_type="application/json",
-                               headers=(("X-GitHub-Event", "ping"),
-                                        ("X-GitHub-Delivery", "1")),
-                               data=json.dumps({"hook_id": 1,
-                                                "zen": "Responsive is better "
-                                                       "than fast."}))
-        assert_that(response.status_code, equal_to(200))
+def test_ping(app):
+    """POST /payload (ping) is ignored by kwalitee"""
+    tester = app.test_client()
+    response = tester.post("/payload", content_type="application/json",
+                           headers=(("X-GitHub-Event", "ping"),
+                                    ("X-GitHub-Delivery", "1")),
+                           data=json.dumps({"hook_id": 1,
+                                            "zen": "Responsive is better "
+                                                   "than fast."}))
+    assert_that(response.status_code, equal_to(200))
 
-    def test_ping_no_headers(self):
-        """POST /payload (ping) expects a X-GitHub-Event header"""
-        tester = app.test_client(self)
-        response = tester.post("/payload",
-                               data=json.dumps({"hook_id": 1,
-                                                "zen": "Responsive is better "
-                                                       "than fast."}))
-        body = json.loads(response.data)
-        assert_that(response.status_code, equal_to(500))
-        assert_that(body["exception"],
-                    equal_to("No X-GitHub-Event HTTP header found"))
-        assert_that(body["status"], equal_to("failure"))
 
-    def test_not_a_ping(self):
-        """POST /payload (pong) rejects an unknown event"""
-        tester = app.test_client(self)
-        response = tester.post("/payload",
-                               headers=(("X-GitHub-Event", "pong"),
-                                        ("X-GitHub-Delivery", "1")),
-                               data=json.dumps({"hook_id": 1,
-                                                "zen": "Responsive is better "
-                                                       "than fast."}))
-        body = json.loads(response.data)
-        assert_that(response.status_code, equal_to(500))
-        assert_that(body["exception"],
-                    equal_to("Event pong is not supported"))
-        assert_that(body["status"], equal_to("failure"))
+def test_ping_no_headers(app):
+    """POST /payload (ping) expects a X-GitHub-Event header"""
+    tester = app.test_client()
+    response = tester.post("/payload",
+                           data=json.dumps({"hook_id": 1,
+                                            "zen": "Responsive is better "
+                                                   "than fast."}))
+    body = json.loads(response.data)
+    assert_that(response.status_code, equal_to(500))
+    assert_that(body["exception"],
+                equal_to("No X-GitHub-Event HTTP header found"))
+    assert_that(body["status"], equal_to("failure"))
+
+
+def test_not_a_ping(app):
+    """POST /payload (pong) rejects an unknown event"""
+    tester = app.test_client()
+    response = tester.post("/payload",
+                           headers=(("X-GitHub-Event", "pong"),
+                                    ("X-GitHub-Delivery", "1")),
+                           data=json.dumps({"hook_id": 1,
+                                            "zen": "Responsive is better "
+                                                   "than fast."}))
+    body = json.loads(response.data)
+    assert_that(response.status_code, equal_to(500))
+    assert_that(body["exception"],
+                equal_to("Event pong is not supported"))
+    assert_that(body["status"], equal_to("failure"))

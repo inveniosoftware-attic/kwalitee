@@ -23,12 +23,11 @@
 
 """Command line interfaces entrypoints."""
 
-from .. import app
 from . import account, githooks, repository
 
 from flask.ext.script import Manager
 
-manager = Manager(app)
+manager = Manager()
 
 manager.add_command("account", account.manager)
 manager.add_command("githooks", githooks.manager)
@@ -37,4 +36,6 @@ manager.add_command("repository", repository.manager)
 
 def main():  # pragma: no cover
     """Running the manager."""
+    from .. import create_app
+    manager.app = create_app()
     manager.run()

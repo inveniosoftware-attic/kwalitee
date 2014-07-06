@@ -25,12 +25,29 @@
 
 from __future__ import unicode_literals
 
-import os
-import sys
-import tempfile
 
-from io import StringIO
-from invenio_kwalitee import app, db
+GPL = """
+## This file is part of Invenio-Kwalitee
+## Copyright (C) {0} CERN.
+##
+## Invenio-Kwalitee is free software; you can redistribute it and/or
+## modify it under the terms of the GNU General Public License as
+## published by the Free Software Foundation; either version 2 of the
+## License, or (at your option) any later version.
+##
+## Invenio-Kwalitee is distributed in the hope that it will be useful, but
+## WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+## General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with Invenio-Kwalitee; if not, write to the Free Software Foundation,
+## Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+##
+## In applying this licence, CERN does not waive the privileges and immunities
+## granted to it by virtue of its status as an Intergovernmental Organization
+## or submit itself to any jurisdiction.
+"""
 
 
 class MyQueue(object):
@@ -59,39 +76,6 @@ class MyQueue(object):
         :param kwargs: are ignored.
         """
         self.queue.append(args)
-
-
-class DatabaseMixin(object):
-
-    """Mixin to work with a disposable database."""
-
-    in_memory = False
-    """Flag to use a real file or in memory database."""
-
-    def databaseUp(self):
-        """Set up the database and tables."""
-        self.__database_uri = app.config["SQLALCHEMY_DATABASE_URI"]
-        app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite://"
-
-        if not self.in_memory:
-            fp, self.database = tempfile.mkstemp(".db")
-            os.close(fp)
-
-            app.config["SQLALCHEMY_DATABASE_URI"] += "/" + self.database
-        else:
-            self.database = ":memory:"
-
-        db.create_all()
-
-    def databaseDown(self):
-        """Tear down the tables and database."""
-        db.session.remove()
-        db.drop_all()
-
-        if not self.in_memory:
-            os.unlink(self.database)
-
-        app.config["SQLALCHEMY_DATABASE_URI"] = self.__database_uri
 
 
 class CaptureMixin(object):

@@ -21,65 +21,62 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+"""Integration tests for the commit page."""
+
 from __future__ import unicode_literals
 
-from unittest import TestCase
-from invenio_kwalitee import app, db
-from invenio_kwalitee.models import Account, Repository, CommitStatus
+import pytest
+from invenio_kwalitee.models import CommitStatus
 from hamcrest import assert_that, equal_to, contains_string
 
-from .. import DatabaseMixin
 
-
-class CommitTest(TestCase, DatabaseMixin):
-
-    """Integration tests for the commit page."""
-
+@pytest.fixture(scope="function")
+def commit(repository, session, request):
     sha = "060fcc4e4856b1bc7dc0eba0b07d3c734bbf24fd"
     url_template = "https://github.com/invenio/test/commits/{sha}"
 
-    def setUp(self):
-        super(CommitTest, self).setUp()
-        self.databaseUp()
-        self.owner = Account.find_or_create("invenio")
-        self.repository = Repository.find_or_create(self.owner, "test")
-        self.commit = CommitStatus(self.repository,
-                                   self.sha,
-                                   self.url_template.format(sha=self.sha),
-                                   {"message": ["foo", "bar"],
-                                    "files": {"spam": {"errors": ["spam"]},
-                                              "eggs": {"errors": ["eggs"]}}})
-        db.session.add(self.commit)
-        db.session.commit()
+    c = CommitStatus(repository,
+                     sha,
+                     url_template.format(sha=sha),
+                     {"message": ["foo", "bar"],
+                      "files": {"spam": {"errors": ["spam"]},
+                                "eggs": {"errors": ["eggs"]}}})
+    session.add(c)
+    session.commit()
 
-    def tearDown(self):
-        self.databaseDown()
-        super(CommitTest, self).tearDown()
+    def teardown():
+        session.delete(c)
+        session.commit()
 
-    def test_get_commit(self):
-        """GET /{account}/{repository}/commits/{sha} displays the commit."""
+    request.addfinalizer(teardown)
+    return c
 
-        tester = app.test_client(self)
-        response = tester.get("/{0}/{1}/commits/{2}/".format(
-                              self.owner.name,
-                              self.repository.name,
-                              self.sha))
 
-        assert_that(response.status_code, equal_to(200))
-        body = response.get_data(as_text=True)
-        assert_that(body,
-                    contains_string("/{0}/{1}/".format(
-                                    self.owner.name,
-                                    self.repository.name)))
-        assert_that(body,
-                    contains_string(self.url_template.format(sha=self.sha)))
-        assert_that(body, contains_string("foo"))
-        assert_that(body, contains_string("eggs"))
+def test_get_commit(app, owner, repository, commit):
+    """GET /{account}/{repository}/commits/{sha} displays the commit."""
 
-    def test_get_commit_doesnt_exist(self):
-        """GET /{account}/{repository}/commits/404 raise 404 if not found."""
+    tester = app.test_client()
+    response = tester.get("/{0}/{1}/commits/{2}/".format(
+                          owner.name,
+                          repository.name,
+                          commit.sha))
 
-        tester = app.test_client(self)
-        response = tester.get("/invenio/test/commits/404/")
+    assert_that(response.status_code, equal_to(200))
+    body = response.get_data(as_text=True)
+    assert_that(body,
+                contains_string("/{0}/{1}/".format(
+                                owner.name,
+                                repository.name)))
+    assert_that(body,
+                contains_string("/commits/{sha}".format(sha=commit.sha)))
+    assert_that(body, contains_string("foo"))
+    assert_that(body, contains_string("eggs"))
 
-        assert_that(response.status_code, equal_to(404))
+
+def test_get_commit_doesnt_exist(app):
+    """GET /{account}/{repository}/commits/404 raise 404 if not found."""
+
+    tester = app.test_client()
+    response = tester.get("/invenio/test/commits/404/")
+
+    assert_that(response.status_code, equal_to(404))
