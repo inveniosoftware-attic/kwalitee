@@ -103,6 +103,11 @@ def push(commit_status_id, commit_url, status_url, config):
     sha = data["sha"]
     files = data["files"]
 
+    # Check only if the component does not contain 'wip'.
+    component = data["commit"]["message"].split(":", 1)[0]
+    is_wip = bool(re.match(r"\bwip\b", component, re.IGNORECASE))
+    check = config.get("CHECK_WIP", False) or not is_wip
+
     # This commit might have been checked in a pull request, which skipped
     # the files check.
     is_new = False
@@ -110,12 +115,12 @@ def push(commit_status_id, commit_url, status_url, config):
     if commit_status.is_pending() or commit_status.content["files"] is None:
         is_new = True
 
-    if check_commit_messages:
+    if check and check_commit_messages:
         errs = _check_commit(commit_status, data, **options)
         length = len(errs)
         checked = True
 
-    if is_new and checked and length:
+    if check and is_new and checked and length:
         body = "\n".join(commit_status.content["message"])
         try:
             requests.post(comments_url,
@@ -124,7 +129,7 @@ def push(commit_status_id, commit_url, status_url, config):
         except requests.RequestException:
             LOGGER.exception(comments_url)
 
-    if is_new and check_files:
+    if check and is_new and check_files:
         tmp = tempfile.mkdtemp()
         filenames = _download_files_from_commit(files, sha, tmp)
         total, messages = _check_files(filenames, tmp, **options)
@@ -135,6 +140,9 @@ def push(commit_status_id, commit_url, status_url, config):
 
         if total:
             _post_file_comments(comments_url, messages, headers)
+
+    if not check:
+        commit_status.content = dict(commit_status.content, message=[])
 
     db.session.add(commit_status)
     db.session.commit()

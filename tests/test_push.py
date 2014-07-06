@@ -234,6 +234,66 @@ def test_push_valid_commit(app, repository):
 
 
 @httpretty.activate
+def test_push_wip_commit(app, repository):
+    """Worker push /commits/1 has wip as a component and is ignored"""
+    commit = {
+        "sha": 1,
+        "url": "https://api.github.com/commits/1",
+        "html_url": "https://github.com/commits/1",
+        "comments_url": "https://api.github.com/commits/1/comments",
+        "commit": {
+            "message": "wip: herp derp\n\nBy: John Doe <john.doe@example.org>",
+        },
+        "files": [{
+            "filename": "spam/__init__.py",
+            "status": "added",
+            "raw_url": "https://github.com/raw/1/spam/__init__.py"
+        }]
+    }
+    httpretty.register_uri(httpretty.GET,
+                           "https://api.github.com/commits/1",
+                           body=json.dumps(commit),
+                           content_type="application/json")
+    status = {"id": 1, "state": "success"}
+    httpretty.register_uri(httpretty.POST,
+                           "https://api.github.com/statuses/1",
+                           status=201,
+                           body=json.dumps(status),
+                           content_type="application/json")
+
+    cs = CommitStatus.find_or_create(repository,
+                                     commit["sha"],
+                                     commit["url"])
+    assert_that(cs.is_pending())
+
+    push(cs.id,
+         "https://api.github.com/commits/1",
+         "https://api.github.com/statuses/1",
+         {"COMPONENTS": ["comp"],
+          "SIGNATURES": ["By"],
+          "TRUSTED_DEVELOPERS": ["john.doe@example.org"],
+          "CHECK_LICENSE": False,
+          "repository": repository.id})
+
+    latest_requests = httpretty.HTTPretty.latest_requests
+    assert_that(len(latest_requests), equal_to(2), "1x GET, 1x POST")
+
+    expected_requests = [
+        "",
+        "success"
+    ]
+    for expected, request in zip(expected_requests, latest_requests):
+        assert_that(str(request.parsed_body), contains_string(expected))
+
+    cs = CommitStatus.query.filter_by(repository_id=repository.id,
+                                      sha=commit["sha"]).first()
+    assert_that(cs)
+    assert_that(cs.state, equal_to("success"))
+    assert_that(cs.errors, equal_to(0))
+
+
+
+@httpretty.activate
 def test_push_broken_commit_message(app, repository):
     """Worker push /commits/1 is invalid (message)"""
     commit = {
