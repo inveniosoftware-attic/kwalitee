@@ -256,8 +256,8 @@ def check_message(message, **kwargs):
                                      code,
                                      _messages_codes[code].format(*args))
 
-    errors.sort()
-    return list(map(lambda x: _format(x[0], x[1], x[2:]), errors))
+    return list(map(lambda x: _format(x[0], x[1], x[2:]),
+                    sorted(errors, key=lambda x: x[0])))
 
 
 class _PyFlakesChecker(pyflakes.checker.Checker):
@@ -347,8 +347,7 @@ def check_pep8(filename, **kwargs):
     checker.check_all()
 
     errors = []
-    checker.report.errors.sort()
-    for error in checker.report.errors:
+    for error in sorted(checker.report.errors, key=lambda x: x[0]):
         errors.append("{0}:{1}: {3}".format(*error))
     return errors
 
@@ -521,8 +520,8 @@ def check_file(filename, **kwargs):
         errors += check_license(filename, **kwargs)
     elif re.search("\.(js|jsx|css|less)$", filename):
         errors += check_license(filename, python_style=False, **kwargs)
-    errors.sort()
-    return errors
+
+    return sorted(errors, key=lambda x: int(x.split(':', 1)[0]))
 
 
 def get_options(config):
