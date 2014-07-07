@@ -23,8 +23,8 @@
 
 """Initialize Redis and setups the RQ worker."""
 
-import sys
-import logging
+from __future__ import absolute_import
+
 from redis import Redis
 from rq import Worker, Queue, Connection
 
@@ -39,10 +39,14 @@ def init_app(app):
 
 
 if __name__ == "__main__":
-    if tuple(sys.version_info) < (2, 7):
-        logger = logging.getLogger("rq.worker")
-        logger.setLevel(logging.DEBUG)
-        logger.addHandler(logging.StreamHandler())
-    with Connection(conn):
-        worker = Worker(list(map(Queue, ('high', 'default', 'low'))))
-        worker.work()
+    import sys
+    import logging
+    from .wsgi import application
+    with application.app_context():
+        if tuple(sys.version_info) < (2, 7):
+            logger = logging.getLogger("rq.worker")
+            logger.setLevel(logging.DEBUG)
+            logger.addHandler(logging.StreamHandler())
+        with Connection(conn):
+            worker = Worker(list(map(Queue, ('high', 'default', 'low'))))
+            worker.work()
