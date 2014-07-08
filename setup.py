@@ -34,6 +34,7 @@ install_requires = [
     'Flask',
     'Flask-Script',
     'Flask-SQLAlchemy',
+    'GitPython',
     'pep8',
     'pep257',
     'pyflakes',

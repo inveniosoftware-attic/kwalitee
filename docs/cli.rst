@@ -46,6 +46,24 @@ The command line tool is able to give you direct little help.
 
     $ kwalitee --help
 
+``check``
+=========
+
+Utility to run various *kwalitee* checks in your repository.
+
+Messages
+--------
+
+``message``
+-----------
+
+Runs the checks on the existing commits.
+
+.. code-block:: console
+
+    $ kwalitee check message master..
+
+
 ``githooks``
 ============
 
