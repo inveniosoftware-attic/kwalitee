@@ -40,8 +40,9 @@ class ShaConverter(BaseConverter):
     weight = 150
 
 
-def create_app(name=__name__, config=None):
+def create_app(name=None, config=None):
     """Create the Flask application."""
+    name = 'invenio_kwalitee' if name is None else name
     app = Flask(name, template_folder="templates", static_folder="static",
                 instance_relative_config=True)
 

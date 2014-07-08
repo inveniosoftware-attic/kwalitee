@@ -25,7 +25,7 @@
 
 from __future__ import absolute_import
 
-from . import create_app
+from invenio_kwalitee import create_app
 
 
 application = create_app("invenio_kwalitee")
