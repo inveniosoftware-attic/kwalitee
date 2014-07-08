@@ -83,7 +83,7 @@ def push(commit_status_id, commit_url, status_url, config):
     commit_status = CommitStatus.query.filter_by(id=commit_status_id).first()
     if not commit_status:
         raise AssertionError("Unknown commit: {0} ({1})"
-                         .format(commit_status_id, commit_url))
+                             .format(commit_status_id, commit_url))
 
     options = get_options(config)
     headers = get_headers(commit_status.repository, config)
@@ -188,7 +188,7 @@ def pull_request(branch_status_id, pull_request_url, status_url, config):
 
     if not branch_status:
         raise AssertionError("Unknown branch: {0} ({1})"
-                         .format(branch_status_id, pull_request_url))
+                             .format(branch_status_id, pull_request_url))
     if not branch_status.is_pending():
         LOGGER.info("Known pull request, skipping.")
         return branch_status.errors
@@ -432,14 +432,15 @@ def _check_commits(repository, url, **kwargs):
             sha=sha).first()
 
         if not commit_status:
-            raise AssertionError("CommitStatus not found for {0.fullname} {sha}"
-                             .format(repo=repository, sha=sha))
+            raise AssertionError(
+                "CommitStatus not found for {0.fullname} {sha}"
+                .format(repo=repository, sha=sha))
 
         if check and check_commit_messages:
             errs = _check_commit(commit_status, commit, **kwargs)
 
         # filter out the needs more reviewers
-        e = list(filter(lambda x: not x.startswith("M100:"), errs))
+        e = list(filter(lambda x: not re.match(r"\d+: M100\b", x), errs))
 
         messages.append({
             "sha": sha,
