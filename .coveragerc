@@ -1,5 +1,9 @@
 [run]
-source = invenio_kwalitee
+branch = True
+omit =
+    docs/*
+    *.html
+    *.test
 
 [report]
 # Regexes for lines to exclude from consideration
@@ -14,10 +18,15 @@ exclude_lines =
     # Don't complain if tests don't hit defensive assertion code:
     raise AssertionError
     raise NotImplementedError
+    # HTTP exception catching
+    except requests\.RequestException:
 
     # Don't complain if non-runnable code isn't run:
     if 0:
     if __name__ == .__main__.:
+
+    # ignore filesystem directory creation
+    os\.makedirs
 
 [html]
 directory = html_coverage_report

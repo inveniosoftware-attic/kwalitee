@@ -23,16 +23,16 @@
 
 """Command-line tools for the git hooks."""
 
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import sys
 
+from flask import current_app as app
 from flask.ext.script import Manager
 
-from . import app
-from .hooks import (pre_commit_hook, prepare_commit_msg_hook, run,
-                    post_commit_hook)
+from ..hooks import (pre_commit_hook, prepare_commit_msg_hook, run,
+                     post_commit_hook)
 
 HOOKS = {
     "pre-commit": pre_commit_hook.__name__,
@@ -41,19 +41,17 @@ HOOKS = {
 }
 HOOK_PATH = os.path.join(".git", "hooks")
 
-manager = Manager(app)
-githooks = Manager()
-manager.add_command("githooks", githooks)
+manager = Manager(usage="install githooks for kwalitee checks")
 
 
-@githooks.option("-f", "--force",
-                 help="Overwrite existing hooks", default=False,
-                 action="store_true")
+@manager.option("-f", "--force",
+                help="Overwrite existing hooks", default=False,
+                action="store_true")
 def install(force=False):
     """Install git hooks."""
     ret, git_dir, _ = run("git rev-parse --show-toplevel")
     if ret != 0:
-        print(u"ERROR: Please run from within a GIT repository.",
+        print("ERROR: Please run from within a GIT repository.",
               file=sys.stderr)
         return False
     git_dir = git_dir[0]
@@ -65,7 +63,7 @@ def install(force=False):
     for hook, name in HOOKS.items():
         hook_path = os.path.join(hooks_dir, hook)
         if os.path.exists(hook_path) and not force:
-            print(u"Hook already exists. Skipping {0}".format(hook_path),
+            print("Hook already exists. Skipping {0}".format(hook_path),
                   file=sys.stderr)
             continue
 
@@ -75,12 +73,12 @@ def install(force=False):
     return True
 
 
-@githooks.command
+@manager.command
 def uninstall():
     """Uninstall git hooks."""
     ret, git_dir, _ = run("git rev-parse --show-toplevel")
     if ret != 0:
-        print(u"ERROR: Please run from within a GIT repository.",
+        print("ERROR: Please run from within a GIT repository.",
               file=sys.stderr)
         return False
     git_dir = git_dir[0]
@@ -92,8 +90,3 @@ def uninstall():
         if os.path.exists(hook_path):
             os.remove(hook_path)
     return True
-
-
-def main():  # pragma: no cover
-    """Running the manager."""
-    manager.run()

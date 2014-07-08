@@ -21,11 +21,19 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
-include COPYING AUTHORS CHANGES README.rst
-include .coveragerc run-tests.sh
-include docs/*.rst docs/*.py docs/Makefile
-include invenio_kwalitee/application.wsgi
-include tests/*.py
-include tests/resources/testresource.cfg
-recursive-include docs/_themes *.py *.css *.css_t *.conf *.html README
+include INSTALL.rst README.rst CHANGELOG.rst
+include Procfile setup.cfg .coveragerc
+include requirements*.txt
+
+include docs/*.rst docs/*.py
+
+recursive-include docs *.rst
+recursive-include docs/_themes *.py *.css *.css_t *.conf *.html
 recursive-include docs/_templates *.html
+
+recursive-include invenio_kwalitee *
+
+include alembic.ini
+recursive-include alembic *
+
+global-exclude *.pyc

@@ -32,12 +32,12 @@ python:
 install:
   - pip install --upgrade pip  --use-mirrors
   - travis_retry pip install -r requirements.txt
-  - travis_retry pip install -r requirements-test.txt
-  - pip install -e .
-  - pip install coveralls --use-mirrors
+  - travis_retry pip install -r requirements-docs.txt
+  - travis_retry pip install coveralls pytest --use-mirrors
 
 script:
-  - coverage run --source=invenio_kwalitee setup.py test
+  - python setup.py test -a "tests --cov-config .coveragerc --cov invenio_kwalitee --cov-report term-missing"
+  - sphinx-build -vnNW docs _build
 
 after_success:
   - coveralls

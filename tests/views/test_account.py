@@ -21,33 +21,28 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
-import os
-import shutil
-import tempfile
-from unittest import TestCase
-from invenio_kwalitee import app
+from __future__ import unicode_literals
+
 from hamcrest import assert_that, equal_to, contains_string
 
 
-class StatusTest(TestCase):
-    """Integration tests for the status page"""
-    def test_simple_status(self):
-        """GET /status/sha1 displays the associated text file"""
-        sha = "deadbeef"
-        instance_path = tempfile.mkdtemp()
-        app.instance_path = instance_path
-        filename = os.path.join(app.instance_path,
-                                "status_{0}.txt".format(sha))
-        with open(filename, "w+") as f:
-            f.write("\n".join(["{0}: Signature missing",
-                               "{0}: Needs more reviewers"]).format(sha))
+def test_get_account(app, owner, repositories):
+    """GET /{account} displays the repositories."""
 
-        tester = app.test_client(self)
-        response = tester.get("status/{0}".format(sha))
+    tester = app.test_client()
+    response = tester.get("/{0}/".format(owner.name))
 
-        assert_that(response.status_code, equal_to(200))
-        assert_that(str(response.data), contains_string("Signature missing"))
-        assert_that(str(response.data),
-                    contains_string("Needs more reviewers"))
+    assert_that(response.status_code, equal_to(200))
+    for repository in repositories:
+        assert_that(response.get_data(as_text=True),
+                    contains_string("/{0}/{1}/".format(owner.name,
+                                                       repository.name)))
 
-        shutil.rmtree(instance_path)
+
+def test_get_account_doesnt_exist(app):
+    """GET /{account} raise 404 if not found."""
+
+    tester = app.test_client()
+    response = tester.get("/404/")
+
+    assert_that(response.status_code, equal_to(404))

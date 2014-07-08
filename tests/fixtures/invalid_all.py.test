@@ -1,0 +1,12 @@
+# -*- coding: utf-8 -*-
+# vim: set ft=python:
+
+"""__all__ should be immutable."""
+
+__all__ = ["a", "b"]
+
+a = 1
+b = 2
+c = 3
+
+__all__.append("c")

@@ -1,4 +1,4 @@
-##
+{#
 ## This file is part of Invenio-Kwalitee
 ## Copyright (C) 2014 CERN.
 ##
@@ -19,5 +19,28 @@
 ## In applying this licence, CERN does not waive the privileges and immunities
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
-coverage run setup.py test
-coverage report -m
+#}
+
+{%- extends 'page.html' -%}
+
+{%- block body -%}
+<div class="row">
+  <div class="col-lg-12">
+    <h2>Repositories of {{ account.name }}</h2>
+    <ul>
+  {%- for repository in repositories %}
+      <li>
+        <a href="{{ url_for("repository", account=account.name,
+                                          repository=repository.name) }}">
+          {{- repository.name -}}
+        </a>
+        (<a href="{{ config.get("GITHUB_REPO").format(account=account.name,
+                                                      repository=repository.name) }}">
+          github
+        </a>)
+      </li>
+  {%- endfor %}
+    </ul>
+  </div>
+</div>
+{%- endblock body -%}

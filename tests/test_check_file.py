@@ -21,10 +21,13 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+from __future__ import unicode_literals
+
 import os
+import tempfile
 from invenio_kwalitee.kwalitee import check_pep8, check_pep257, check_license
 from unittest import TestCase
-from hamcrest import assert_that, has_length, has_item, is_not
+from hamcrest import assert_that, has_length, has_item, is_not, contains_string
 
 
 class TestCheckFile(TestCase):
@@ -33,6 +36,8 @@ class TestCheckFile(TestCase):
         fixtures = os.path.join(os.path.dirname(__file__), "fixtures", "")
         self.valid = "{0}valid.py.test".format(fixtures)
         self.invalid = "{0}invalid.py.test".format(fixtures)
+        self.invalid_token = "{0}invalid_token.py.test".format(fixtures)
+        self.invalid_all = "{0}invalid_all.py.test".format(fixtures)
         self.error = "{0}error.py.test".format(fixtures)
         self.empty = "{0}empty.py.test".format(fixtures)
         self.invalid_license = "{0}invalid_license.py.test".format(fixtures)
@@ -44,6 +49,7 @@ class TestCheckFile(TestCase):
 
 
 class TestCheckPep8(TestCheckFile):
+
     """Unit tests of the PEP8 check."""
 
     def test_valid(self):
@@ -83,22 +89,55 @@ class TestCheckPep257(TestCheckFile):
 
     def test_valid(self):
         """valid.py is correctly formatted (according to pep257)"""
-        print(self.valid)
         errors = check_pep257(self.valid)
         assert_that(errors, has_length(0))
 
     def test_missing(self):
         """invalid.py has no docstring"""
         errors = check_pep257(self.invalid)
-        assert_that(errors, has_item("1:D100: Docstring missing"))
+        assert_that(errors, has_item("1: D100 Docstring missing"))
+
+    def test_invalid_token(self):
+        """invalid_token.py has a tokenization error"""
+        errors = check_pep257(self.invalid_token)
+        assert_that(errors, has_item("6:0 EOF in multi-line string"))
+
+    def test_invalid_all(self):
+        """invalid_all.py has a mutable all"""
+        errors = check_pep257(self.invalid_all)
+        assert_that(errors, has_length(1))
+        assert_that(errors[0], contains_string("Could not evaluate contents of"
+                                               " __all__. That means pep257"))
 
     def test_ignore(self):
         """ignored PEP257 codes are ignored"""
         errors = check_pep257(self.invalid, ignore=('D100'))
         assert_that(errors, has_length(0))
 
+    def test_match(self):
+        """test only the file that are matched by the regex"""
+        errors = check_pep257("test_bar.py", match="(?!test_).*\.py")
+        assert_that(errors, has_length(0))
+
+    def test_match_dir(self):
+        """test only the directories that are matched by the regex"""
+        errors = check_pep257("foo/.hidden/spam/eggs/bar.py",
+                              match_dir="[^\.].*")
+        assert_that(errors, has_length(0))
+
+    def test_match_absolute_dir(self):
+        fp, path = tempfile.mkstemp(text=True)
+        os.write(fp, "# -*- coding: utf-8 -*-\n".encode("ascii"))
+        os.close(fp)
+
+        errors = check_pep257(path, match_dir="[^\.].*")
+        assert_that(errors, has_length(1))
+
+        os.unlink(path)
+
 
 class TestCheckLicense(TestCheckFile):
+
     """Unit tests of the license validation."""
 
     def test_license(self):
@@ -132,7 +171,10 @@ class TestCheckLicense(TestCheckFile):
         assert_that(errors, has_length(0))
 
     def test_unicode_license(self):
-        """invalid_license uses unicode © and multiline years."""
+        """invalid_license uses unicode copyright and multiline years.
+
+        Where copyright is ©.
+        """
         errors = check_license(self.invalid_license, year=2014)
         assert_that(errors, is_not(has_item("25: I101 copyright is missing")))
 

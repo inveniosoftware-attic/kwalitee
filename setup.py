@@ -23,35 +23,70 @@
 
 """Invenio-Kwalitee setuptools configuration."""
 
-from setuptools import setup
 import os
-import re
 import sys
+from setuptools import setup
+from setuptools.command.test import test as TestCommand
 
 
-def reqs(filename):
-    """Read the requirements from a file."""
-    return [r.strip() for r in open(filename, 'r').readlines()]
-
-
-install_requires = reqs('requirements.txt')
-test_requires = reqs('requirements-test.txt')
-
+install_requires = [
+    'alembic',
+    'Flask',
+    'Flask-Script',
+    'Flask-SQLAlchemy',
+    'pep8',
+    'pep257',
+    'pyflakes',
+    'pytest',
+    'requests',
+    'rq>=0.4.6'
+]
 if tuple(sys.version_info) < (2, 7):
+    install_requires.append('argparse')
     install_requires.append('importlib')
+
+test_requires = [
+    'pytest-cov',
+    'httpretty',
+    'mock',
+    'pyhamcrest'
+]
 
 
 # Get the version string.  Cannot be done with import!
-with open(os.path.join('invenio_kwalitee', 'version.py'), 'rt') as f:
-    version = re.search(
-        '__version__\s*=\s*.(?P<version>.*).\n',
-        f.read()
-    ).group('version')
+version = {}
+with open(os.path.join('invenio_kwalitee', 'version.py'), 'r') as fp:
+    exec(fp.read(), version)
+
+
+class PyTest(TestCommand):
+
+    """
+    PyTest test runner.
+
+    See: http://pytest.org/latest/goodpractises.html?highlight=setuptools
+    """
+
+    user_options = [('pytest-args=', 'a', 'Arguments to pass to py.test')]
+
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.pytest_args = ["tests"]
+
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.test_args = []
+        self.test_suite = True
+
+    def run_tests(self):
+        import pytest
+        errno = pytest.main(self.pytest_args)
+        sys.exit(errno)
 
 
 setup(
     name='Invenio-Kwalitee',
-    version=version,
+    version=version['__version__'],
     url='https://github.com/inveniosoftware/invenio-kwalitee',
     license='GPLv2',
     author='Invenio collaboration',
@@ -64,7 +99,9 @@ setup(
     include_package_data=True,
     platforms='any',
     install_requires=install_requires,
+    tests_require=test_requires,
     classifiers=[
+        'Development Status :: 3 - Alpha',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
@@ -84,6 +121,7 @@ setup(
             'kwalitee = invenio_kwalitee.cli:main',
         ],
     },
-    test_suite='nose.collector',
-    tests_require=test_requires,
+    cmdclass={
+        'test': PyTest
+    },
 )

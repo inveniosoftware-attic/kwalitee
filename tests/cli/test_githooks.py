@@ -21,25 +21,29 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
+from __future__ import unicode_literals
+
 import os
 import sys
+import pytest
 import shutil
 import tempfile
 import subprocess
 from io import StringIO
 from unittest import TestCase
 from hamcrest import assert_that, has_length, is_not
-from invenio_kwalitee.cli import install, uninstall, HOOK_PATH
+from invenio_kwalitee.cli.githooks import install, uninstall, HOOK_PATH
 
 
-class CliTest(TestCase):
+@pytest.mark.usefixtures("session")
+class GithookCliTest(TestCase):
 
     def setUp(self):
         self.hooks = ('pre-commit', 'prepare-commit-msg', 'post-commit')
         self.path = tempfile.mkdtemp()
         self.cwd = os.getcwd()
         self.stderr = sys.stderr
-        sys.stderr = StringIO(u"")
+        sys.stderr = StringIO("")
         os.chdir(self.path)
 
     def tearDown(self):
