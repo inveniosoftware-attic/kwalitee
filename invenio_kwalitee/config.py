@@ -150,6 +150,7 @@ COMPONENTS = [
     'authorids',
     'authorprofiles',
     'baskets',
+    'bibauthorid',
     'bulletin',
     'circulation',
     'classifier',
@@ -196,6 +197,7 @@ COMPONENTS = [
     'tickets',
     'upgrader',
     'uploader',
+    'webauthorlist',
     'workflows',
 ]
 
