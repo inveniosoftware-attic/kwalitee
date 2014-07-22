@@ -236,7 +236,7 @@ def test_post_commit_hook(github):
     stderr = sys.stderr
 
     sys.stderr = StringIO()
-    assert_that(not post_commit_hook())
+    assert_that(post_commit_hook() == 0)
     sys.stderr.seek(0)
     output = "\n".join(sys.stderr.readlines())
     sys.stderr = stderr
@@ -249,7 +249,7 @@ def test_pre_commit_hook(github):
     stderr = sys.stderr
 
     sys.stderr = StringIO()
-    assert_that(not pre_commit_hook())
+    assert_that(pre_commit_hook() == 1)
     sys.stderr.seek(0)
     output = "\n".join(sys.stderr.readlines())
     sys.stderr = stderr

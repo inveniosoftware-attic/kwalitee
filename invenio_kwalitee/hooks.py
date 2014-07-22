@@ -36,7 +36,6 @@ from subprocess import Popen, PIPE
 from .kwalitee import check_file, check_message, get_options, SUPPORTED_FILES
 
 
-
 def _get_files_modified():
     """Get the list of modified files that are Python or Jinja2."""
     cmd = "git diff-index --cached --name-only --diff-filter=ACMRTUXB HEAD"
@@ -144,6 +143,7 @@ def prepare_commit_msg_hook(argv):
                         _get_git_author(),
                         _get_files_modified(),
                         template)
+    return 0
 
 
 def commit_msg_hook(argv):
@@ -156,7 +156,8 @@ def commit_msg_hook(argv):
     if not _check_message(message, options):
         print("Aborting commit due to commit message errors (override with "
               "'git commit --no-verify').", file=sys.stderr)
-        return False
+        return 1
+    return 0
 
 
 def post_commit_hook(argv=None):
@@ -168,8 +169,8 @@ def post_commit_hook(argv=None):
     if not _check_message(message, options):
         print("Commit message errors (fix with 'git commit --amend').",
               file=sys.stderr)
-
-        return False
+        return 1
+    return 0
 
 
 # =============================================================================
@@ -255,7 +256,8 @@ def pre_commit_hook(argv=None):
         print("Aborting commit due to kwalitee errors (override with "
               "'git commit --no-verify').",
               file=sys.stderr)
-        return False
+        return 1
+    return 0
 
 
 def run(command, raw_output=False):
