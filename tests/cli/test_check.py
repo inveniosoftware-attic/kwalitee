@@ -23,68 +23,42 @@
 
 from __future__ import unicode_literals
 
-import os
 import sys
 import pytest
-import shutil
-import tempfile
-import subprocess
-from io import StringIO
-from unittest import TestCase
-from hamcrest import assert_that, equal_to, has_items, has_length, is_not
+from hamcrest import assert_that, equal_to, has_item, has_items
+
 from invenio_kwalitee.cli.check import message
 
-@pytest.mark.skipif(sys.version_info > (3, 0), reason="not py3k ready")
-@pytest.mark.usefixtures("session")
-class CheckCliTest(TestCase):
 
-    """Test command `kwalitee check message [OPTIONS]`."""
+py3k = pytest.mark.skipif(sys.version_info > (3, 0), reason="not py3k ready")
 
-    def setUp(self):
-        self.path = tempfile.mkdtemp()
-        self.cwd = os.getcwd()
-        self.stderr = sys.stderr
-        sys.stderr = StringIO("")
-        os.chdir(self.path)
 
-    def tearDown(self):
-        os.chdir(self.cwd)
-        sys.stderr = self.stderr
-        shutil.rmtree(self.path)
+@py3k
+def test_check_head(capsys, session, git):
+    assert_that(message("HEAD", repository=git), equal_to(1))
 
-    def call(self, *args):
-        """Execute a command."""
-        return subprocess.Popen(
-            args,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=self.path
-        ).wait()
+    out, _ = capsys.readouterr()
+    assert_that(out.split("\n"),
+                has_items("1: M110 missing component name",
+                          "1: M101 signature is missing",
+                          "1: M100 needs more reviewers"))
 
-    def test_install_hooks(self):
-        """Test install hooks."""
-        commands = (
-            ("git", "init"),
-            ("git", "config", "user.name", "Herp Derpson"),
-            ("git", "config", "user.email", "herp.derpson@example.org"),
-            ("touch", "README.rst"),
-            ("git", "add", "README.rst"),
-            ("git", "commit", "-m", "empty README")
-        )
 
-        for cmd in commands:
-            assert_that(self.call(*cmd), equal_to(0))
+@py3k
+def test_check_branch(capsys, session, app, git):
+    app.config['TRUSTED_DEVELOPERS'] = ('a@b.org',)
+    app.config['SIGNATURES'] = ('By',)
+    app.config['COMPONENTS'] = ('global',)
 
-        sys_stdout = sys.stdout
-        sys.stdout = StringIO("")
+    assert_that(message("master..testbranch", repository=git), equal_to(0))
 
-        # call check on HEAD
-        assert_that(message(), equal_to(1))
+    out, _ = capsys.readouterr()
+    assert_that(out.split("\n"), has_item("Everything is OK."))
 
-        errors = sys.stdout.getvalue().split("\n")
-        assert_that(errors,
-                    has_items("1: M110 missing component name",
-                              "1: M101 signature is missing",
-                              "1: M100 needs more reviewers"))
-        # restore output
-        sys.stdout = sys_stdout
+
+@py3k
+def test_check_branch_wrong_side(capsys, session, git):
+    assert_that(message("testbranch..master", repository=git), equal_to(0))
+
+    out, _ = capsys.readouterr()
+    assert_that(out.strip(), equal_to(""))

@@ -12,7 +12,7 @@
 ## WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ## General Public License for more details.
-##g
+##
 ## You should have received a copy of the GNU General Public License
 ## along with Invenio-Kwalitee; if not, write to the Free Software Foundation,
 ## Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
@@ -34,25 +34,28 @@ from flask.ext.script import Manager
 manager = Manager(usage="check commits")
 
 
+@manager.option('repository', default='.', nargs='?', help='repository path')
 @manager.option('commit', metavar='<sha or branch>', nargs='?',
                 default='HEAD', help='an integer for the accumulator')
-def message(commit='HEAD', repo='.'):
+def message(commit='HEAD', repository='.'):
     """Check the messages of the commits.
 
-    :param commit: commit to check
-    :param repo: where is the repository to check
+    :param commit: commit or range (e.g., ``master..pu``)
+    :param repository: where is the repository to check
+    :return: 0 in case of success, 1 in case of errors
+    :rtype: int
     """
     import git
     from ..kwalitee import check_message, get_options
     options = get_options(current_app.config)
     cwd = os.getcwd()
-    os.chdir(repo)
+    os.chdir(repository)
     g = git.Repo('.')
     kwargs = {'with_keep_cwd': True}
     if '..' not in commit:
         kwargs['max_count'] = 1
     commits = list(g.iter_commits(commit, **kwargs))
-    template = "{commit.summary}\ncommit {commit.hexsha}\n\n{errors}\n"
+    template = "commit {commit.hexsha}\n{commit.message}\n\n{errors}\n"
 
     count = 0
     for commit in g.iter_commits(commit, **kwargs):

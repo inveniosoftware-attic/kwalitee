@@ -27,6 +27,9 @@ from __future__ import unicode_literals
 
 import os
 import pytest
+import shutil
+import tempfile
+import subprocess
 
 from invenio_kwalitee import create_app
 from invenio_kwalitee.models import db as _db, Account, Repository
@@ -54,13 +57,11 @@ def app(request):
 @pytest.fixture(scope="session")
 def db(app, request):
     """Session-wide test database."""
-    print(app.config["DATABASE"])
     if os.path.exists(app.config["DATABASE"]):
         os.unlink(app.config["DATABASE"])
 
     def teardown():
         _db.drop_all()
-        print(app.config["DATABASE"])
         os.unlink(app.config["DATABASE"])
 
     _db.app = app
@@ -109,6 +110,36 @@ def repository(owner, session, request):
     def teardown():
         session.delete(repo)
         session.commit()
+
+    request.addfinalizer(teardown)
+    return repo
+
+@pytest.fixture(scope="function")
+def git(request):
+    """Create a git repository."""
+    repo = tempfile.mkdtemp()
+
+    commands = (("git", "init"),
+                ("git", "config", "user.name", "Herp Derpson"),
+                ("git", "config", "user.email", "herp.derpson@example.org"),
+                ("touch", "README.rst"),
+                ("git", "add", "README.rst"),
+                ("git", "commit", "-m", "empty README"),
+                ("git", "checkout", "-b", "testbranch"),
+                ("touch", "TODO"),
+                ("git", "add", "TODO"),
+                ("git", "commit", "-m", "global: kikoo\n\nBy: bob <a@b.org>"),
+                ("git", "checkout", "master"))
+
+    for command in commands:
+        status = subprocess.Popen(command,
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE,
+                                  cwd=repo).wait()
+        assert 0 == status, " ".join(command)
+
+    def teardown():
+        shutil.rmtree(repo)
 
     request.addfinalizer(teardown)
     return repo
