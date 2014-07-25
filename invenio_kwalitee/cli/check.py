@@ -25,6 +25,7 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import os
 import sys
 
 from flask import current_app
@@ -35,25 +36,33 @@ manager = Manager(usage="check commits")
 
 @manager.option('commit', metavar='<sha or branch>', nargs='?',
                 default='HEAD', help='an integer for the accumulator')
-def message(commit='HEAD'):
-    """Add/modify an account."""
+def message(commit='HEAD', repo='.'):
+    """Check the messages of the commits.
+
+    :param commit: commit to check
+    :param repo: where is the repository to check
+    """
     import git
     from ..kwalitee import check_message, get_options
     options = get_options(current_app.config)
+    cwd = os.getcwd()
+    os.chdir(repo)
     g = git.Repo('.')
     kwargs = {'with_keep_cwd': True}
     if '..' not in commit:
         kwargs['max_count'] = 1
-    commits = list(g.log(commit, **kwargs))
-    msg_format = """commit {commit.id}\n\n{errors}"""
+    commits = list(g.iter_commits(commit, **kwargs))
+    template = "{commit.summary}\ncommit {commit.hexsha}\n\n{errors}\n"
 
-    def worker():
-        kwargs['format'] = "%B%x00"
-        for i, msg in enumerate(
-                g.git.log(commit, **kwargs).split('\0')[:-1]):
-            msg = msg.strip()
-            errors = check_message(msg, **options) or ['Everything is OK.']
-            yield msg_format.format(commit=commits[i],
-                                    errors='\n'.join(errors))
+    count = 0
+    for commit in g.iter_commits(commit, **kwargs):
+        errors = check_message(commit.message, **options)
+        if errors:
+            count += 1
+        else:
+            errors = ['Everything is OK.']
 
-    print('\n\n'.join(list(worker())))
+        print(template.format(commit=commit, errors='\n'.join(errors)))
+
+    os.chdir(cwd)
+    return min(count, 1)

@@ -34,7 +34,6 @@ install_requires = [
     'Flask',
     'Flask-Script',
     'Flask-SQLAlchemy',
-    'GitPython',
     'pep8',
     'pep257',
     'pyflakes',
@@ -45,6 +44,8 @@ install_requires = [
 if tuple(sys.version_info) < (2, 7):
     install_requires.append('argparse')
     install_requires.append('importlib')
+if tuple(sys.version_info) < (3, 0):
+    install_requires.append('GitPython>=0.3.2.RC1')
 
 test_requires = [
     'pytest-cov',

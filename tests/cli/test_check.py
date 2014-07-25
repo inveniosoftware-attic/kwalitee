@@ -25,15 +25,17 @@ from __future__ import unicode_literals
 
 import os
 import sys
+import pytest
 import shutil
 import tempfile
 import subprocess
 from io import StringIO
 from unittest import TestCase
-from hamcrest import assert_that, has_item, has_items, has_length, is_not
+from hamcrest import assert_that, equal_to, has_items, has_length, is_not
 from invenio_kwalitee.cli.check import message
 
-
+@pytest.mark.skipif(sys.version_info > (3, 0), reason="not py3k ready")
+@pytest.mark.usefixtures("session")
 class CheckCliTest(TestCase):
 
     """Test command `kwalitee check message [OPTIONS]`."""
@@ -51,7 +53,7 @@ class CheckCliTest(TestCase):
         shutil.rmtree(self.path)
 
     def call(self, *args):
-        """Exectute a command."""
+        """Execute a command."""
         return subprocess.Popen(
             args,
             stdout=subprocess.PIPE,
@@ -61,16 +63,24 @@ class CheckCliTest(TestCase):
 
     def test_install_hooks(self):
         """Test install hooks."""
-        self.call("git", "init")
-        self.call("touch", "README.rst")
-        self.call("git", "add", "README.rst")
-        self.call("git", "commit", "-m", "'empty README'")
+        commands = (
+            ("git", "init"),
+            ("git", "config", "user.name", "Herp Derpson"),
+            ("git", "config", "user.email", "herp.derpson@example.org"),
+            ("touch", "README.rst"),
+            ("git", "add", "README.rst"),
+            ("git", "commit", "-m", "empty README")
+        )
+
+        for cmd in commands:
+            assert_that(self.call(*cmd), equal_to(0))
 
         sys_stdout = sys.stdout
         sys.stdout = StringIO("")
 
         # call check on HEAD
-        message()
+        assert_that(message(), equal_to(1))
+
         errors = sys.stdout.getvalue().split("\n")
         assert_that(errors,
                     has_items("1: M110 missing component name",
@@ -78,4 +88,3 @@ class CheckCliTest(TestCase):
                               "1: M100 needs more reviewers"))
         # restore output
         sys.stdout = sys_stdout
-

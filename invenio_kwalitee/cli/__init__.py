@@ -23,16 +23,22 @@
 
 """Command line interfaces entrypoints."""
 
-from . import account, check, githooks, repository
+
+import sys
 
 from flask.ext.script import Manager
+
+from . import account, check, githooks, repository
+
 
 manager = Manager()
 
 manager.add_command("account", account.manager)
-manager.add_command("check", check.manager)
 manager.add_command("githooks", githooks.manager)
 manager.add_command("repository", repository.manager)
+
+if tuple(sys.version_info) < (3, 0):
+    manager.add_command("check", check.manager)
 
 
 def main():  # pragma: no cover
