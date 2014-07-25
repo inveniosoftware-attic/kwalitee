@@ -45,7 +45,11 @@ if tuple(sys.version_info) < (2, 7):
     install_requires.append('argparse')
     install_requires.append('importlib')
 if tuple(sys.version_info) < (3, 0):
-    install_requires.append('GitPython>=0.3.2.RC1')
+    # If pygit2 is not installed, grab GitPython instead.
+    try:
+        import pygit2
+    except ImportError:
+        install_requires.append('GitPython>=0.3.2.RC1')
 
 test_requires = [
     'pytest-cov',

@@ -29,11 +29,17 @@ from hamcrest import assert_that, equal_to, has_item, has_items
 
 from invenio_kwalitee.cli.check import message
 
+try:
+    import pygit2
+    pygit = True
+except ImportError:
+    pygit = False
 
-py3k = pytest.mark.skipif(sys.version_info > (3, 0), reason="not py3k ready")
+skip = pytest.mark.skipif(sys.version_info > (3, 0) and not pygit,
+                          reason="no pygit2 and not GitPython")
 
 
-@py3k
+@skip
 def test_check_head(capsys, session, git):
     assert_that(message("HEAD", repository=git), equal_to(1))
 
@@ -44,7 +50,7 @@ def test_check_head(capsys, session, git):
                           "1: M100 needs more reviewers"))
 
 
-@py3k
+@skip
 def test_check_branch(capsys, session, app, git):
     app.config['TRUSTED_DEVELOPERS'] = ('a@b.org',)
     app.config['SIGNATURES'] = ('By',)
@@ -56,7 +62,7 @@ def test_check_branch(capsys, session, app, git):
     assert_that(out.split("\n"), has_item("Everything is OK."))
 
 
-@py3k
+@skip
 def test_check_branch_wrong_side(capsys, session, git):
     assert_that(message("testbranch..master", repository=git), equal_to(0))
 

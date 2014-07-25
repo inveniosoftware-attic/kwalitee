@@ -34,6 +34,41 @@ from flask.ext.script import Manager
 manager = Manager(usage="check commits")
 
 
+def _git_commits(commit, repository):
+    import git
+    cwd = os.getcwd()
+    os.chdir(repository)
+    g = git.Repo('.')
+    kwargs = {'with_keep_cwd': True}
+    if '..' not in commit:
+        kwargs['max_count'] = 1
+    commits = list(g.iter_commits(commit, **kwargs))
+
+    os.chdir(cwd)
+    return commits
+
+
+def _pygit2_commits(commit, repository):
+    from pygit2 import Repository, GIT_SORT_TOPOLOGICAL, GIT_SORT_REVERSE
+    g = Repository(repository)
+
+    if '..' in commit:
+        tail, head = commit.split('..', 2)
+    else:
+        head = commit
+        tail = commit + '^'
+
+    walker = g.walk(g.revparse_single(head).oid,
+                    GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE)
+
+    try:
+        walker.hide(g.revparse_single(tail).oid)
+    except KeyError:
+        pass
+
+    return walker
+
+
 @manager.option('repository', default='.', nargs='?', help='repository path')
 @manager.option('commit', metavar='<sha or branch>', nargs='?',
                 default='HEAD', help='an integer for the accumulator')
@@ -45,20 +80,26 @@ def message(commit='HEAD', repository='.'):
     :return: 0 in case of success, 1 in case of errors
     :rtype: int
     """
-    import git
     from ..kwalitee import check_message, get_options
     options = get_options(current_app.config)
-    cwd = os.getcwd()
-    os.chdir(repository)
-    g = git.Repo('.')
-    kwargs = {'with_keep_cwd': True}
-    if '..' not in commit:
-        kwargs['max_count'] = 1
-    commits = list(g.iter_commits(commit, **kwargs))
-    template = "commit {commit.hexsha}\n{commit.message}\n\n{errors}\n"
+
+    try:
+        import pygit2  # noqa
+        template = "commit {commit.id}\n{commit.message}\n\n{errors}\n"
+        commits = _pygit2_commits(commit, repository)
+    except ImportError:
+        try:
+            import git  # noqa
+            template = "commit {commit.hexsha}\n{commit.message}\n\n{errors}\n"
+            commits = _git_commits(commit, repository)
+        except ImportError:
+            print("To use this feature, please install pygit2. GitPython will "
+                  "also work but is not recommended (python <= 2.7 only).",
+                  file=sys.stderr)
+            return 2
 
     count = 0
-    for commit in g.iter_commits(commit, **kwargs):
+    for commit in commits:
         errors = check_message(commit.message, **options)
         if errors:
             count += 1
@@ -67,5 +108,4 @@ def message(commit='HEAD', repository='.'):
 
         print(template.format(commit=commit, errors='\n'.join(errors)))
 
-    os.chdir(cwd)
     return min(count, 1)
