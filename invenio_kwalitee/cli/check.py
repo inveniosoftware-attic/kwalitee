@@ -26,12 +26,14 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
+import re
 import sys
+import colorama
 
 from flask import current_app
 from flask.ext.script import Manager
 
-manager = Manager(usage="check commits")
+manager = Manager(usage='check commits')
 
 
 def _git_commits(commit, repository):
@@ -73,39 +75,53 @@ def _pygit2_commits(commit, repository):
 @manager.option('commit', metavar='<sha or branch>', nargs='?',
                 default='HEAD', help='an integer for the accumulator')
 def message(commit='HEAD', repository='.'):
-    """Check the messages of the commits.
-
-    :param commit: commit or range (e.g., ``master..pu``)
-    :param repository: where is the repository to check
-    :return: 0 in case of success, 1 in case of errors
-    :rtype: int
-    """
+    """Check the messages of the commits."""
     from ..kwalitee import check_message, get_options
     options = get_options(current_app.config)
 
+    if options.get('colors') is not False:
+        colorama.init(autoreset=True)
+        reset = colorama.Style.RESET_ALL
+        yellow = colorama.Fore.YELLOW
+        green = colorama.Fore.GREEN
+        red = colorama.Fore.RED
+    else:
+        reset = yellow = green = red = ''
+
     try:
         import pygit2  # noqa
-        template = "commit {commit.id}\n{commit.message}\n\n{errors}\n"
+        sha = "oid"
         commits = _pygit2_commits(commit, repository)
     except ImportError:
         try:
             import git  # noqa
-            template = "commit {commit.hexsha}\n{commit.message}\n\n{errors}\n"
+            sha = "hexsha"
             commits = _git_commits(commit, repository)
         except ImportError:
-            print("To use this feature, please install pygit2. GitPython will "
-                  "also work but is not recommended (python <= 2.7 only).",
+            print('To use this feature, please install pygit2. GitPython will '
+                  'also work but is not recommended (python <= 2.7 only).',
                   file=sys.stderr)
             return 2
 
+    template = '{0}commit {{commit.{1}}}{2}\n\n'.format(yellow, sha, reset)
+    template += '{message}{errors}'
+
     count = 0
+    ident = "    "
+    re_line = re.compile('^', re.MULTILINE)
     for commit in commits:
-        errors = check_message(commit.message, **options)
+        message = commit.message
+        errors = check_message(message, **options)
+        message = re.sub(re_line, ident, message)
         if errors:
             count += 1
+            errors.insert(0, red)
         else:
-            errors = ['Everything is OK.']
+            errors = [green, 'Everything is OK.']
+        errors.append(reset)
 
-        print(template.format(commit=commit, errors='\n'.join(errors)))
+        print(template.format(commit=commit,
+                              message=message,
+                              errors='\n'.join(errors)))
 
     return min(count, 1)

@@ -31,6 +31,7 @@ from setuptools.command.test import test as TestCommand
 
 install_requires = [
     'alembic',
+    'colorama',
     'Flask',
     'Flask-Script',
     'Flask-SQLAlchemy',

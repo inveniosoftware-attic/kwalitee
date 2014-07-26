@@ -114,6 +114,7 @@ def repository(owner, session, request):
     request.addfinalizer(teardown)
     return repo
 
+
 @pytest.fixture(scope="function")
 def git(request):
     """Create a git repository."""

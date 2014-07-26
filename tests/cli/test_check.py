@@ -30,7 +30,7 @@ from hamcrest import assert_that, equal_to, has_item, has_items
 from invenio_kwalitee.cli.check import message
 
 try:
-    import pygit2
+    import pygit2  # noqa
     pygit = True
 except ImportError:
     pygit = False
@@ -40,7 +40,9 @@ skip = pytest.mark.skipif(sys.version_info > (3, 0) and not pygit,
 
 
 @skip
-def test_check_head(capsys, session, git):
+def test_check_head(capsys, session, app, git):
+    app.config['COLORS'] = False
+
     assert_that(message("HEAD", repository=git), equal_to(1))
 
     out, _ = capsys.readouterr()
@@ -55,6 +57,7 @@ def test_check_branch(capsys, session, app, git):
     app.config['TRUSTED_DEVELOPERS'] = ('a@b.org',)
     app.config['SIGNATURES'] = ('By',)
     app.config['COMPONENTS'] = ('global',)
+    app.config['COLORS'] = False
 
     assert_that(message("master..testbranch", repository=git), equal_to(0))
 
@@ -63,7 +66,9 @@ def test_check_branch(capsys, session, app, git):
 
 
 @skip
-def test_check_branch_wrong_side(capsys, session, git):
+def test_check_branch_wrong_side(capsys, session, app, git):
+    app.config['COLORS'] = False
+
     assert_that(message("testbranch..master", repository=git), equal_to(0))
 
     out, _ = capsys.readouterr()

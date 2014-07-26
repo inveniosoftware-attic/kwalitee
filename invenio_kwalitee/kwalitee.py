@@ -544,7 +544,8 @@ def get_options(config):
         "select": config.get("SELECT"),
         "match": config.get("PEP257_MATCH"),
         "match_dir": config.get("PEP257_MATCH_DIR"),
-        "min_reviewers": config.get("MIN_REVIEWERS")
+        "min_reviewers": config.get("MIN_REVIEWERS"),
+        "colors": config.get("COLORS", True),
     }
     options = {}
     for k, v in base.items():
