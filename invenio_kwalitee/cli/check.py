@@ -51,7 +51,7 @@ def _git_commits(commit, repository):
 
 
 def _pygit2_commits(commit, repository):
-    from pygit2 import Repository, GIT_SORT_TOPOLOGICAL, GIT_SORT_REVERSE
+    from pygit2 import Repository, GIT_SORT_TOPOLOGICAL
     g = Repository(repository)
 
     if '..' in commit:
@@ -60,8 +60,7 @@ def _pygit2_commits(commit, repository):
         head = commit
         tail = commit + '^'
 
-    walker = g.walk(g.revparse_single(head).oid,
-                    GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE)
+    walker = g.walk(g.revparse_single(head).oid, GIT_SORT_TOPOLOGICAL)
 
     try:
         walker.hide(g.revparse_single(tail).oid)
