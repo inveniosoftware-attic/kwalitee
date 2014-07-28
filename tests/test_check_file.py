@@ -27,7 +27,8 @@ import os
 import tempfile
 from invenio_kwalitee.kwalitee import check_pep8, check_pep257, check_license
 from unittest import TestCase
-from hamcrest import assert_that, has_length, has_item, is_not, contains_string
+from hamcrest import (assert_that, has_length, has_item, has_items, is_not,
+                      contains_string)
 
 
 class TestCheckFile(TestCase):
@@ -46,6 +47,7 @@ class TestCheckFile(TestCase):
         self.license_html = "{0}license.html.test".format(fixtures)
         self.license_js = "{0}license.js.test".format(fixtures)
         self.license_css = "{0}license.css.test".format(fixtures)
+        self.cp1252 = "{0}cp1252.py.test".format(fixtures)
 
 
 class TestCheckPep8(TestCheckFile):
@@ -191,10 +193,16 @@ class TestCheckLicense(TestCheckFile):
     def test_outdated_license(self):
         """valid_license has an outdated license."""
         errors = check_license(self.valid_license, year=2015)
-        assert_that(errors, has_item("4: I102 copyright year is outdated, "
+        assert_that(errors, has_item("5: I102 copyright year is outdated, "
                                      "expected 2015 but got 2014"))
 
     def test_doesnt_look_like_gnu_gpl(self):
         """invalid_license doesn't look like the GNU GPL"""
         errors = check_license(self.invalid_license, year=2014)
         assert_that(errors, has_item("25: I103 license is not GNU GPLv2"))
+
+    def test_badly_encoded_file(self):
+        errors = check_license(self.cp1252, year=2014)
+        assert_that(errors,
+                    has_items("24: I190 file cannot be decoded as utf-8",
+                              "24: I101 copyright is missing"))

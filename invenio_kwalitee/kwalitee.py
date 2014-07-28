@@ -75,6 +75,7 @@ _licenses_codes = {
     "I101": "copyright is missing",
     "I102": "copyright year is outdated, expected {0} but got {1}",
     "I103": "license is not GNU GPLv2",
+    "I190": "file cannot be decoded as {0}"
 }
 
 
@@ -441,17 +442,21 @@ def check_license(filename, **kwargs):
     file_is_empty = False
     license = ""
     lineno = 0
-    with codecs.open(filename, "r", "utf-8") as fp:
-        line = fp.readline()
-        blocks = []
-        while re_comment.match(line):
-            if line.startswith(starter):
-                line = line[len(starter):].lstrip()
-                blocks.append(line)
-                lines.append((lineno, line.strip()))
-            lineno, line = lineno + 1, fp.readline()
-        file_is_empty = line == ""
-        license = "".join(blocks)
+    try:
+        with codecs.open(filename, "r", "utf-8") as fp:
+            line = fp.readline()
+            blocks = []
+            while re_comment.match(line):
+                if line.startswith(starter):
+                    line = line[len(starter):].lstrip()
+                    blocks.append(line)
+                    lines.append((lineno, line.strip()))
+                lineno, line = lineno + 1, fp.readline()
+            file_is_empty = line == ""
+            license = "".join(blocks)
+    except UnicodeDecodeError:
+        errors.append((lineno + 1, "I190", "utf-8"))
+        license = ""
 
     if file_is_empty and not license.strip():
         return errors

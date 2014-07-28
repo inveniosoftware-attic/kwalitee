@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: cp1252 -*-
 # vim: set ft=python:
 ##
 ## This file is part of Invenio-Kwalitee
@@ -22,8 +22,6 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
-import os
-import sys
+"""Test file that is not properly encoded."""
 
-
-print("Hello world!%d" % 1 + 2)
+__author__ = "Jürg Müller"
