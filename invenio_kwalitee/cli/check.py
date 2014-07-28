@@ -89,12 +89,10 @@ def message(commit='HEAD', repository='.'):
         reset = yellow = green = red = ''
 
     try:
-        import pygit2  # noqa
         sha = "oid"
         commits = _pygit2_commits(commit, repository)
     except ImportError:
         try:
-            import git  # noqa
             sha = "hexsha"
             commits = _git_commits(commit, repository)
         except ImportError:
