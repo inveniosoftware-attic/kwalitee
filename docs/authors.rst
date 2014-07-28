@@ -21,32 +21,6 @@
     or submit itself to any jurisdiction.
 
 
-:orphan:
+.. _authors:
 
-.. Invenio-Kwalitee documentation master file, created by
-   sphinx-quickstart on Tue Jun  3 08:27:01 2014.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to Invenio-Kwalitee's documentation!
-============================================
-
-Contents:
-
-.. toctree::
-   :maxdepth: 2
-
-   introduction
-   installation
-   cli
-   testing
-   changelog
-   api/modules
-   authors
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. include:: ../AUTHORS.rst

@@ -26,6 +26,7 @@ Release 0.2.0: *The next big thing®*
 
 This version uses a database (SQLite) for persistence.
 
+    * cli for checking commit messages ``kwalitee check message`` (Jiří)
     * support of ``push`` events (Yoan)
     * multi-repositories (Yoan)
     * multi-users (Yoan)

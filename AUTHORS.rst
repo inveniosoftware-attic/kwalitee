@@ -21,32 +21,18 @@
     or submit itself to any jurisdiction.
 
 
-:orphan:
+Authors
+-------
 
-.. Invenio-Kwalitee documentation master file, created by
-   sphinx-quickstart on Tue Jun  3 08:27:01 2014.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Invenio-Kwalitee is developed to support developers of
+`Invenio <http://invenio-software.org>`_ digital library software.
 
-Welcome to Invenio-Kwalitee's documentation!
-============================================
+Contact us at `info@invenio-software.org <mailto:info@invenio-software.org>`_.
 
-Contents:
+Contributors
+^^^^^^^^^^^^
 
-.. toctree::
-   :maxdepth: 2
-
-   introduction
-   installation
-   cli
-   testing
-   changelog
-   api/modules
-   authors
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+* Jiri Kuncar <jiri.kuncar@cern.ch>
+* Yoan Blanc <yoan@dosimple.ch>
+* Lars Holm Nielsen <lars.holm.nielsen@cern.ch>
+* Mateusz Susik <mateuszsusik@gmail.com>

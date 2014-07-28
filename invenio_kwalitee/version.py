@@ -23,4 +23,4 @@
 
 """Invenio Kwalitee version number."""
 
-__version__ = "0.2.0c2"
+__version__ = "0.2.0c3"
