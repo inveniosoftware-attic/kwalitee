@@ -131,7 +131,7 @@ To change it, put a config.py into your instance.
 
     Label to apply for a pull request that passes all the checks.
 
-    **Default:** ``"in_integratoin"``
+    **Default:** ``"in_integration"``
 
 """
 

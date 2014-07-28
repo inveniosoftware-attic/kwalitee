@@ -210,7 +210,7 @@ def payload():
                     status_url = ""
                     commit_url = "https://api.github.com/repos/{owner}" \
                                  "/{repo}/commits/{sha}"
-                    for commit in reversed(data["commits"]):
+                    for commit in data["commits"]:
                         cs = CommitStatus.find_or_create(repository,
                                                          commit["id"],
                                                          commit["url"])

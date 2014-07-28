@@ -75,4 +75,4 @@ class MyQueue(object):
         :param args: tuple is appended to list
         :param kwargs: are ignored.
         """
-        self.queue.append(args)
+        self.queue.insert(0, args)
