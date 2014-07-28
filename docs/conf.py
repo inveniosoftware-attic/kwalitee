@@ -301,7 +301,8 @@ intersphinx_mapping = {
     'http://pep8.readthedocs.org/en/latest/': None,
     'http://www.voidspace.org.uk/python/mock/': None,
     'http://pytest.org/latest/': None,
-    'http://werkzeug.pocoo.org/docs/': None
+    'http://werkzeug.pocoo.org/docs/': None,
+    'http://www.pygit2.org/': None
 }
 
 if sys.version_info < (3,):

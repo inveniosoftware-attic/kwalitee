@@ -56,6 +56,7 @@ def _pygit2_commits(commit, repository):
 
     if '..' in commit:
         tail, head = commit.split('..', 2)
+        head = head or 'HEAD'
     else:
         head = commit
         tail = commit + '^'
@@ -88,11 +89,11 @@ def message(commit='HEAD', repository='.'):
         reset = yellow = green = red = ''
 
     try:
-        sha = "oid"
+        sha = 'oid'
         commits = _pygit2_commits(commit, repository)
     except ImportError:
         try:
-            sha = "hexsha"
+            sha = 'hexsha'
             commits = _git_commits(commit, repository)
         except ImportError:
             print('To use this feature, please install pygit2. GitPython will '
@@ -104,7 +105,7 @@ def message(commit='HEAD', repository='.'):
     template += '{message}{errors}'
 
     count = 0
-    ident = "    "
+    ident = '    '
     re_line = re.compile('^', re.MULTILINE)
     for commit in commits:
         message = commit.message

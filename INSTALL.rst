@@ -35,12 +35,6 @@ Invenio-Kwalitee is on PyPI so all you need is:
 
     $ pip install --user Invenio-Kwalitee
 
-To install kwalitee as a web service:
-
-.. code-block:: console
-
-    $ pip install --user Invenio-Kwalitee[web]
-
 
 Development version
 -------------------
@@ -52,8 +46,43 @@ Development version
     $ pip install --user -r requirements.txt
 
 
-Deployment
-==========
+Installation of the command-line interface
+==========================================
+
+Kwalitee can be used as a :ref:`cli`, which has some handy features like the
+:ref:`githooks` and the :ref:`messages` checks.
+
+By default the messages checks will try to use ``GitPython`` but we are
+recommending you to install and use `pygit2 <http://www.pygit2.org/>`_. As, it
+has not stable version yet, the installation requires some work.
+
+Ubuntu
+------
+
+.. code-block:: console
+
+    $ sudo apt-add-repository ppa:dennis/python
+    $ sudo apt-get update
+    $ sudo apt-get install python-dev libffi-dev libgit2
+    $ pip install cffi pygit2
+
+If you don't find a suitable version using ``ppa:dennis/python``, you can
+always install it manually via ``cmake``.
+
+OSX
+---
+
+The important detail here is to use the same version for ``libgit2`` **and**
+``pygit2``. `Homebrew <http://brew.sh/>`_ is a way to get it working.
+
+.. code-block:: console
+
+    $ brew update
+    $ brew install libgit2 # currently 0.21.0 (2014-07-28)
+    $ pip install pygit2
+
+Deployment of the web server
+============================
 
 Invenio-Kwalitee is composed of a WSGI server and a worker to handle the long
 tasks asynchronously.

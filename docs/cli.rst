@@ -51,6 +51,9 @@ The command line tool is able to give you direct little help.
 
 Utility to run various *kwalitee* checks in your repository.
 
+
+.. _messages:
+
 Messages
 --------
 
@@ -64,6 +67,8 @@ Runs the checks on the existing commits.
     $ kwalitee check message master..
 
 
+.. _githooks:
+
 ``githooks``
 ============
 
@@ -74,6 +79,7 @@ repository.
 
    * :py:mod:`invenio_kwalitee.cli.githooks`
    * :py:mod:`invenio_kwalitee.hooks`
+
 
 Hooks
 -----
