@@ -126,6 +126,52 @@ def test_pull_request(app, owner, repository):
     assert_that(bs.state, equal_to("pending"))
 
 
+def test_invalid_pull_request_action(app, owner, repository):
+    """POST /payload (pull_request) performs the action checks"""
+    httpretty.reset()
+    queue = MyQueue()
+    # Replace the default Redis queue
+    app.config["queue"] = queue
+
+    pull_request_event = {
+        "action": "labeled",
+        "number": 1,
+        "pull_request": {
+            "title": "Lorem ipsum",
+            "url": "https://api.github.com/pulls/1",
+            "html_url": "https://github.com/pulls/1",
+            "commits_url": "https://api.github.com/pulls/1/commits",
+            "statuses_url": "https://api.github.com/pulls/1/statuses",
+            "head": {
+                "sha": "2",
+                "label": "spam:wip/my-branch",
+                "ref": "wip/my-branch"
+            }
+        },
+        "repository": {
+            "name": "test",
+            "owner": {
+                "login": "invenio"
+            }
+        }
+    }
+    httpretty.register_uri(httpretty.GET,
+                           "https://api.github.com/pulls/1/commits",
+                           body=json.dumps([]),
+                           content_type="application/json")
+
+    tester = app.test_client()
+    httpretty.enable()
+
+    response = tester.post("/payload", content_type="application/json",
+                           headers=(("X-GitHub-Event", "pull_request"),
+                                    ("X-GitHub-Delivery", "1")),
+                           data=json.dumps(pull_request_event))
+    httpretty.disable()
+
+    assert_that(response.status_code, equal_to(500))
+
+
 def test_pull_request_task(app, owner, repository, session):
     """Task pull_request /pulls/1"""
     httpretty.reset()

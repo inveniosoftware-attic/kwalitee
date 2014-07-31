@@ -234,6 +234,11 @@ def payload():
                     payload["description"] = "commits queues"
 
                 elif event == "pull_request":
+                    if data["action"] not in ["synchronize", "opened",
+                                              "reopened"]:
+                        raise ValueError(
+                            "Pull request action {0} is not supported"
+                            .format(data["action"]))
                     repo = data["repository"]
                     data = data["pull_request"]
                     pull_request_url = data["url"]
@@ -243,6 +248,7 @@ def payload():
                         name=repo["name"]).first(), config)
                     response = requests.get(data["commits_url"],
                                             headers=headers)
+                    response.raise_for_status()  # check API rate limit
                     response_json = json.loads(response.content)
                     for commit in response_json:
                         cstat = CommitStatus.find_or_create(repository,
