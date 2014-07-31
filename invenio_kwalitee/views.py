@@ -30,7 +30,7 @@ from flask import (current_app, render_template, make_response, json, jsonify,
                    request, url_for)
 from werkzeug.exceptions import NotFound
 
-from .tasks import pull_request, push
+from .tasks import pull_request, push, get_headers
 from .models import db, Account, BranchStatus, CommitStatus, Repository
 
 
@@ -234,17 +234,21 @@ def payload():
                     payload["description"] = "commits queues"
 
                 elif event == "pull_request":
+                    repo = data["repository"]
                     data = data["pull_request"]
                     pull_request_url = data["url"]
                     commit_sha = data["head"]["sha"]
                     commits = []
-                    response = requests.get(data["commits_url"])
-                    d = json.loads(response.content)
-                    for commit in d:
-                        cs = CommitStatus.find_or_create(repository,
-                                                         commit["sha"],
-                                                         commit["html_url"])
-                        commits.append(cs)
+                    headers = get_headers(Repository.query.filter_by(
+                        name=repo["name"]).first(), config)
+                    response = requests.get(data["commits_url"],
+                                            headers=headers)
+                    response_json = json.loads(response.content)
+                    for commit in response_json:
+                        cstat = CommitStatus.find_or_create(repository,
+                                                            commit["sha"],
+                                                            commit["html_url"])
+                        commits.append(cstat)
 
                     bs = BranchStatus.find_or_create(commits[-1],
                                                      data["head"]["label"],

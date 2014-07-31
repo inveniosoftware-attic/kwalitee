@@ -94,7 +94,7 @@ def push(commit_status_id, commit_url, status_url, config):
     check_license = options["license"]
     check_files = check_pep8 or check_pep257 or check_license
 
-    commit = requests.get(commit_url)
+    commit = requests.get(commit_url, headers=headers)
     data = json.loads(commit.content)
 
     # FIXME guessing the status URL based on the commit one.
@@ -193,11 +193,11 @@ def pull_request(branch_status_id, pull_request_url, status_url, config):
         LOGGER.info("Known pull request, skipping.")
         return branch_status.errors
 
-    pull_request = requests.get(pull_request_url)
-    data = json.loads(pull_request.content)
-
     options = get_options(config)
     headers = get_headers(branch_status.commit.repository, config)
+
+    pull_request = requests.get(pull_request_url, headers=headers)
+    data = json.loads(pull_request.content)
 
     issue_url = data["issue_url"]
     commits_url = data["commits_url"]
