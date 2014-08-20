@@ -79,6 +79,20 @@ _licenses_codes = {
 }
 
 
+@pep257.check_for(pep257.Definition)
+def check_whitespaces(self, definition, docstring):
+    """D290: White spaces around doctring should be trimmed."""
+    if docstring:
+        lines = eval(docstring).split('\n')
+        if lines[0].startswith(' ') or \
+                len(lines) == 1 and lines[0].endswith(' '):
+            return pep257.Error(
+                'D290: White spaces around docstring should be trimmed.'
+            )
+
+pep257.PEP257Checker.check_whitespaces = check_whitespaces
+
+
 def _check_1st_line(line, **kwargs):
     """First line check.
 

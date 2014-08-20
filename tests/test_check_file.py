@@ -37,6 +37,8 @@ class TestCheckFile(TestCase):
         fixtures = os.path.join(os.path.dirname(__file__), "fixtures", "")
         self.valid = "{0}valid.py.test".format(fixtures)
         self.invalid = "{0}invalid.py.test".format(fixtures)
+        self.invalid_whitespaces = "{0}invalid_whitespaces.py.test".format(
+            fixtures)
         self.invalid_token = "{0}invalid_token.py.test".format(fixtures)
         self.invalid_all = "{0}invalid_all.py.test".format(fixtures)
         self.error = "{0}error.py.test".format(fixtures)
@@ -93,6 +95,11 @@ class TestCheckPep257(TestCheckFile):
         """valid.py is correctly formatted (according to pep257)"""
         errors = check_pep257(self.valid)
         assert_that(errors, has_length(0))
+
+    def test_invalid_whitespaces(self):
+        """invalid_whitespaces.py is incorrectly formatted."""
+        errors = check_pep257(self.invalid_whitespaces)
+        assert_that(errors, has_length(5))
 
     def test_missing(self):
         """invalid.py has no docstring"""

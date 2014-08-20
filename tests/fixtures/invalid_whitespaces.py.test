@@ -1,0 +1,19 @@
+# -*- coding: utf-8 -*-
+# vim: set ft=python:
+
+""" Whitespaces around. """
+
+def startswith():
+    """ Whitespace at the begining."""
+
+def endswith():
+    """Whitespace at the end. """
+
+def around():
+    """ Whitespace at everywhere. """
+
+def multiline():
+    """ Whitespace at the begining.
+
+    This is the end.
+    """
