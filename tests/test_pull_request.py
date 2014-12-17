@@ -186,12 +186,24 @@ def test_pull_request_task(app, owner, repository, session):
         "head": {
             "sha": "2",
             "label": "test:my-branch"
-        }
+        },
+        "base": {
+            "repo": {
+                "full_name": "kwalitee/test"
+            },
+            "ref": "testref"
+        },
     }
     httpretty.register_uri(httpretty.GET,
                            "https://api.github.com/pulls/1",
                            body=json.dumps(pull),
                            content_type="application/json")
+
+    httpretty.register_uri(httpretty.GET,
+                           "https://api.github.com/repos/kwalitee/test/"
+                           "contents/.kwalitee.yml?ref=testref",
+                           status=404)
+
     issue = {
         "url": "https://api.github.com/issues/1",
         "html_url": "https://github.com/issues/1",
@@ -316,12 +328,14 @@ def test_pull_request_task(app, owner, repository, session):
     httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
-    # 6x GET pull, issue, commits, files, spam/eggs.py, spam/herp.html
+    # 7x GET pull, .kwalitee.yml, issue, commits, files, spam/eggs.py,
+    # spam/herp.html
     # 5x POST comments (1 message + 2 files), status
     # 1x PUT labels
-    assert_that(len(latest_requests), equal_to(11), "6x GET + 4x POST + 1 PUT")
+    assert_that(len(latest_requests), equal_to(12), "7x GET + 4x POST + 1 PUT")
 
     expected_requests = [
+        "",
         "",
         "",
         "missing component name",  # "signature is missing",
@@ -375,12 +389,24 @@ def test_wip_pull_request_task(app, owner, repository, session):
         "head": {
             "sha": "2",
             "label": "test:my-branch"
-        }
+        },
+        "base": {
+            "repo": {
+                "full_name": "kwalitee/test"
+            },
+            "ref": "testref"
+        },
     }
     httpretty.register_uri(httpretty.GET,
                            "https://api.github.com/pulls/1",
                            body=json.dumps(pull),
                            content_type="application/json")
+
+    httpretty.register_uri(httpretty.GET,
+                           "https://api.github.com/repos/kwalitee/test/"
+                           "contents/.kwalitee.yml?ref=testref",
+                           status=404)
+
     commits = [
         {
             "url": "https://api.github.com/commits/1",
@@ -455,11 +481,12 @@ def test_wip_pull_request_task(app, owner, repository, session):
     httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
-    # 3x GET pull, commits, issue
+    # 4x GET pull, .kwalitee.yml, commits, issue
     # 1x POST labels
-    assert_that(len(latest_requests), equal_to(4), "3x GET + 1x POST")
+    assert_that(len(latest_requests), equal_to(5), "4x GET + 1x POST")
 
     expected_requests = [
+        "",
         "",
         "",
         "",
@@ -487,12 +514,24 @@ def test_pep8_pull_request_task(app, owner, repository, session):
         "head": {
             "sha": "1",
             "label": "test:my-branch"
-        }
+        },
+        "base": {
+            "repo": {
+                "full_name": "kwalitee/test"
+            },
+            "ref": "testref"
+        },
     }
     httpretty.register_uri(httpretty.GET,
                            "https://api.github.com/pulls/1",
                            body=json.dumps(pull),
                            content_type="application/json")
+
+    httpretty.register_uri(httpretty.GET,
+                           "https://api.github.com/repos/kwalitee/test/"
+                           "contents/.kwalitee.yml?ref=testref",
+                           status=404)
+
     issue = {
         "url": "https://api.github.com/issues/1",
         "html_url": "https://github.com/issues/1",
@@ -593,11 +632,12 @@ def test_pep8_pull_request_task(app, owner, repository, session):
     httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
-    # 5x GET pull, issue, commits, 1 file, spam/eggs.py
+    # 6x GET pull, .kwalitee.yml, issue, commits, 1 file, spam/eggs.py
     # 3x POST comments (1xfile), status, label
-    assert_that(len(latest_requests), equal_to(8), "5x GET + 3x POST")
+    assert_that(len(latest_requests), equal_to(9), "6x GET + 3x POST")
 
     expected_requests = [
+        "",
         "",
         "",
         "",
@@ -646,12 +686,24 @@ def test_okay_pull_request_task(app, owner, repository, session):
         "head": {
             "sha": "1",
             "label": "test:my-branch"
-        }
+        },
+        "base": {
+            "repo": {
+                "full_name": "kwalitee/test"
+            },
+            "ref": "testref"
+        },
     }
     httpretty.register_uri(httpretty.GET,
                            "https://api.github.com/pulls/1",
                            body=json.dumps(pull),
                            content_type="application/json")
+
+    httpretty.register_uri(httpretty.GET,
+                           "https://api.github.com/repos/kwalitee/test/"
+                           "contents/.kwalitee.yml?ref=testref",
+                           status=404)
+
     issue = {
         "url": "https://apigithub.com/issues/1",
         "html_url": "https://github.com/issues/1",
@@ -751,11 +803,12 @@ def test_okay_pull_request_task(app, owner, repository, session):
     httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
-    # 5x GET pull, issue, commits, 1 file, spam/eggs.py
+    # 5x GET pull, .kwalitee.yml, issue, commits, 1 file, spam/eggs.py
     # 2x POST status, label
-    assert_that(len(latest_requests), equal_to(7), "5x GET + 2x POST")
+    assert_that(len(latest_requests), equal_to(8), "6x GET + 2x POST")
 
     expected_requests = [
+        "",
         "",
         "",
         "",

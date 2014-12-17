@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ##
 ## This file is part of Invenio-Kwalitee
-## Copyright (C) 2014 CERN.
+## Copyright (C) 2014, 2015 CERN.
 ##
 ## Invenio-Kwalitee is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
@@ -25,6 +25,7 @@
 
 import os
 import sys
+
 from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
@@ -43,7 +44,8 @@ install_requires = [
     'flake8-blind-except',
     'pytest',
     'requests',
-    'rq>=0.4.6'
+    'rq>=0.4.6',
+    'PyYAML',
 ]
 if tuple(sys.version_info) < (2, 7):
     install_requires.append('argparse')
@@ -71,8 +73,7 @@ with open(os.path.join('invenio_kwalitee', 'version.py'), 'r') as fp:
 
 class PyTest(TestCommand):
 
-    """
-    PyTest test runner.
+    """PyTest test runner.
 
     See: http://pytest.org/latest/goodpractises.html?highlight=setuptools
     """
@@ -80,15 +81,18 @@ class PyTest(TestCommand):
     user_options = [('pytest-args=', 'a', 'Arguments to pass to py.test')]
 
     def initialize_options(self):
+        """Initialize test options."""
         TestCommand.initialize_options(self)
         self.pytest_args = ["tests"]
 
     def finalize_options(self):
+        """Finalize options."""
         TestCommand.finalize_options(self)
         self.test_args = []
         self.test_suite = True
 
     def run_tests(self):
+        """Run listed tests."""
         import pytest
         errno = pytest.main(self.pytest_args)
         sys.exit(errno)

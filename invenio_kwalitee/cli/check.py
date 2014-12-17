@@ -33,6 +33,7 @@ import sys
 
 from flask import current_app
 from flask.ext.script import Manager
+
 from tempfile import mkdtemp
 
 manager = Manager(usage='check commits')
@@ -79,7 +80,9 @@ def _pygit2_commits(commit, repository):
 def message(commit='HEAD', repository='.'):
     """Check the messages of the commits."""
     from ..kwalitee import check_message, get_options
+    from ..hooks import _read_local_kwalitee_configuration
     options = get_options(current_app.config)
+    options.update(_read_local_kwalitee_configuration(directory=repository))
 
     if options.get('colors') is not False:
         colorama.init(autoreset=True)
@@ -133,8 +136,9 @@ def message(commit='HEAD', repository='.'):
 def files(commit='HEAD', repository='.'):
     """Check the files of the commits."""
     from ..kwalitee import check_file, get_options, SUPPORTED_FILES
-    from ..hooks import run
+    from ..hooks import run, _read_local_kwalitee_configuration
     options = get_options(current_app.config)
+    options.update(_read_local_kwalitee_configuration(directory=repository))
 
     if options.get('colors') is not False:
         colorama.init(autoreset=True)
@@ -191,7 +195,6 @@ def files(commit='HEAD', repository='.'):
         message = commit.message
         commit_sha = getattr(commit, sha)
         tmpdir = mkdtemp()
-        files = []
         errors = {}
         try:
             for filename in _get_files_modified(commit):

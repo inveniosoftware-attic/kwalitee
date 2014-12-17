@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ##
 ## This file is part of Invenio-Kwalitee
-## Copyright (C) 2014 CERN.
+## Copyright (C) 2014, 2015 CERN.
 ##
 ## Invenio-Kwalitee is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
@@ -27,13 +27,15 @@ from __future__ import print_function, unicode_literals
 
 import os
 import re
-import sys
 import shutil
-from codecs import open
-from tempfile import mkdtemp
-from subprocess import Popen, PIPE
+import sys
+import yaml
 
-from .kwalitee import check_file, check_message, get_options, SUPPORTED_FILES
+from codecs import open
+from subprocess import PIPE, Popen
+from tempfile import mkdtemp
+
+from .kwalitee import SUPPORTED_FILES, check_file, check_message, get_options
 
 
 def _get_files_modified():
@@ -173,6 +175,15 @@ def post_commit_hook(argv=None):
     return 0
 
 
+def _read_local_kwalitee_configuration(directory="."):
+    """Check if the repo has a ``.kwalitee.yaml`` file."""
+    filepath = os.path.abspath(os.path.join(directory, '.kwalitee.yml'))
+    data = {}
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as file_read:
+            data = yaml.load(file_read.read())
+    return data
+
 # =============================================================================
 # _pre_commit, pre_commit_hook() and run() is based on initially on Flake8
 # git_hook, which is covered by the license:
@@ -198,6 +209,7 @@ def post_commit_hook(argv=None):
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 
 def _pre_commit(files, options):
     """Run the check on files of the added version.
@@ -236,6 +248,9 @@ def pre_commit_hook(argv=None):
     from flask import current_app
     with current_app.app_context():
         options = get_options(current_app.config)
+
+    # Check if the repo has a configuration repo
+    options.update(_read_local_kwalitee_configuration())
 
     files = []
     for filename in _get_files_modified():

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ##
 ## This file is part of Invenio-Kwalitee
-## Copyright (C) 2014 CERN.
+## Copyright (C) 2014, 2015 CERN.
 ##
 ## Invenio-Kwalitee is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
@@ -31,11 +31,11 @@ import shutil
 import logging
 import tempfile
 import requests
+import yaml
 from flask import json
 
 from .kwalitee import get_options, check_message, check_file
 from .models import db, BranchStatus, CommitStatus
-
 # Worker logger
 LOGGER = logging.getLogger("rq.worker")
 
@@ -61,7 +61,6 @@ def get_headers(repository, config):
 
     """
     token = repository.owner.token or config["ACCESS_TOKEN"]
-
     return {
         "Content-Type": "application/json",
         "Authorization": "token {token}".format(token=token)
@@ -194,10 +193,14 @@ def pull_request(branch_status_id, pull_request_url, status_url, config):
         return branch_status.errors
 
     options = get_options(config)
+
     headers = get_headers(branch_status.commit.repository, config)
 
     pull_request = requests.get(pull_request_url, headers=headers)
     data = json.loads(pull_request.content)
+
+    # Update config with .kwalitee.yml from git root folder
+    options.update(_check_for_kwalitee_configuration(data))
 
     issue_url = data["issue_url"]
     commits_url = data["commits_url"]
@@ -488,3 +491,46 @@ def _check_files(files, cwd, **kwargs):
         }
         total += len(errors)
     return total, messages
+
+
+def _check_for_kwalitee_configuration(github_pr):
+    """Check if a configuaration file exists in the repo.
+
+    .. note::
+
+        If the `.kwalitee.yml` file has not been found it will return
+        an empty dict will not affect the process.
+
+    :param dict github_pr: responded github pull_request object
+    :return: yaml parsed configuration
+    :rtype: dict
+    """
+    # download .kwalitee.yml if exists
+    github_contents_api = (
+        "https://api.github.com/repos/{name}/contents/.kwalitee.yml"
+        "?ref={branch}"
+    ).format(
+        name=github_pr.get('base', {}).get('repo', {}).get('full_name'),
+        branch=github_pr.get('base', {}).get('ref')
+    )
+    # try to request the file
+    request_configuration = requests.get(github_contents_api)
+    data = {}
+    # check if the status code is 200
+    if request_configuration.status_code == 200:
+        response = request_configuration.content
+        data_response = json.loads(response)
+        # get the file's download url and download it
+        download_url = data_response.get('download_url')
+        # create a temporary file
+        tmp = tempfile.mkdtemp()
+        destination = os.path.join(tmp, data_response.get('name', 'temp'))
+        # and finaly download the file into it
+        written = _download_file(download_url, destination)
+        # if there is an actual downloaded file try to read the yaml
+        if written:
+            with open(destination, 'r') as file_read:
+                data = yaml.load(file_read.read())
+        # finaly delete the tempdirectory
+        shutil.rmtree(tmp)
+    return data
