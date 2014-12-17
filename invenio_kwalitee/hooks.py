@@ -29,6 +29,7 @@ import os
 import re
 import sys
 import shutil
+import yaml
 from codecs import open
 from tempfile import mkdtemp
 from subprocess import Popen, PIPE
@@ -173,6 +174,15 @@ def post_commit_hook(argv=None):
     return 0
 
 
+def _read_local_kwalitee_configuration():
+    """Check if the repo has a .kwalitee file."""
+    filepath = os.path.abspath('.kwalitee.yml')
+    data = {}
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as file_read:
+            data = yaml.load(file_read.read())
+    return data
+
 # =============================================================================
 # _pre_commit, pre_commit_hook() and run() is based on initially on Flake8
 # git_hook, which is covered by the license:
@@ -236,6 +246,10 @@ def pre_commit_hook(argv=None):
     from flask import current_app
     with current_app.app_context():
         options = get_options(current_app.config)
+
+    # Check if the repo has a configuration repo
+    data = _read_local_kwalitee_configuration()
+    options.update(data)
 
     files = []
     for filename in _get_files_modified():
