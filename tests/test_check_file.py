@@ -157,7 +157,7 @@ class TestCheckLicense(TestCheckFile):
     def test_missing(self):
         """missing_license has only the copyright"""
         errors = check_license(self.missing_license)
-        assert_that(errors, has_item("13: I100 license is missing"))
+        assert_that(errors, has_item("13: L100 license is missing"))
 
     def test_license_jinja(self):
         """license.html has a well formatted license."""
@@ -185,31 +185,31 @@ class TestCheckLicense(TestCheckFile):
         Where copyright is ©.
         """
         errors = check_license(self.invalid_license, year=2014)
-        assert_that(errors, is_not(has_item("25: I101 copyright is missing")))
+        assert_that(errors, is_not(has_item("25: L101 copyright is missing")))
 
     def test_no_license(self):
         """license is missing"""
         errors = check_license(self.valid)
-        assert_that(errors, has_item("25: I101 copyright is missing"))
+        assert_that(errors, has_item("25: L101 copyright is missing"))
 
     def test_no_copyright(self):
         """copyright is missing"""
         errors = check_license(self.valid)
-        assert_that(errors, has_item("25: I101 copyright is missing"))
+        assert_that(errors, has_item("25: L101 copyright is missing"))
 
     def test_outdated_license(self):
         """valid_license has an outdated license."""
         errors = check_license(self.valid_license, year=2015)
-        assert_that(errors, has_item("5: I102 copyright year is outdated, "
+        assert_that(errors, has_item("5: L102 copyright year is outdated, "
                                      "expected 2015 but got 2014"))
 
     def test_doesnt_look_like_gnu_gpl(self):
         """invalid_license doesn't look like the GNU GPL"""
         errors = check_license(self.invalid_license, year=2014)
-        assert_that(errors, has_item("25: I103 license is not GNU GPLv2"))
+        assert_that(errors, has_item("25: L103 license is not GNU GPLv2"))
 
     def test_badly_encoded_file(self):
         errors = check_license(self.cp1252, year=2014)
         assert_that(errors,
-                    has_items("24: I190 file cannot be decoded as utf-8",
-                              "24: I101 copyright is missing"))
+                    has_items("24: L190 file cannot be decoded as utf-8",
+                              "24: L101 copyright is missing"))

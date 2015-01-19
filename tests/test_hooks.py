@@ -79,7 +79,7 @@ class PreCommitTest(TestCase):
         assert_that(
             errors,
             has_items(
-                "i/j/k/error.py: 1: I101 copyright is missing",
+                "i/j/k/error.py: 1: L101 copyright is missing",
                 "i/j/k/error.py: 1:1: F401 'os' imported but unused"))
 
 

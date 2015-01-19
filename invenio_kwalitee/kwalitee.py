@@ -71,11 +71,11 @@ _messages_codes = {
 }
 
 _licenses_codes = {
-    "I100": "license is missing",
-    "I101": "copyright is missing",
-    "I102": "copyright year is outdated, expected {0} but got {1}",
-    "I103": "license is not GNU GPLv2",
-    "I190": "file cannot be decoded as {0}"
+    "L100": "license is missing",
+    "L101": "copyright is missing",
+    "L102": "copyright year is outdated, expected {0} but got {1}",
+    "L103": "license is not GNU GPLv2",
+    "L190": "file cannot be decoded as {0}"
 }
 
 
@@ -291,6 +291,9 @@ class _PyFlakesChecker(pyflakes.checker.Checker):
 
 def _register_pyflakes_check():
     """Register the pyFlakes checker into PEP8 set of checks."""
+    from flake8_import_order.flake8_linter import Linter
+    from flake8_blind_except import check_blind_except
+
     # Resolving conflicts between pep8 and pyflakes.
     codes = {
         "UnusedImport": "F401",
@@ -311,6 +314,14 @@ def _register_pyflakes_check():
             obj.tpl = "{0} {1}".format(codes.get(name, "F999"), obj.message)
 
     pep8.register_check(_PyFlakesChecker, codes=['F'])
+    # FIXME parser hack
+    parser = pep8.get_parser('', '')
+    Linter.add_options(parser)
+    options, args = parser.parse_args([])
+    Linter.parse_options(options)
+    # end of hack
+    pep8.register_check(Linter, codes=['I'])
+    pep8.register_check(check_blind_except, codes=['B90'])
 _registered_pyflakes_check = False
 
 
@@ -469,7 +480,7 @@ def check_license(filename, **kwargs):
             file_is_empty = line == ""
             license = "".join(blocks)
     except UnicodeDecodeError:
-        errors.append((lineno + 1, "I190", "utf-8"))
+        errors.append((lineno + 1, "L190", "utf-8"))
         license = ""
 
     if file_is_empty and not license.strip():
@@ -477,7 +488,7 @@ def check_license(filename, **kwargs):
 
     match_year = _re_copyright_year.search(license)
     if match_year is None:
-        errors.append((lineno + 1, "I101"))
+        errors.append((lineno + 1, "L101"))
     elif int(match_year.group("year")) != year:
         theline = match_year.group(0)
         lno = lineno
@@ -485,19 +496,19 @@ def check_license(filename, **kwargs):
             if theline.strip() == l:
                 lno = no
                 break
-        errors.append((lno + 1, "I102", year, match_year.group("year")))
+        errors.append((lno + 1, "L102", year, match_year.group("year")))
     else:
         program_match = _re_program.search(license)
         program_2_match = _re_program_2.search(license)
         program_3_match = _re_program_3.search(license)
         if program_match is None:
-            errors.append((lineno, "I100"))
+            errors.append((lineno, "L100"))
         elif (program_2_match is None or
               program_3_match is None or
               (program_match.group("program").upper() !=
                program_2_match.group("program").upper() !=
                program_3_match.group("program").upper())):
-            errors.append((lineno, "I103"))
+            errors.append((lineno, "L103"))
 
     def _format_error(lineno, code, *args):
         return template.format(lineno, code,
@@ -540,7 +551,13 @@ def check_file(filename, **kwargs):
     elif re.search("\.(js|jsx|css|less)$", filename):
         errors += check_license(filename, python_style=False, **kwargs)
 
-    return sorted(errors, key=lambda x: int(x.split(':', 1)[0]))
+    def try_to_int(value):
+        try:
+            return int(value.split(':', 1)[0])
+        except ValueError:
+            return 0
+
+    return sorted(errors, key=try_to_int)
 
 
 def get_options(config):

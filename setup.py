@@ -36,8 +36,11 @@ install_requires = [
     'Flask-Script',
     'Flask-SQLAlchemy',
     'pep8',
+    'pep8-naming',
     'pep257',
     'pyflakes',
+    'flake8-import-order',
+    'flake8-blind-except',
     'pytest',
     'requests',
     'rq>=0.4.6'

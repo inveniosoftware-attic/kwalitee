@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ##
 ## This file is part of Invenio-Kwalitee
-## Copyright (C) 2014 CERN.
+## Copyright (C) 2014, 2015 CERN.
 ##
 ## Invenio-Kwalitee is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
@@ -244,7 +244,8 @@ TRUSTED_DEVELOPERS = []
 # List of recognized signatures
 #
 #
-SIGNATURES = 'Signed-off-by', 'Co-authored-by', 'Tested-by', 'Reviewed-by'
+SIGNATURES = ('Signed-off-by', 'Co-authored-by', 'Tested-by', 'Reviewed-by',
+              'Acked-by')
 """Authors and reviewers signatures."""
 ALT_SIGNATURES = 'Reported-by',
 """Alternative signatures recognized but not counted as reviewers."""

@@ -329,7 +329,7 @@ def test_pull_request_task(app, owner, repository, session):
         "",
         "",
         "F821 undefined name",
-        "I101 copyright is missing",
+        "L101 copyright is missing",
         "/status/2",
         "",
         "in_review"
