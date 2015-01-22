@@ -316,15 +316,15 @@ def test_pull_request_task(app, owner, repository, session):
     httpretty.disable()
 
     latest_requests = httpretty.HTTPretty.latest_requests
-    # 6x GET pull, issue, commits, 2xfiles, spam/eggs.py
-    # 6x POST comments (2 messages + 2 file), label, status
-    assert_that(len(latest_requests), equal_to(12), "6x GET + 6x POST")
+    # 6x GET pull, issue, commits, files, spam/eggs.py, spam/herp.html
+    # 5x POST comments (1 message + 2 files), status
+    # 1x PUT labels
+    assert_that(len(latest_requests), equal_to(11), "6x GET + 4x POST + 1 PUT")
 
     expected_requests = [
         "",
         "",
-        "missing component name",
-        "signature is missing",
+        "missing component name",  # "signature is missing",
         "",
         "",
         "",

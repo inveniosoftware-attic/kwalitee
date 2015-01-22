@@ -179,6 +179,11 @@ def files(commit='HEAD', repository='.'):
         if not os.path.exists(dir_):
             os.makedirs(dir_)
 
+    def _format_errors(args):
+        filename, errors = args
+        return error_template.format(filename=filename, errors='\n'.join(
+            errors if len(errors) else no_errors))
+
     count = 0
     ident = '    '
     re_line = re.compile('^', re.MULTILINE)
@@ -208,10 +213,7 @@ def files(commit='HEAD', repository='.'):
         message = re.sub(re_line, ident, message)
         if len(errors):
             count += 1
-            errors = map(lambda (filename, errors): error_template.format(
-                filename=filename, errors='\n'.join(
-                    errors if len(errors) else no_errors
-                )), errors.items())
+            errors = map(_format_errors, errors.items())
         else:
             errors = no_errors
 
