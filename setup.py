@@ -43,7 +43,8 @@ install_requires = [
     'flake8-blind-except',
     'pytest',
     'requests',
-    'rq>=0.4.6'
+    'rq>=0.4.6',
+    'PyYAML',
 ]
 if tuple(sys.version_info) < (2, 7):
     install_requires.append('argparse')
