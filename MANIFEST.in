@@ -21,19 +21,25 @@
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 
-include INSTALL.rst README.rst CHANGELOG.rst
-include Procfile setup.cfg .coveragerc
+include *.cfg
+include *.ini
+include *.rst
+include *.yml
+include .coveragerc
+include Dockerfile
+include Procfile
+include LICENSE
 include requirements*.txt
-
 include docs/*.rst docs/*.py
 
+recursive-include docs *.keep
 recursive-include docs *.rst
-recursive-include docs/_themes *.py *.css *.css_t *.conf *.html
 recursive-include docs/_templates *.html
+recursive-include docs/_themes *.py *.css *.css_t *.conf *.html
+recursive-include tests *.py
+recursive-include tests *.test
 
-recursive-include kwalitee *
-
-include alembic.ini
 recursive-include alembic *
+recursive-include kwalitee *
 
 global-exclude *.pyc
