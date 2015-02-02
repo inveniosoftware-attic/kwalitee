@@ -1,6 +1,7 @@
 components:
 - cli
 - config
+- docker
 - docs
 - global
 - hooks
