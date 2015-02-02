@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 ##
-## This file is part of Invenio-Kwalitee
+## This file is part of kwalitee
 ## Copyright (C) 2014 CERN.
 ##
-## Invenio-Kwalitee is free software; you can redistribute it and/or
+## kwalitee is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
 ## published by the Free Software Foundation; either version 2 of the
 ## License, or (at your option) any later version.
 ##
-## Invenio-Kwalitee is distributed in the hope that it will be useful, but
+## kwalitee is distributed in the hope that it will be useful, but
 ## WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ## General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with Invenio-Kwalitee; if not, write to the Free Software Foundation,
+## along with kwalitee; if not, write to the Free Software Foundation,
 ## Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 ##
 ## In applying this licence, CERN does not waive the privileges and immunities
@@ -23,7 +23,7 @@
 
 from __future__ import unicode_literals
 
-from invenio_kwalitee.kwalitee import check_message
+from kwalitee.kwalitee import check_message
 from itertools import repeat
 from unittest import TestCase
 from hamcrest import assert_that, has_item, has_items, has_length, is_not

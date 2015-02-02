@@ -1,19 +1,19 @@
 ..
-    This file is part of Invenio-Kwalitee
+    This file is part of kwalitee
     Copyright (C) 2014 CERN.
 
-    Invenio-Kwalitee is free software; you can redistribute it and/or
+    kwalitee is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation; either version 2 of the
     License, or (at your option) any later version.
 
-    Invenio-Kwalitee is distributed in the hope that it will be useful, but
+    kwalitee is distributed in the hope that it will be useful, but
     WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with Invenio-Kwalitee; if not, write to the Free Software Foundation,
+    along with kwalitee; if not, write to the Free Software Foundation,
     Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
     In applying this licence, CERN does not waive the privileges and immunities
@@ -27,7 +27,7 @@
  Command-line interface
 ========================
 
-*Invenio-Kwalitee* comes with a command-line tool that goes by the name of
+*kwalitee* comes with a command-line tool that goes by the name of
 ``kwalitee``. If you've installed it using the ``--user`` option, you'll have
 to add ``~/.local/bin`` to your path. Otherwise, you should be able to call it
 without any trouble.
@@ -77,8 +77,8 @@ repository.
 
 .. seealso::
 
-   * :py:mod:`invenio_kwalitee.cli.githooks`
-   * :py:mod:`invenio_kwalitee.hooks`
+   * :py:mod:`kwalitee.cli.githooks`
+   * :py:mod:`kwalitee.hooks`
 
 
 Hooks
@@ -94,7 +94,7 @@ Runs the checks on the files about to be commited.
 
 Based on the state of the commit create a commit message to be filled in.
 
-.. seealso:: :py:data:`invenio_kwalitee.config.COMMIT_MSG_TEMPLATE`
+.. seealso:: :py:data:`kwalitee.config.COMMIT_MSG_TEMPLATE`
 
 ``post-commit``
 ^^^^^^^^^^^^^^^
@@ -141,7 +141,7 @@ the default one.
 
     $ kwalitee account add <ACCOUNT> --email <EMAIL> --token <TOKEN>
 
-.. seealso:: :py:data:`invenio_kwalitee.config.ACCESS_TOKEN`
+.. seealso:: :py:data:`kwalitee.config.ACCESS_TOKEN`
 
 Deletion
 --------

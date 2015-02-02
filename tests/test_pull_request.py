@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 ##
-## This file is part of Invenio-Kwalitee
+## This file is part of kwalitee
 ## Copyright (C) 2014 CERN.
 ##
-## Invenio-Kwalitee is free software; you can redistribute it and/or
+## kwalitee is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
 ## published by the Free Software Foundation; either version 2 of the
 ## License, or (at your option) any later version.
 ##
-## Invenio-Kwalitee is distributed in the hope that it will be useful, but
+## kwalitee is distributed in the hope that it will be useful, but
 ## WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ## General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with Invenio-Kwalitee; if not, write to the Free Software Foundation,
+## along with kwalitee; if not, write to the Free Software Foundation,
 ## Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 ##
 ## In applying this licence, CERN does not waive the privileges and immunities
@@ -29,8 +29,8 @@ import httpretty
 
 from flask import json
 from datetime import datetime
-from invenio_kwalitee.models import BranchStatus, CommitStatus
-from invenio_kwalitee.tasks import pull_request
+from kwalitee.models import BranchStatus, CommitStatus
+from kwalitee.tasks import pull_request
 from hamcrest import (assert_that, equal_to, contains_string, has_length,
                       has_item, has_items, is_not, greater_than)
 

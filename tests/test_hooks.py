@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 ##
-## This file is part of Invenio-Kwalitee
+## This file is part of kwalitee
 ## Copyright (C) 2014 CERN.
 ##
-## Invenio-Kwalitee is free software; you can redistribute it and/or
+## kwalitee is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
 ## published by the Free Software Foundation; either version 2 of the
 ## License, or (at your option) any later version.
 ##
-## Invenio-Kwalitee is distributed in the hope that it will be useful, but
+## kwalitee is distributed in the hope that it will be useful, but
 ## WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ## General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with Invenio-Kwalitee; if not, write to the Free Software Foundation,
+## along with kwalitee; if not, write to the Free Software Foundation,
 ## Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 ##
 ## In applying this licence, CERN does not waive the privileges and immunities
@@ -35,7 +35,7 @@ from mock import patch, mock_open, MagicMock
 from hamcrest import (assert_that, equal_to, has_length, has_item, has_items,
                       is_not, contains_string)
 
-from invenio_kwalitee.hooks import (_get_component, _get_components,
+from kwalitee.hooks import (_get_component, _get_components,
                                     _get_git_author, _get_files_modified,
                                     _pre_commit, _prepare_commit_msg,
                                     post_commit_hook, pre_commit_hook)
@@ -109,7 +109,7 @@ class PrepareCommitMsgTest(TestCase):
     def test_prepare_commit_msg(self):
         commit_msg = "# this is a comment"
         mock, tmp_file = self._mock_open(commit_msg)
-        with patch("invenio_kwalitee.hooks.open", mock, create=True):
+        with patch("kwalitee.hooks.open", mock, create=True):
             _prepare_commit_msg("mock", "John",
                                 template="{component}: {author}")
 
@@ -121,7 +121,7 @@ class PrepareCommitMsgTest(TestCase):
     def test_prepare_commit_msg_with_one_component(self):
         commit_msg = "# this is a comment"
         mock, tmp_file = self._mock_open(commit_msg)
-        with patch("invenio_kwalitee.hooks.open", mock, create=True):
+        with patch("kwalitee.hooks.open", mock, create=True):
             _prepare_commit_msg("mock", "John",
                                 ("setup.py", "test.py"),
                                 "{component}")
@@ -134,7 +134,7 @@ class PrepareCommitMsgTest(TestCase):
     def test_prepare_commit_msg_with_many_components(self):
         commit_msg = "# this is a comment"
         mock, tmp_file = self._mock_open(commit_msg)
-        with patch("invenio_kwalitee.hooks.open", mock, create=True):
+        with patch("kwalitee.hooks.open", mock, create=True):
             _prepare_commit_msg("mock", "John",
                                 ("setup.py",
                                  "grunt/foo.js",
@@ -151,7 +151,7 @@ class PrepareCommitMsgTest(TestCase):
     def test_prepare_commit_msg_aborts_if_existing(self):
         commit_msg = "Lorem ipsum"
         mock, tmp_file = self._mock_open(commit_msg)
-        with patch("invenio_kwalitee.hooks.open", mock, create=True):
+        with patch("kwalitee.hooks.open", mock, create=True):
             _prepare_commit_msg("mock", "John")
 
             tmp_file.seek(0)

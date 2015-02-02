@@ -1,29 +1,29 @@
-invenio_kwalitee.cli package
+kwalitee.cli package
 ============================
 
 Submodules
 ----------
 
-invenio_kwalitee.cli.account module
+kwalitee.cli.account module
 -----------------------------------
 
-.. automodule:: invenio_kwalitee.cli.account
+.. automodule:: kwalitee.cli.account
     :members:
     :undoc-members:
     :show-inheritance:
 
-invenio_kwalitee.cli.githooks module
+kwalitee.cli.githooks module
 ------------------------------------
 
-.. automodule:: invenio_kwalitee.cli.githooks
+.. automodule:: kwalitee.cli.githooks
     :members:
     :undoc-members:
     :show-inheritance:
 
-invenio_kwalitee.cli.repository module
+kwalitee.cli.repository module
 --------------------------------------
 
-.. automodule:: invenio_kwalitee.cli.repository
+.. automodule:: kwalitee.cli.repository
     :members:
     :undoc-members:
     :show-inheritance:
@@ -32,7 +32,7 @@ invenio_kwalitee.cli.repository module
 Module contents
 ---------------
 
-.. automodule:: invenio_kwalitee.cli
+.. automodule:: kwalitee.cli
     :members:
     :undoc-members:
     :show-inheritance:

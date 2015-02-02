@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 ##
-## This file is part of Invenio-Kwalitee
+## This file is part of kwalitee
 ## Copyright (C) 2014 CERN.
 ##
-## Invenio-Kwalitee is free software; you can redistribute it and/or
+## kwalitee is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
 ## published by the Free Software Foundation; either version 2 of the
 ## License, or (at your option) any later version.
 ##
-## Invenio-Kwalitee is distributed in the hope that it will be useful, but
+## kwalitee is distributed in the hope that it will be useful, but
 ## WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ## General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with Invenio-Kwalitee; if not, write to the Free Software Foundation,
+## along with kwalitee; if not, write to the Free Software Foundation,
 ## Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 ##
 ## In applying this licence, CERN does not waive the privileges and immunities
@@ -31,8 +31,8 @@ import shutil
 import tempfile
 import subprocess
 
-from invenio_kwalitee import create_app
-from invenio_kwalitee.models import db as _db, Account, Repository
+from kwalitee import create_app
+from kwalitee.models import db as _db, Account, Repository
 
 
 @pytest.fixture(scope="session")
@@ -42,7 +42,7 @@ def app(request):
         "TESTING": True,
         "DATABASE_NAME": "testdb"
     }
-    app = create_app("invenio_kwalitee", config)
+    app = create_app("kwalitee", config)
 
     ctx = app.app_context()
     ctx.push()

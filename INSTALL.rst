@@ -1,19 +1,19 @@
 ..
-    This file is part of Invenio-Kwalitee
+    This file is part of kwalitee
     Copyright (C) 2014 CERN.
 
-    Invenio-Kwalitee is free software; you can redistribute it and/or
+    kwalitee is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation; either version 2 of the
     License, or (at your option) any later version.
 
-    Invenio-Kwalitee is distributed in the hope that it will be useful, but
+    kwalitee is distributed in the hope that it will be useful, but
     WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with Invenio-Kwalitee; if not, write to the Free Software Foundation,
+    along with kwalitee; if not, write to the Free Software Foundation,
     Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
     In applying this licence, CERN does not waive the privileges and immunities
@@ -29,11 +29,11 @@ We recommend you to use the stable version unless you want to contribute.
 Stable version
 --------------
 
-Invenio-Kwalitee is on PyPI so all you need is:
+kwalitee is on PyPI so all you need is:
 
 .. code-block:: console
 
-    $ pip install --user Invenio-Kwalitee
+    $ pip install --user kwalitee
 
 
 Development version
@@ -41,8 +41,8 @@ Development version
 
 .. code-block:: console
 
-    $ git clone https://github.com/jirikuncar/invenio-kwalitee
-    $ cd invenio-kwalitee
+    $ git clone https://github.com/jirikuncar/kwalitee
+    $ cd kwalitee
     $ pip install --user -r requirements.txt
 
 
@@ -84,7 +84,7 @@ The important detail here is to use the same version for ``libgit2`` **and**
 Deployment of the web server
 ============================
 
-Invenio-Kwalitee is composed of a WSGI server and a worker to handle the long
+kwalitee is composed of a WSGI server and a worker to handle the long
 tasks asynchronously.
 
 Requirements
@@ -107,7 +107,7 @@ Is the API token for your user on Github. You need it in order to be able to
 publish comments and statuses.
 
 It can be defined per account as well. See:
-:ref:`cli` and :py:class:`invenio_kwalitee.models.Account`.
+:ref:`cli` and :py:class:`kwalitee.models.Account`.
 
 ``AUTO_CREATE``
 ^^^^^^^^^^^^^^^
@@ -154,9 +154,9 @@ This configuration file will serve the applicatino on port ``8000``.
     vaccum = true
     max-requests = 100
 
-    chdir = <VIRTUALENV>/opt/invenio-kwalitee
+    chdir = <VIRTUALENV>/opt/kwalitee
     virtualenv = <VIRTUALENV>
-    module = invenio_kwalitee.wsgi:application
+    module = kwalitee.wsgi:application
     touch-reload = uwsgi.ini
 
     enable-threads = true
@@ -184,7 +184,7 @@ systemd_, runit_ or supervisord_.
 
 .. code-block:: console
 
-    $ python -m invenio_kwalitee.worker
+    $ python -m kwalitee.worker
 
 Upstart (Ubuntu)
 ^^^^^^^^^^^^^^^^
@@ -203,9 +203,9 @@ VirtualEnv_ is a clean way to set everything up and is recommended.
     setuid <USER>
     setgid <GROUP>
 
-    exec /usr/bin/python -m invenio_kwalitee.worker
+    exec /usr/bin/python -m kwalitee.worker
     # Or if you've set it up in a virtualenv
-    #exec <VIRTUALENV>/bin/python -m invenio_kwalitee.worker
+    #exec <VIRTUALENV>/bin/python -m kwalitee.worker
 
 Then, you can manage it using upstart like anything else.
 

@@ -1,18 +1,18 @@
-..  This file is part of Invenio-Kwalitee
+..  This file is part of kwalitee
     Copyright (C) 2014 CERN.
 
-    Invenio-Kwalitee is free software; you can redistribute it and/or
+    kwalitee is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation; either version 2 of the
     License, or (at your option) any later version.
 
-    Invenio-Kwalitee is distributed in the hope that it will be useful, but
+    kwalitee is distributed in the hope that it will be useful, but
     WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with Invenio-Kwalitee; if not, write to the Free Software Foundation,
+    along with kwalitee; if not, write to the Free Software Foundation,
     Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
     In applying this licence, CERN does not waive the privileges and immunities
@@ -20,7 +20,7 @@
     or submit itself to any jurisdiction.
 
 
-invenio_kwalitee package
+kwalitee package
 ========================
 
 Subpackages
@@ -28,79 +28,79 @@ Subpackages
 
 .. toctree::
 
-    invenio_kwalitee.cli
+    kwalitee.cli
 
 Submodules
 ----------
 
-invenio_kwalitee.config module
+kwalitee.config module
 ------------------------------
 
-.. automodule:: invenio_kwalitee.config
+.. automodule:: kwalitee.config
     :members:
     :undoc-members:
     :show-inheritance:
 
-invenio_kwalitee.factory module
+kwalitee.factory module
 -------------------------------
 
-.. automodule:: invenio_kwalitee.factory
+.. automodule:: kwalitee.factory
     :members:
     :undoc-members:
     :show-inheritance:
 
-invenio_kwalitee.hooks module
+kwalitee.hooks module
 -----------------------------
 
-.. automodule:: invenio_kwalitee.hooks
+.. automodule:: kwalitee.hooks
     :members:
     :undoc-members:
     :show-inheritance:
 
-invenio_kwalitee.kwalitee module
+kwalitee.kwalitee module
 --------------------------------
 
-.. automodule:: invenio_kwalitee.kwalitee
+.. automodule:: kwalitee.kwalitee
     :members:
     :undoc-members:
     :show-inheritance:
 
-invenio_kwalitee.models module
+kwalitee.models module
 ------------------------------
 
-.. automodule:: invenio_kwalitee.models
+.. automodule:: kwalitee.models
     :members:
     :undoc-members:
     :show-inheritance:
 
-invenio_kwalitee.tasks module
+kwalitee.tasks module
 -----------------------------
 
-.. automodule:: invenio_kwalitee.tasks
+.. automodule:: kwalitee.tasks
     :members:
     :undoc-members:
     :show-inheritance:
 
-invenio_kwalitee.views module
+kwalitee.views module
 -----------------------------
 
-.. automodule:: invenio_kwalitee.views
+.. automodule:: kwalitee.views
     :members:
     :undoc-members:
     :show-inheritance:
 
-invenio_kwalitee.worker module
+kwalitee.worker module
 ------------------------------
 
-.. automodule:: invenio_kwalitee.worker
+.. automodule:: kwalitee.worker
     :members:
     :undoc-members:
     :show-inheritance:
 
-invenio_kwalitee.wsgi module
+kwalitee.wsgi module
 ----------------------------
 
-.. automodule:: invenio_kwalitee.wsgi
+.. automodule:: kwalitee.wsgi
     :members:
     :undoc-members:
     :show-inheritance:
@@ -109,7 +109,7 @@ invenio_kwalitee.wsgi module
 Module contents
 ---------------
 
-.. automodule:: invenio_kwalitee
+.. automodule:: kwalitee
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 ##
-## This file is part of Invenio-Kwalitee
+## This file is part of kwalitee
 ## Copyright (C) 2014 CERN.
 ##
-## Invenio-Kwalitee is free software; you can redistribute it and/or
+## kwalitee is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
 ## published by the Free Software Foundation; either version 2 of the
 ## License, or (at your option) any later version.
 ##
-## Invenio-Kwalitee is distributed in the hope that it will be useful, but
+## kwalitee is distributed in the hope that it will be useful, but
 ## WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ## General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with Invenio-Kwalitee; if not, write to the Free Software Foundation,
+## along with kwalitee; if not, write to the Free Software Foundation,
 ## Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 ##
 ## In applying this licence, CERN does not waive the privileges and immunities
@@ -25,7 +25,7 @@ from __future__ import unicode_literals
 
 import os
 import tempfile
-from invenio_kwalitee.kwalitee import check_pep8, check_pep257, check_license
+from kwalitee.kwalitee import check_pep8, check_pep257, check_license
 from unittest import TestCase
 from hamcrest import (assert_that, has_length, has_item, has_items, is_not,
                       contains_string)
@@ -211,5 +211,4 @@ class TestCheckLicense(TestCheckFile):
     def test_badly_encoded_file(self):
         errors = check_license(self.cp1252, year=2014)
         assert_that(errors,
-                    has_items("24: L190 file cannot be decoded as utf-8",
-                              "24: L101 copyright is missing"))
+                    has_item("24: L190 file cannot be decoded as utf-8"))

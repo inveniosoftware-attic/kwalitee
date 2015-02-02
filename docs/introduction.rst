@@ -2,7 +2,7 @@
  Introduction
 ==============
 
-Invenio Kwalitee is a tool that runs static analysis checks on invenio and
+kwalitee is a tool that runs static analysis checks on invenio and
 invenio-related repositories. It can be used as a web service using the Github
 API or as a git hook from the command line.
 

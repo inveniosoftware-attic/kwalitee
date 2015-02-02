@@ -1,28 +1,28 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ##
-## This file is part of Invenio-Kwalitee
+## This file is part of kwalitee
 ## Copyright (C) 2014 CERN.
 ##
-## Invenio-Kwalitee is free software; you can redistribute it and/or
+## kwalitee is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
 ## published by the Free Software Foundation; either version 2 of the
 ## License, or (at your option) any later version.
 ##
-## Invenio-Kwalitee is distributed in the hope that it will be useful, but
+## kwalitee is distributed in the hope that it will be useful, but
 ## WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ## General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with Invenio-Kwalitee; if not, write to the Free Software Foundation,
+## along with kwalitee; if not, write to the Free Software Foundation,
 ## Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 ##
 ## In applying this licence, CERN does not waive the privileges and immunities
 ## granted to it by virtue of its status as an Intergovernmental Organization
 ## or submit itself to any jurisdiction.
 #
-# Invenio-Kwalitee documentation build configuration file, created by
+# kwalitee documentation build configuration file, created by
 # sphinx-quickstart on Tue Jun  3 08:27:01 2014.
 #
 # This file is execfile()d with the current directory set to its
@@ -41,7 +41,7 @@ import os
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
-sys.path.append(os.path.abspath('../invenio_kwalitee'))
+sys.path.append(os.path.abspath('../kwalitee'))
 
 
 # -- General configuration ------------------------------------------------
@@ -74,7 +74,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'Invenio-Kwalitee'
+project = 'kwalitee'
 copyright = '2014, CERN'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -210,7 +210,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Invenio-Kwaliteedoc'
+htmlhelp_basename = 'kwaliteedoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -230,7 +230,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'Invenio-Kwalitee.tex', 'Invenio-Kwalitee Documentation',
+  ('index', 'kwalitee.tex', 'kwalitee Documentation',
    'CERN', 'manual'),
 ]
 
@@ -260,7 +260,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'invenio-kwalitee', 'Invenio-Kwalitee Documentation',
+    ('index', 'kwalitee', 'kwalitee Documentation',
      ['CERN'], 1)
 ]
 
@@ -274,8 +274,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'Invenio-Kwalitee', 'Invenio-Kwalitee Documentation',
-   'CERN', 'Invenio-Kwalitee', 'One line description of project.',
+  ('index', 'kwalitee', 'kwalitee Documentation',
+   'CERN', 'kwalitee', 'One line description of project.',
    'Miscellaneous'),
 ]
 
