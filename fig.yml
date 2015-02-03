@@ -23,11 +23,12 @@
 
 web:
   build: .
-  command: kwalitee runserver -p 5000
+  command: kwalitee runserver -h 0.0.0.0 -p 5000
   ports:
    - "5000:5000"
   environment:
    - REDIS_HOST=redis
+   - KWALITEE_INSTANCE_PATH=/code/instance
   volumes:
    - .:/code
   links:
@@ -37,6 +38,7 @@ worker:
   command: python -m kwalitee.worker
   environment:
    - REDIS_HOST=redis
+   - KWALITEE_INSTANCE_PATH=/code/instance
   volumes:
    - .:/code
   links:

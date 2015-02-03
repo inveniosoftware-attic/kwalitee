@@ -44,14 +44,15 @@ def create_app(name=None, config=None):
     """Create the Flask application."""
     name = 'kwalitee' if name is None else name
     app = Flask(name, template_folder="templates", static_folder="static",
-                instance_relative_config=True)
+                instance_relative_config=True,
+                instance_path=os.environ.get("KWALITEE_INSTANCE_PATH"))
 
     # Load default configuration
     app.config.from_object("kwalitee.config")
 
     # Load kwalitee.cfg from instance folder
     app.config.from_pyfile("kwalitee.cfg", silent=True)
-    app.config.from_envvar("INVENIO_KWALITEE_CONFIG", silent=True)
+    app.config.from_envvar("KWALITEE_CONFIG", silent=True)
     app.config.update(config or {})
 
     # Create instance path
@@ -59,19 +60,12 @@ def create_app(name=None, config=None):
         os.makedirs(app.instance_path)
 
     # Setting up the database
-    database = os.path.join(app.instance_path,
-                            app.config.get("DATABASE_NAME", "database"))
-    database = "{0}.db".format(database)
-    app.config["DATABASE"] = database
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///{0}".format(database)
-    from .models import db, init_app
-    init_app(app)
-    if not os.path.exists(database):
-        db.create_all()
+    from .import models
+    models.init_app(app)
 
     # Setting up RQ
-    from .worker import init_app
-    init_app(app)
+    from . import worker
+    worker.init_app(app)
 
     # Setting up the views
     app.url_map.converters['sha'] = ShaConverter

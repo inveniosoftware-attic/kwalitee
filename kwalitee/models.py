@@ -25,6 +25,8 @@
 
 from __future__ import unicode_literals
 
+import os
+
 from datetime import datetime
 from flask import json
 from flask.ext.sqlalchemy import SQLAlchemy
@@ -47,8 +49,18 @@ db = SQLAlchemy()
 
 def init_app(app):
     """Initialize the Flask app with db."""
+    database = os.path.join(app.instance_path,
+                            app.config.get("DATABASE_NAME", "database"))
+    database = "{0}.db".format(database)
+    app.config.setdefault("DATABASE", database)
+    app.config.setdefault("SQLALCHEMY_DATABASE_URI",
+                          os.environ.get("SQLALCHEMY_DATABASE_URI",
+                                         "sqlite:///{0}".format(database)))
     db.app = app
     db.init_app(app)
+
+    if not db.engine.has_table(Account.__tablename__):
+        db.create_all()
     return db
 
 
