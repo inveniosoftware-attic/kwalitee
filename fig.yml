@@ -24,8 +24,8 @@
 web:
   build: .
   command: kwalitee runserver -h 0.0.0.0 -p 5000
-  ports:
-   - "5000:5000"
+  expose:
+   - "5000"
   environment:
    - REDIS_HOST=redis
    - SQLALCHEMY_DATABASE_URI=postgres://postgres:postgres@db:5432/postgres
@@ -51,3 +51,11 @@ redis:
   image: redis
 db:
   image: postgres
+haproxy:
+  image: tutum/haproxy
+  environment:
+  - PORT=5000
+  links:
+  - web
+  ports:
+  - "80:80"
