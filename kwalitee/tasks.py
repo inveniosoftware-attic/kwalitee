@@ -368,6 +368,10 @@ def _download_file(source, destination):
     try:
         response = requests.get(source)
 
+        # File not found or other error.
+        if response.status_code > 400:
+            return requests.HTTPError(response.status_code)
+
         dirname = os.path.dirname(destination)
         if not os.path.exists(dirname):
             os.makedirs(dirname)

@@ -758,7 +758,7 @@ def test_okay_pull_request_task(app, owner, repository, session):
                            "https://api.github.com/pulls/1/files",
                            body=json.dumps(files),
                            content_type="application/json")
-    init_py = GPL.format(datetime.now().year)
+    init_py = GPL.format(datetime.now().year, '#')
     httpretty.register_uri(httpretty.GET,
                            "https://github.com/raw/1/eggs/__init__.py",
                            body=init_py,
