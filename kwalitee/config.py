@@ -276,8 +276,12 @@ Signed-off-by: {author}
 HOOK_TEMPLATE = """#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import sys
-from kwalitee import create_app
-from kwalitee.hooks import {hook}
+try:
+    from invenio_kwalitee import create_app
+    from invenio_kwalitee.hooks import pre_commit_hook
+except ImportError:
+    # No kwalitee ? Skip checks then !
+    sys.exit()
 
 if __name__ == "__main__":
     with create_app().app_context():
