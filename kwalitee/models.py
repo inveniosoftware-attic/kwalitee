@@ -68,7 +68,7 @@ class Account(db.Model):
 
     """Github account."""
 
-    id = db.Column(db.Integer(), primary_key=True)
+    id = db.Column(db.Integer(), primary_key=True, autoincrement=True)
     """Identifier"""
     name = db.Column(db.UnicodeText(), unique=True, nullable=False)
     """Username."""
@@ -131,7 +131,7 @@ class Repository(db.Model):
 
     __table_args__ = db.UniqueConstraint('owner_id', 'name'),
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     owner_id = db.Column(db.Integer(),
                          db.ForeignKey("account.id"),
                          nullable=False)
@@ -177,7 +177,7 @@ class CommitStatus(db.Model):
 
     __table_args__ = db.UniqueConstraint('repository_id', 'sha'),
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     repository_id = db.Column(db.Integer(),
                               db.ForeignKey("repository.id"),
                               nullable=False)
@@ -265,7 +265,7 @@ class BranchStatus(db.Model):
 
     __table_args__ = db.UniqueConstraint('commit_id', 'name'),
 
-    id = db.Column(db.Integer(), primary_key=True)
+    id = db.Column(db.Integer(), primary_key=True, autoincrement=True)
     commit_id = db.Column(db.Integer(),
                           db.ForeignKey("commit_status.id"),
                           nullable=False)
