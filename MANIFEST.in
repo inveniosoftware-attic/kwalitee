@@ -26,6 +26,7 @@ include *.ini
 include *.rst
 include *.yml
 include .coveragerc
+include .dockerignore
 include Dockerfile
 include Procfile
 include LICENSE
