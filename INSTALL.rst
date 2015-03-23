@@ -41,7 +41,7 @@ Development version
 
 .. code-block:: console
 
-    $ git clone https://github.com/jirikuncar/kwalitee
+    $ git clone https://github.com/inveniosoftware/kwalitee
     $ cd kwalitee
     $ pip install --user -r requirements.txt
 

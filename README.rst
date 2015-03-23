@@ -2,10 +2,10 @@
 kwalitee
 ================
 
-.. image:: https://travis-ci.org/jirikuncar/kwalitee.png?branch=master
-    :target: https://travis-ci.org/jirikuncar/kwalitee
-.. image:: https://coveralls.io/repos/jirikuncar/kwalitee/badge.png?branch=master
-    :target: https://coveralls.io/r/jirikuncar/kwalitee
+.. image:: https://travis-ci.org/inveniosoftware/kwalitee.png?branch=master
+    :target: https://travis-ci.org/inveniosoftware/kwalitee
+.. image:: https://coveralls.io/repos/inveniosoftware/kwalitee/badge.png?branch=master
+    :target: https://coveralls.io/r/inveniosoftware/kwalitee
 
 
 Installation
