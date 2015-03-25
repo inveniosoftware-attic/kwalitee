@@ -32,7 +32,7 @@ import shutil
 import sys
 
 from flask import current_app
-from flask.ext.script import Manager
+from flask_script import Manager
 
 from tempfile import mkdtemp
 

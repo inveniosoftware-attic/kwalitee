@@ -29,7 +29,7 @@ import os
 import sys
 
 from flask import current_app as app
-from flask.ext.script import Manager
+from flask_script import Manager
 
 from ..hooks import (pre_commit_hook, prepare_commit_msg_hook, run,
                      post_commit_hook)

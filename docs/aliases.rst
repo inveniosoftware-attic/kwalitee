@@ -42,7 +42,7 @@ had to create local references here.
 
 .. py:class:: flask_sqlalchemy.Model
 
-   Flask SQLAlchemy model: :py:class:`flask.ext.sqlalchemy.Model`
+   Flask SQLAlchemy model: :py:class:`flask_sqlalchemy.Model`
 
 .. py:class:: werkzeug.routing.BaseConverter
 

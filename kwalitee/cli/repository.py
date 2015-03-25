@@ -29,7 +29,7 @@ import sys
 
 from ..models import db, Account, Repository
 
-from flask.ext.script import Manager
+from flask_script import Manager
 
 manager = Manager(usage="repository management")
 

@@ -29,7 +29,7 @@ from __future__ import unicode_literals
 import os
 
 from flask import Flask, Config
-from flask.ext.sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.routing import BaseConverter
 
 class ShaConverter(BaseConverter):

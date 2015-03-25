@@ -29,7 +29,7 @@ import os
 
 from datetime import datetime
 from flask import json
-from flask.ext.sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy
 
 
 # Storing states as integers so string can be changed/l10n later

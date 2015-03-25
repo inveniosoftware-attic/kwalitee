@@ -24,7 +24,7 @@
 """Command line interfaces entrypoints."""
 
 
-from flask.ext.script import Manager
+from flask_script import Manager
 
 from . import account, check, githooks, repository
 
