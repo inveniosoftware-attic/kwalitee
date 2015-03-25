@@ -59,6 +59,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
+    'sphinxcontrib.issuetracker',  # autolinks issue numbers (like #62)
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -309,3 +310,6 @@ if sys.version_info < (3,):
     intersphinx_mapping['http://docs.python.org/2.7/'] = None
 else:
     intersphinx_mapping['http://docs.python.org/3.4/'] = None
+
+# sphinxcontrib.issuetracker settings
+issuetracker = 'github'
