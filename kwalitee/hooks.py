@@ -29,11 +29,12 @@ import os
 import re
 import shutil
 import sys
-import yaml
 
 from codecs import open
 from subprocess import PIPE, Popen
 from tempfile import mkdtemp
+
+import yaml
 
 from .kwalitee import SUPPORTED_FILES, check_file, check_message, get_options
 
@@ -139,12 +140,15 @@ def prepare_commit_msg_hook(argv):
     """Hook: prepare a commit message."""
     from flask import current_app
     with current_app.app_context():
-        template = current_app.config["COMMIT_MSG_TEMPLATE"]
+        options = get_options(current_app.config)
+
+    # Check if the repo has a configuration repo
+    options.update(_read_local_kwalitee_configuration())
 
     _prepare_commit_msg(argv[1],
                         _get_git_author(),
                         _get_files_modified(),
-                        template)
+                        options.get('template'))
     return 0
 
 

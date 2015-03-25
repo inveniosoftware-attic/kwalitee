@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee
-# Copyright (C) 2014 CERN.
+# Copyright (C) 2014, 2015 CERN.
 #
 # kwalitee is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -25,10 +25,11 @@ from __future__ import unicode_literals
 
 import os
 import tempfile
-from kwalitee.kwalitee import check_pep8, check_pep257, check_license
-from unittest import TestCase
+
 from hamcrest import (assert_that, has_length, has_item, has_items, is_not,
                       contains_string)
+from kwalitee.kwalitee import check_pep8, check_pep257, check_license
+from unittest import TestCase
 
 
 class TestCheckFile(TestCase):
@@ -104,7 +105,7 @@ class TestCheckPep257(TestCheckFile):
     def test_missing(self):
         """invalid.py has no docstring"""
         errors = check_pep257(self.invalid)
-        assert_that(errors, has_item("1: D100 Docstring missing"))
+        assert_that(errors, has_item("1: D100 Missing docstring in public module"))
 
     def test_invalid_token(self):
         """invalid_token.py has a tokenization error"""

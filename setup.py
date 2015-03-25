@@ -38,7 +38,7 @@ install_requires = [
     'Flask-SQLAlchemy',
     'pep8',
     'pep8-naming',
-    'pep257',
+    'pep257>=0.5.0',
     'pyflakes',
     'flake8-import-order',
     'flake8-blind-except',

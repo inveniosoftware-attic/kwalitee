@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee
-# Copyright (C) 2014 CERN.
+# Copyright (C) 2014, 2015 CERN.
 #
 # kwalitee is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -23,12 +23,12 @@
 
 """Integration tests for the pull_request event."""
 
-from __future__ import unicode_literals, absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import httpretty
 
 from flask import json
-from kwalitee.models import Repository, CommitStatus
+from kwalitee.models import CommitStatus, Repository
 from kwalitee.tasks import push
 from hamcrest import (assert_that, equal_to, contains_string, has_length,
                       has_item)
@@ -542,4 +542,4 @@ def test_push_half_known_commit(repository, session):
     assert_that(cs)
     assert_that(cs.is_pending(), equal_to(False))
     assert_that(cs.content["files"]["spam/eggs.py"]["errors"],
-                has_item("1: D100 Docstring missing"))
+                has_item("1: D100 Missing docstring in public module"))

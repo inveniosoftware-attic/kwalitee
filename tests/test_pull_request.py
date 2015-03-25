@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee
-# Copyright (C) 2014 CERN.
+# Copyright (C) 2014, 2015 CERN.
 #
 # kwalitee is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -23,7 +23,7 @@
 
 """Integration tests for the pull_request event."""
 
-from __future__ import unicode_literals, absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import httpretty
 
@@ -642,7 +642,7 @@ def test_pep8_pull_request_task(app, owner, repository, session):
         "",
         "",
         "",
-        "D100 Docstring missing",
+        "D100 Missing docstring in public module",
         "/status/1",
         "",
         "in_review",

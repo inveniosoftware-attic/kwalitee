@@ -25,14 +25,19 @@
 
 from __future__ import unicode_literals
 
+import codecs
 import os
 import re
-import pep8
-import codecs
+
 import pep257
+
+import pep8
+
 import pyflakes
 import pyflakes.checker
+
 import tokenize
+
 from datetime import datetime
 
 
@@ -77,20 +82,6 @@ _licenses_codes = {
     "L103": "license is not GNU GPLv2",
     "L190": "file cannot be decoded as {0}"
 }
-
-
-@pep257.check_for(pep257.Definition)
-def check_whitespaces(self, definition, docstring):
-    """D290: White spaces around doctring should be trimmed."""
-    if docstring:
-        lines = eval(docstring).split('\n')
-        if lines[0].startswith(' ') or \
-                len(lines) == 1 and lines[0].endswith(' '):
-            return pep257.Error(
-                'D290: White spaces around docstring should be trimmed.'
-            )
-
-pep257.PEP257Checker.check_whitespaces = check_whitespaces
 
 
 def _check_1st_line(line, **kwargs):
@@ -565,6 +556,7 @@ def get_options(config):
     base = {
         "components": config.get("COMPONENTS"),
         "signatures": config.get("SIGNATURES"),
+        "commit_msg_template": config.get("COMMIT_MSG_TEMPLATE"),
         "alt_signatures": config.get("ALT_SIGNATURES"),
         "trusted": config.get("TRUSTED_DEVELOPERS"),
         "pep8": config.get("CHECK_PEP8", True),
