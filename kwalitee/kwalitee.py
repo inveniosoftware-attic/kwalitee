@@ -230,14 +230,13 @@ def check_message(message, **kwargs):
     - and finally signatures.
 
     :param components: compontents, e.g. ``('auth', 'utils', 'misc')``
-    :type components: list
-    :type components: list
+    :type components: `list`
     :param signatures: signatures, e.g. ``('Signed-off-by', 'Reviewed-by')``
-    :type signatures: list
+    :type signatures: `list`
     :param alt_signatures: alternative signatures, e.g. ``('Tested-by',)``
-    :type alt_signatures: list
+    :type alt_signatures: `list`
     :param trusted: optional list of reviewers, e.g. ``('john.doe@foo.org',)``
-    :type trusted: list
+    :type trusted: `list`
     :param max_length: optional maximum line length (by default: 72)
     :type max_length: int
     :param max_first_line: optional maximum first line length (by default: 50)
@@ -245,7 +244,7 @@ def check_message(message, **kwargs):
     :param allow_empty: optional way to allow empty message (by default: False)
     :type allow_empty: bool
     :return: errors sorted by line number
-    :rtype: list
+    :rtype: `list`
     """
     if kwargs.pop("allow_empty", False):
         if not message or message.isspace():
@@ -335,19 +334,31 @@ class _Report(pep8.BaseReport):
             self.errors.append((line_number, offset + 1, code, text, check))
 
 
+def is_file_excluded(filename, excludes):
+    """Check if the file should be excluded.
+
+    :param filename: file name
+    :param excludes: list of regex to match
+    :return: True if the file should be excluded
+    """
+    # check if you need to exclude this file
+    return any([exclude and re.match(exclude, filename) is not None
+                for exclude in excludes])
+
+
 def check_pep8(filename, **kwargs):
     """Perform static analysis on the given file.
 
     :param filename: path of file to check.
     :type filename: str
     :param ignore: codes to ignore, e.g. ``('E111', 'E123')``
-    :type ignore: list
+    :type ignore: `list`
     :param select: codes to explicitly select.
-    :type select: list
+    :type select: `list`
     :param pyflakes: run the pyflakes checks too (default ``True``)
     :type pyflakes: bool
     :return: errors
-    :rtype: list
+    :rtype: `list`
 
     .. seealso:: :py:class:`pep8.Checker`
 
@@ -375,13 +386,13 @@ def check_pep257(filename, **kwargs):
     :param filename: path of file to check.
     :type filename: str
     :param ignore: codes to ignore, e.g. ('D400',)
-    :type ignore: list
+    :type ignore: `list`
     :param match: regex the filename has to match to be checked
     :type match: str
     :param match_dir: regex everydir in path should match to be checked
     :type match_dir: str
     :return: errors
-    :rtype: list
+    :rtype: `list`
 
     .. seealso:: `GreenSteam/pep257 <https://github.com/GreenSteam/pep257/>`_
 
@@ -434,11 +445,11 @@ def check_license(filename, **kwargs):
     :param year: default current year
     :type year: int
     :param ignore: codes to ignore, e.g. ``('L100', 'L101')``
-    :type ignore: list
+    :type ignore: `list`
     :param python_style: False for JavaScript or CSS files
     :type python_style: bool
     :return: errors
-    :rtype: list
+    :rtype: `list`
 
     """
     year = kwargs.pop("year", datetime.now().year)
@@ -525,11 +536,16 @@ def check_file(filename, **kwargs):
 
     :param filename: path of file to check.
     :type filename: str
-    :return: errors sorted by line number
-    :rtype: list
+    :return: errors sorted by line number or False if file is excluded
+    :rtype: `list`
 
     """
+    excludes = kwargs.get("excludes", [])
     errors = []
+
+    if is_file_excluded(filename, excludes):
+        return False
+
     if filename.endswith(".py"):
         if kwargs.get("pep8", True):
             errors += check_pep8(filename, **kwargs)
@@ -569,6 +585,7 @@ def get_options(config):
         "match_dir": config.get("PEP257_MATCH_DIR"),
         "min_reviewers": config.get("MIN_REVIEWERS"),
         "colors": config.get("COLORS", True),
+        "excludes": config.get("EXCLUDES", [])
     }
     options = {}
     for k, v in base.items():

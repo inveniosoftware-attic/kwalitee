@@ -167,6 +167,7 @@ def files(commit='HEAD', repository='.'):
 
     error_template = '\n{0}{{filename}}\n{1}{{errors}}{0}'.format(reset, red)
     no_errors = ['\n{0}Everything is OK.{1}'.format(green, reset)]
+    msg_file_excluded = '\n{0}{{filename}} excluded.{1}'.format(yellow, reset)
 
     def _get_files_modified(commit):
         """Get the list of modified files that are Python or Jinja2."""
@@ -185,8 +186,11 @@ def files(commit='HEAD', repository='.'):
 
     def _format_errors(args):
         filename, errors = args
-        return error_template.format(filename=filename, errors='\n'.join(
-            errors if len(errors) else no_errors))
+        if errors is False:
+            return msg_file_excluded.format(filename=filename)
+        else:
+            return error_template.format(filename=filename, errors='\n'.join(
+                errors if len(errors) else no_errors))
 
     count = 0
     ident = '    '

@@ -240,7 +240,7 @@ def _pre_commit(files, options):
 
         for (file_, filename) in files_to_check:
             errors += list(map(lambda x: "{0}: {1}".format(file_, x),
-                               check_file(filename, **options)))
+                               check_file(filename, **options) or []))
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 

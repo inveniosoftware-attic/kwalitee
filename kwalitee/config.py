@@ -133,6 +133,12 @@ To change it, put a config.py into your instance.
 
     **Default:** ``"in_integration"``
 
+.. py:data:: EXCLUDES
+
+    List of regex of excluded files.
+
+    **Default:** ``[]``
+
 """
 
 COMPONENTS = [
@@ -209,23 +215,23 @@ GITHUB_REPO = GITHUB + "{account}/{repository}/"
 
 # Background worker
 # -----------------
-#WORKER_TIMEOUT = 180
+# WORKER_TIMEOUT = 180
 
 # Checks run on the files
 # -----------------------
 #
 # Default values, uncomment to change:
-#CHECK_COMMIT_MESSAGES = True
-#CHECK_WIP = False
-#CHECK_LICENSE = True
-#CHECK_PEP8 = True
-#CHECK_PEP257 = True
-#CHECK_PYFLAKES = True # PyFlakes requires PEP8
+# CHECK_COMMIT_MESSAGES = True
+# CHECK_WIP = False
+# CHECK_LICENSE = True
+# CHECK_PEP8 = True
+# CHECK_PEP257 = True
+# CHECK_PYFLAKES = True # PyFlakes requires PEP8
 
 # You may ignore some codes from PEP8, PEP257 and
 # the license checks as well.
 IGNORE = ['E123', 'E226', 'E24', 'E501', 'E265']
-#SELECT = []
+# SELECT = []
 
 # Apply the tests only to the files matching those criteria.
 PEP257_MATCH = "(?!test_).*\.py"
@@ -236,7 +242,7 @@ PEP257_MATCH_DIR = "[^\.].*"
 # Minimal number of reviewers needed to accept a commit.
 #
 # Default value, uncomment to change:
-#MIN_REVIEWERS = 3
+# MIN_REVIEWERS = 3
 
 TRUSTED_DEVELOPERS = []
 """Super developers who's code never fail."""
@@ -257,9 +263,9 @@ ALT_SIGNATURES = 'Reported-by',
 # - ready, none of the above
 #
 # Default values, uncomment to change:
-#LABEL_WIP = "in_work"
-#LABEL_REVIEW = "in_review"
-#LABEL_READY = "in_integration"
+# LABEL_WIP = "in_work"
+# LABEL_REVIEW = "in_review"
+# LABEL_READY = "in_integration"
 
 # Hooks
 # -----
