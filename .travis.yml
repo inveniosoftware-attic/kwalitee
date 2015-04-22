@@ -27,7 +27,8 @@ python:
  - "2.6"
  - "2.7"
  - "3.3"
- - "3.4"
+# TODO re-enable after gabrielfalcao/HTTPretty#193 will be merged
+# - "3.4"
 
 env:
   global:
