@@ -75,9 +75,9 @@ class TestExcludesOption(TestCase):
         options_1 = get_options({'EXCLUDES': self.legacy_regex_1})
         options_2 = get_options({'EXCLUDES': self.legacy_regex_2})
 
-        assert check_file(filename=self.file_1, **options_1) is not False
-        assert check_file(filename=self.file_1, **options_2) is not False
-        assert check_file(filename=self.file_2, **options_1) is not False
-        assert check_file(filename=self.file_2, **options_2) is False
-        assert check_file(filename=self.file_3, **options_1) is False
-        assert check_file(filename=self.file_3, **options_2) is False
+        assert check_file(filename=self.file_1, **options_1) is not None
+        assert check_file(filename=self.file_1, **options_2) is not None
+        assert check_file(filename=self.file_2, **options_1) is not None
+        assert check_file(filename=self.file_2, **options_2) is None
+        assert check_file(filename=self.file_3, **options_1) is None
+        assert check_file(filename=self.file_3, **options_2) is None

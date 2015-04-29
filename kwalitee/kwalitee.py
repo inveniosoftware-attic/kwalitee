@@ -536,7 +536,7 @@ def check_file(filename, **kwargs):
 
     :param filename: path of file to check.
     :type filename: str
-    :return: errors sorted by line number or False if file is excluded
+    :return: errors sorted by line number or None if file is excluded
     :rtype: `list`
 
     """
@@ -544,7 +544,7 @@ def check_file(filename, **kwargs):
     errors = []
 
     if is_file_excluded(filename, excludes):
-        return False
+        return None
 
     if filename.endswith(".py"):
         if kwargs.get("pep8", True):

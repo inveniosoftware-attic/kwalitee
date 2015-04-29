@@ -186,7 +186,7 @@ def files(commit='HEAD', repository='.'):
 
     def _format_errors(args):
         filename, errors = args
-        if errors is False:
+        if errors is None:
             return msg_file_excluded.format(filename=filename)
         else:
             return error_template.format(filename=filename, errors='\n'.join(

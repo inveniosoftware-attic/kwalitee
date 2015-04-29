@@ -493,7 +493,7 @@ def _check_files(files, cwd, **kwargs):
             "sha": sha,
             "errors": errors
         }
-        total += len(errors) if errors is not False else 0
+        total += len(errors or [])
     return total, messages
 
 

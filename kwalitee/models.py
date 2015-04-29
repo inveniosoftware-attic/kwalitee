@@ -215,7 +215,7 @@ class CommitStatus(db.Model):
         self._errors = len(value["message"])
         if value["files"] is not None:
             for ferrors in value["files"].values():
-                self._errors += len(ferrors["errors"])
+                self._errors += len(ferrors["errors"] or [])
 
         if self._errors:
             self._state = STATE_ERROR
@@ -304,7 +304,7 @@ class BranchStatus(db.Model):
              "files": value.get("files", {})}
         if "files" in value and value["files"]:
             for ferrors in value["files"].values():
-                self._errors += len(ferrors["errors"])
+                self._errors += len(ferrors["errors"] or [])
         for commit in value["commits"]:
             if not isinstance(commit, CommitStatus):
                 # FIXME potentially unnecessary heavy operation
