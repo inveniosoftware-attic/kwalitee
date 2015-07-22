@@ -21,6 +21,8 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
+sudo: true
+
 language: python
 
 python:
@@ -39,7 +41,7 @@ env:
 
 install:
   - sudo apt-get install -qy python-dev libffi-dev cmake
-  - pip install --upgrade pip --use-mirrors
+  - pip install --upgrade pip
   # libgit2-dev isn't available from ubuntu, and ppa:dennis doesn't work with
   # the Ubuntu LTS version travis is using.
   - $WITH_PYGIT2 && wget https://github.com/libgit2/libgit2/archive/v0.21.0.tar.gz || true
@@ -47,10 +49,10 @@ install:
   - $WITH_PYGIT2 && cd libgit2-0.21.0/ || true
   - $WITH_PYGIT2 && cmake . && make && sudo make install || true
   - $WITH_PYGIT2 && cd .. || true
-  - $WITH_PYGIT2 && pip install cffi pygit2 --use-mirrors || true
+  - $WITH_PYGIT2 && pip install cffi pygit2 || true
   - travis_retry pip install -r requirements.txt
   - travis_retry pip install -r requirements-docs.txt
-  - travis_retry pip install coveralls pytest --use-mirrors
+  - travis_retry pip install coveralls pytest
 
 script:
   - python setup.py test -a "tests --cov-config .coveragerc --cov kwalitee --cov-report term-missing"
