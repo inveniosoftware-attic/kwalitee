@@ -7,7 +7,6 @@ components:
 - hooks
 - installation
 - kwalitee
-- scripts
 - tests
 - travis
 - views

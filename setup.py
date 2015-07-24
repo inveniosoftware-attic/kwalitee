@@ -47,9 +47,7 @@ install_requires = [
     'rq>=0.4.6',
     'PyYAML',
 ]
-if tuple(sys.version_info) < (2, 7):
-    install_requires.append('argparse')
-    install_requires.append('importlib')
+
 if tuple(sys.version_info) < (3, 0):
     # If pygit2 is not installed, grab GitPython instead.
     try:
@@ -106,7 +104,7 @@ setup(
     author='Invenio collaboration',
     author_email='info@invenio-software.org',
     description='kwalitee is tool for checking quality of '
-                'Invenio commits.',
+                'Git commits.',
     long_description=open('README.rst').read(),
     packages=['kwalitee'],
     zip_safe=False,

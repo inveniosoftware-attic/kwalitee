@@ -290,3 +290,13 @@ if __name__ == "__main__":
         sys.exit({hook}(sys.argv))
 """
 """Template used to generate the git hooks, customize at will."""
+
+
+COMMIT_MSG_LABELS = (
+    ('SECURITY', 'Security fixes'),
+    ('INCOMPATIBLE', 'Incompatible changes'),
+    ('NEW', 'New features'),
+    ('BETTER', 'Improved features'),
+    ('FIX', 'Bug fixes'),
+    ('NOTE', 'Notes'),
+)

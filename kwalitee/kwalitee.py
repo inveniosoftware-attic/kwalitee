@@ -28,6 +28,9 @@ from __future__ import unicode_literals
 import codecs
 import os
 import re
+import tokenize
+
+from datetime import datetime
 
 import pep257
 
@@ -35,10 +38,6 @@ import pep8
 
 import pyflakes
 import pyflakes.checker
-
-import tokenize
-
-from datetime import datetime
 
 
 SUPPORTED_FILES = '.py', '.html', '.tpl', '.js', '.jsx', '.css', '.less'
@@ -573,6 +572,7 @@ def get_options(config):
         "components": config.get("COMPONENTS"),
         "signatures": config.get("SIGNATURES"),
         "commit_msg_template": config.get("COMMIT_MSG_TEMPLATE"),
+        "commit_msg_labels": config.get("COMMIT_MSG_LABELS"),
         "alt_signatures": config.get("ALT_SIGNATURES"),
         "trusted": config.get("TRUSTED_DEVELOPERS"),
         "pep8": config.get("CHECK_PEP8", True),

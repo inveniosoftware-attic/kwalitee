@@ -26,13 +26,14 @@
 
 from flask_script import Manager
 
-from . import account, check, githooks, repository
+from . import account, check, githooks, prepare, repository
 
 
 manager = Manager()
 
 manager.add_command("account", account.manager)
 manager.add_command("githooks", githooks.manager)
+manager.add_command("prepare", prepare.manager)
 manager.add_command("repository", repository.manager)
 manager.add_command("check", check.manager)
 
