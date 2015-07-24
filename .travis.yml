@@ -26,9 +26,12 @@ sudo: true
 language: python
 
 python:
- - "2.7"
- - "3.3"
- - "3.4"
+  - "2.7"
+  - "3.3"
+  - "3.4"
+
+cache:
+  - pip
 
 env:
   global:
@@ -61,3 +64,14 @@ after_success:
 
 notifications:
   email: false
+
+deploy:
+  provider: pypi
+  user: jirikuncar
+  password:
+    secure: KDuOZ9/9YXmUUfP3tvpw/FRtkRVPbrVvropkyG2jra9QUe+2aVgc0u6DxHgBfbYUl2aocE0RWssQT8ulFzaK4kir9TWnJxKiPV2HLEkj4WDfLTE2EFpBSdMyAjEsYJ6Igxtq+k665O4qTLzECtMcCAYDDy65oEq1WwOqJCDhhds=
+  distributions: "sdist bdist_wheel"
+  on:
+    tags: true
+    python: "2.7"
+    condition: $WITH_PYGIT2 = false
