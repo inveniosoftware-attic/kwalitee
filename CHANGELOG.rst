@@ -24,10 +24,11 @@
 Release 0.2.0: *The next big thing®*
 ====================================
 
-This version uses a database (SQLite) for persistence.
+This version uses a database (SQLite, PostgreSQL) for persistence.
 
 - Support for Docker. (Jiří)
 - Support for ``.kwalitee.yml`` configuration per repository. (Haris)
+- Cli for preparing release notes ``kwalitee prepare release``. (Tibor, Jiří)
 - Cli for checking changed files ``kwalitee check files``. (Jiří)
 - Cli for checking commit messages ``kwalitee check message``. (Jiří)
 - Support of ``push`` events. (Yoan)

@@ -21,7 +21,7 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-"""kwalitee setuptools configuration."""
+"""Kwalitee is a tool that runs static analysis checks on Git repository."""
 
 import os
 import sys
@@ -103,8 +103,7 @@ setup(
     license='GPLv2',
     author='Invenio collaboration',
     author_email='info@invenio-software.org',
-    description='kwalitee is tool for checking quality of '
-                'Git commits.',
+    description=__doc__,
     long_description=open('README.rst').read(),
     packages=['kwalitee'],
     zip_safe=False,
