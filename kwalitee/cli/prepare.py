@@ -174,8 +174,11 @@ def release(commit='HEAD', repository='.', group_components=False):
             print('-' * len(section))
             print()
             if group_components:
+                def key(cmt):
+                    return cmt['component']
+
                 for component, bullets in itertools.groupby(
-                        bullets, lambda b: b['component']):
+                        sorted(bullets, key=key), key):
                     bullets = list(bullets)
                     if len(bullets) > 0:
                         print('+ ' + component)
