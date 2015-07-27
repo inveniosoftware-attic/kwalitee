@@ -69,7 +69,7 @@ deploy:
   provider: pypi
   user: jirikuncar
   password:
-    secure: KDuOZ9/9YXmUUfP3tvpw/FRtkRVPbrVvropkyG2jra9QUe+2aVgc0u6DxHgBfbYUl2aocE0RWssQT8ulFzaK4kir9TWnJxKiPV2HLEkj4WDfLTE2EFpBSdMyAjEsYJ6Igxtq+k665O4qTLzECtMcCAYDDy65oEq1WwOqJCDhhds=
+    secure: Nzdu1h3PbcIuRd2vZb2q3IIimY/3kaWSTAQfLqxJGojgDFqBh7gCJu8/H4r4bQOUvqcgIzz9yd3ohrQVvFXAx+Qbl5s+uUZjeC+KsDLmV4hrNkDN/o/LqmungMqsREYb+tegDclCnAjjL+K4//57asDgbu19FOdZ4ozqBlAWEdY=
   distributions: "sdist bdist_wheel"
   on:
     tags: true
