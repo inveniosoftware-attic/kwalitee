@@ -159,7 +159,9 @@ def release(commit='HEAD', repository='.', group_components=False):
         subsequent_indent=indent + '  ',
     )
 
-    for label, section in options.get('commit_msg_labels') + ((None, 'Other'), ):
+    for label, section in options.get('commit_msg_labels'):
+        if section is None:
+            continue
         bullets = []
         for commit in full_messages:
             bullets += [

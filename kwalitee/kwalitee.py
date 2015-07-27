@@ -56,6 +56,8 @@ _re_program_3 = re.compile(r"GNU General Public License\s+along\s+with "
                            r"(?P<program>.*?)[;\.]",
                            re.UNICODE | re.MULTILINE)
 
+_re_bullet_label = re.compile(r"^\* (?P<label>[A-Z]{1,70}) ", re.UNICODE)
+
 _messages_codes = {
     # Global
     "M100": "needs more reviewers",
@@ -67,6 +69,7 @@ _messages_codes = {
     # Dots
     "M120": "missing empty line before bullet",
     "M121": "indentation of two spaces expected",
+    "M122": "unrecognized bullet label: {0}",
     # Signatures
     "M130": "no bullets are allowed after signatures",
     # Generic
@@ -136,6 +139,7 @@ def _check_bullets(lines, **kwargs):
 
     """
     max_length = kwargs.get("max_length", 72)
+    labels = {l for l, _ in kwargs.get("commit_msg_labels", tuple())}
 
     errors = []
     missed_lines = []
@@ -147,6 +151,11 @@ def _check_bullets(lines, **kwargs):
                 errors.append(("M130", i + 2))
             if lines[i].strip() != '':
                 errors.append(("M120", i + 2))
+
+            label = _re_bullet_label.search(line)
+            if label and label.group('label') not in labels:
+                errors.append(("M122", i + 2, label.group('label')))
+
             for (j, indented) in enumerate(lines[i + 2:]):
                 if indented.strip() == '':
                     break

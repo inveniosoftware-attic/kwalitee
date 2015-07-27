@@ -1,10 +1,10 @@
-================
-kwalitee
-================
+==========
+ Kwalitee
+==========
 
-.. image:: https://travis-ci.org/inveniosoftware/kwalitee.png?branch=master
+.. image:: https://travis-ci.org/inveniosoftware/kwalitee.svg?branch=master
     :target: https://travis-ci.org/inveniosoftware/kwalitee
-.. image:: https://coveralls.io/repos/inveniosoftware/kwalitee/badge.png?branch=master
+.. image:: https://coveralls.io/repos/inveniosoftware/kwalitee/badge.svg?branch=master
     :target: https://coveralls.io/r/inveniosoftware/kwalitee
 
 

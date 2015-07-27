@@ -299,4 +299,5 @@ COMMIT_MSG_LABELS = (
     ('BETTER', 'Improved features'),
     ('FIX', 'Bug fixes'),
     ('NOTE', 'Notes'),
+    ('AMENDS', None),
 )

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee
-# Copyright (C) 2014 CERN.
+# Copyright (C) 2014, 2015 CERN.
 #
 # kwalitee is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -23,10 +23,12 @@
 
 from __future__ import unicode_literals
 
-from kwalitee.kwalitee import check_message
 from itertools import repeat
 from unittest import TestCase
+
 from hamcrest import assert_that, has_item, has_items, has_length, is_not
+
+from kwalitee.kwalitee import check_message
 
 
 class TestCheckMessage(TestCase):
@@ -34,6 +36,7 @@ class TestCheckMessage(TestCase):
     options = dict(components=("search", "utils"),
                    trusted=("john.doe@example.org",),
                    signatures=("Signed-off-by", "Reviewed-by"),
+                   commit_msg_labels=(('NEW', 'New'), ('AMENDS', None)),
                    alt_signatures=("Reported-by",))
 
     def test_no_message(self):
@@ -180,3 +183,16 @@ class TestCheckMessage(TestCase):
         assert_that(errors, has_items(
             "7: M130 no bullets are allowed after signatures",
             "11: M130 no bullets are allowed after signatures"))
+
+    def test_bullet_labels(self):
+        errors = check_message("search: hello\r\n\r\n"
+                               "* NEW bullet 1\r\n  line 2\r\n\r\n"
+                               "* AMENDS deadbeef\r\n\r\n"
+                               "* DEADBEEF invalid name\r\n\r\n"
+                               "* MISSINGSPACE\r\n\r\n"
+                               "Signed-off-by: a a <a@a.com>\r\n\r\n"
+                               "Reviewed-by: b b <b@b.com>\r\n\r\n"
+                               "Reviewed-by: c c <c@c.com>",
+                               **self.options)
+        assert_that(errors, has_items(
+            "8: M122 unrecognized bullet label: DEADBEEF"))
