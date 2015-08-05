@@ -147,7 +147,7 @@ def release(commit='HEAD', repository='.', group_components=False):
 
     for commit_sha1 in amended_commits(messages):
         if commit_sha1 in messages:
-            messages.remove(commit_sha1)
+            del messages[commit_sha1]
 
     full_messages = list(
         enrich_git_log_dict(messages, options.get('commit_msg_labels'))
@@ -181,7 +181,7 @@ def release(commit='HEAD', repository='.', group_components=False):
                         sorted(bullets, key=key), key):
                     bullets = list(bullets)
                     if len(bullets) > 0:
-                        print('+ ' + component)
+                        print('+ {}'.format(component))
                         print()
                     for bullet in bullets:
                         print(wrapper.fill(bullet['text']))
