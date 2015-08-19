@@ -25,16 +25,18 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-import colorama
+
 import os
 import re
 import shutil
 import sys
+from tempfile import mkdtemp
+
+import colorama
 
 from flask import current_app
-from flask_script import Manager
 
-from tempfile import mkdtemp
+from flask_script import Manager
 
 manager = Manager(usage='check commits')
 
@@ -74,10 +76,20 @@ def _pygit2_commits(commit, repository):
     return walker
 
 
+def _is_merge_commit(commit):
+    """Test whether the commit is a merge commit or not."""
+    if len(commit.parents) > 1:
+        return True
+    return False
+
+
 @manager.option('repository', default='.', nargs='?', help='repository path')
 @manager.option('commit', metavar='<sha or branch>', nargs='?',
                 default='HEAD', help='an integer for the accumulator')
-def message(commit='HEAD', repository='.'):
+@manager.option('-s', '--skip-merge-commits', default=False,
+                action="store_true", help='skip merge commits',
+                dest='skip_merge_commits')
+def message(commit='HEAD', repository='.', skip_merge_commits=False):
     """Check the messages of the commits."""
     from ..kwalitee import check_message, get_options
     from ..hooks import _read_local_kwalitee_configuration
@@ -113,6 +125,8 @@ def message(commit='HEAD', repository='.'):
     ident = '    '
     re_line = re.compile('^', re.MULTILINE)
     for commit in commits:
+        if skip_merge_commits and _is_merge_commit(commit):
+            continue
         message = commit.message
         errors = check_message(message, **options)
         message = re.sub(re_line, ident, message)
@@ -133,7 +147,10 @@ def message(commit='HEAD', repository='.'):
 @manager.option('repository', default='.', nargs='?', help='repository path')
 @manager.option('commit', metavar='<sha or branch>', nargs='?',
                 default='HEAD', help='an integer for the accumulator')
-def files(commit='HEAD', repository='.'):
+@manager.option('-s', '--skip-merge-commits', default=False,
+                action="store_true", help='skip merge commits',
+                dest='skip_merge_commits')
+def files(commit='HEAD', repository='.', skip_merge_commits=False):
     """Check the files of the commits."""
     from ..kwalitee import check_file, get_options, SUPPORTED_FILES
     from ..hooks import run, _read_local_kwalitee_configuration
@@ -196,6 +213,8 @@ def files(commit='HEAD', repository='.'):
     ident = '    '
     re_line = re.compile('^', re.MULTILINE)
     for commit in commits:
+        if skip_merge_commits and _is_merge_commit(commit):
+            continue
         message = commit.message
         commit_sha = getattr(commit, sha)
         tmpdir = mkdtemp()
