@@ -36,3 +36,6 @@ Contributors
 * Yoan Blanc <yoan@dosimple.ch>
 * Lars Holm Nielsen <lars.holm.nielsen@cern.ch>
 * Mateusz Susik <mateuszsusik@gmail.com>
+* Harris Tzovanakis <me@drjova.com>
+* Leonardo Rossi <leonardo.r@cern.ch>
+* Tibor Simko <tibor.simko@cern.ch>

@@ -23,4 +23,4 @@
 
 """kwalitee version number."""
 
-__version__ = "0.2.0rc7"
+__version__ = "0.2.0rc8"

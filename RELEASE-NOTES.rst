@@ -2,7 +2,7 @@
  Kwalitee v0.2.0
 =================
 
-Kwalitee v0.2.0 was released on July 25, 2015.
+Kwalitee v0.2.0 was released on August 20, 2015.
 
 About "*The next big thing®*"
 -----------------------------
@@ -21,17 +21,19 @@ What's new
 
 This version uses a database (SQLite, PostgreSQL) for persistence.
 
-- Support for Docker. (Jiří)
-- Support for ``.kwalitee.yml`` configuration per repository. (Haris)
-- Cli for preparing release notes ``kwalitee prepare release``. (Tibor, Jiří)
-- Cli for checking changed files ``kwalitee check files``. (Jiří)
-- Cli for checking commit messages ``kwalitee check message``. (Jiří)
-- Support of ``push`` events. (Yoan)
-- Support for multiple repositories. (Yoan)
-- Support for multiple users. (Yoan)
-- Alembic setup for upcoming migrations (Yoan)
-- New Sphinx documentation. (Yoan)
-- Fixes double commenting bug. (Yoan)
+- Adds a new CLI option `-s, --skip-merge-commits` to both
+  `kwalitee check` commands.  (#60)
+- Support for Docker.
+- Support for ``.kwalitee.yml`` configuration per repository.
+- Cli for preparing release notes ``kwalitee prepare release``.
+- Cli for checking changed files ``kwalitee check files``.
+- Cli for checking commit messages ``kwalitee check message``.
+- Support of ``push`` events.
+- Support for multiple repositories.
+- Support for multiple users.
+- Alembic setup for upcoming migrations.
+- New Sphinx documentation.
+- Fixes double commenting bug.
 
 Incompatibilities
 -----------------

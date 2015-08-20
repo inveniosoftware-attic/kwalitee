@@ -26,17 +26,19 @@ Release 0.2.0: *The next big thing®*
 
 This version uses a database (SQLite, PostgreSQL) for persistence.
 
-- Support for Docker. (Jiří)
-- Support for ``.kwalitee.yml`` configuration per repository. (Haris)
-- Cli for preparing release notes ``kwalitee prepare release``. (Tibor, Jiří)
-- Cli for checking changed files ``kwalitee check files``. (Jiří)
-- Cli for checking commit messages ``kwalitee check message``. (Jiří)
-- Support of ``push`` events. (Yoan)
-- Support for multiple repositories. (Yoan)
-- Support for multiple users. (Yoan)
-- Alembic setup for upcoming migrations (Yoan)
-- New Sphinx documentation. (Yoan)
-- Fixes double commenting bug. (Yoan)
+- Adds a new CLI option `-s, --skip-merge-commits` to both
+  `kwalitee check` commands.  (#60)
+- Support for Docker.
+- Support for ``.kwalitee.yml`` configuration per repository.
+- Cli for preparing release notes ``kwalitee prepare release``.
+- Cli for checking changed files ``kwalitee check files``.
+- Cli for checking commit messages ``kwalitee check message``.
+- Support of ``push`` events.
+- Support for multiple repositories.
+- Support for multiple users.
+- Alembic setup for upcoming migrations.
+- New Sphinx documentation.
+- Fixes double commenting bug.
 
 Incompatibilities
 -----------------
@@ -53,13 +55,13 @@ Release 0.1.0: *The playground*
 Initial version. It supports ``pull request`` events on one repository and
 will perform checks on the commit message and files.
 
-- Commit message checks. (Jiří)
-- Git hooks. (Lars)
-- PEP8 checks. (Yoan)
-- PEP257 checks. (Yoan)
-- PyFlakes checks. (Yoan)
-- License checks. (Yoan)
-- Asynchronous checks using RQ. (Yoan)
-- New unit tests. (Yoan)
-- Auto labelling of the pull requests. (Yoan)
-- Skip work in progress (wip) pull requests. (Yoan)
+- Commit message checks.
+- Git hooks.
+- PEP8 checks.
+- PEP257 checks.
+- PyFlakes checks.
+- License checks.
+- Asynchronous checks using RQ.
+- New unit tests.
+- Auto labelling of the pull requests.
+- Skip work in progress (wip) pull requests.
