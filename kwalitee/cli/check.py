@@ -23,22 +23,48 @@
 
 """Command-line tools for checking commits."""
 
-from __future__ import absolute_import, print_function, unicode_literals
-
+from __future__ import absolute_import, print_function
 
 import os
 import re
 import shutil
 import sys
+from collections import namedtuple
 from tempfile import mkdtemp
 
+import click
 import colorama
+import yaml
 
-from flask import current_app
+from ..hooks import _read_local_kwalitee_configuration
+from ..kwalitee import get_options
 
-from flask_script import Manager
 
-manager = Manager(usage='check commits')
+class Repo(object):
+    """Hold information about repository."""
+
+    def __init__(self, repository='.', config=None):
+        """Store information about repository and get kwalitee options."""
+        self.repository = repository
+        self.options = get_options()
+        self.options.update(_read_local_kwalitee_configuration(
+            directory=repository))
+        if config:
+            self.options.update(
+                yaml.load(config.read())
+            )
+
+
+pass_repo = click.make_pass_decorator(Repo)
+
+
+@click.group()
+@click.option('-r', '--repository', envvar='KWALITEE_REPO', default='.')
+@click.option('-c', '--config', type=click.File('rb'), default=None)
+@click.pass_context
+def check(ctx, repository, config):
+    """Check commits."""
+    ctx.obj = Repo(repository=repository, config=config)
 
 
 def _git_commits(commit, repository):
@@ -82,19 +108,17 @@ def _is_merge_commit(commit):
         return True
     return False
 
-
-@manager.option('repository', default='.', nargs='?', help='repository path')
-@manager.option('commit', metavar='<sha or branch>', nargs='?',
-                default='HEAD', help='an integer for the accumulator')
-@manager.option('-s', '--skip-merge-commits', default=False,
-                action="store_true", help='skip merge commits',
-                dest='skip_merge_commits')
-def message(commit='HEAD', repository='.', skip_merge_commits=False):
+@check.command()
+@click.argument('commit', metavar='<sha or branch>',
+                default='HEAD')  # , help='an integer for the accumulator')
+@click.option('-s', '--skip-merge-commits', is_flag=True,
+                help='skip merge commits')
+@pass_repo
+def message(obj, commit='HEAD', skip_merge_commits=False):
     """Check the messages of the commits."""
-    from ..kwalitee import check_message, get_options
-    from ..hooks import _read_local_kwalitee_configuration
-    options = get_options(current_app.config)
-    options.update(_read_local_kwalitee_configuration(directory=repository))
+    from ..kwalitee import check_message
+    options = obj.options
+    repository = obj.repository
 
     if options.get('colors') is not False:
         colorama.init(autoreset=True)
@@ -113,7 +137,7 @@ def message(commit='HEAD', repository='.', skip_merge_commits=False):
             sha = 'hexsha'
             commits = _git_commits(commit, repository)
         except ImportError:
-            print('To use this feature, please install pygit2. GitPython will '
+            click.echo('To use this feature, please install pygit2. GitPython will '
                   'also work but is not recommended (python <= 2.7 only).',
                   file=sys.stderr)
             return 2
@@ -137,25 +161,26 @@ def message(commit='HEAD', repository='.', skip_merge_commits=False):
             errors = [green, 'Everything is OK.']
         errors.append(reset)
 
-        print(template.format(commit=commit,
-                              message=message,
-                              errors='\n'.join(errors)))
+        click.echo(template.format(commit=commit,
+                                   message=message,
+                                   errors='\n'.join(errors)))
 
-    return min(count, 1)
+    if min(count, 1):
+        raise click.Abort
 
 
-@manager.option('repository', default='.', nargs='?', help='repository path')
-@manager.option('commit', metavar='<sha or branch>', nargs='?',
-                default='HEAD', help='an integer for the accumulator')
-@manager.option('-s', '--skip-merge-commits', default=False,
-                action="store_true", help='skip merge commits',
-                dest='skip_merge_commits')
-def files(commit='HEAD', repository='.', skip_merge_commits=False):
+@check.command()
+@click.argument('commit', metavar='<sha or branch>',
+                default='HEAD')  # , help='an integer for the accumulator')
+@click.option('-s', '--skip-merge-commits', is_flag=True,
+                help='skip merge commits')
+@pass_repo
+def files(obj, commit='HEAD', skip_merge_commits=False):
     """Check the files of the commits."""
-    from ..kwalitee import check_file, get_options, SUPPORTED_FILES
-    from ..hooks import run, _read_local_kwalitee_configuration
-    options = get_options(current_app.config)
-    options.update(_read_local_kwalitee_configuration(directory=repository))
+    from ..kwalitee import check_file, SUPPORTED_FILES
+    from ..hooks import run
+    options = obj.options
+    repository = obj.repository
 
     if options.get('colors') is not False:
         colorama.init(autoreset=True)
@@ -174,10 +199,11 @@ def files(commit='HEAD', repository='.', skip_merge_commits=False):
             sha = 'hexsha'
             commits = _git_commits(commit, repository)
         except ImportError:
-            print('To use this feature, please install pygit2. GitPython will '
-                  'also work but is not recommended (python <= 2.7 only).',
-                  file=sys.stderr)
-            return 2
+            click.echo(
+                'To use this feature, please install pygit2. GitPython will '
+                'also work but is not recommended (python <= 2.7 only).',
+                file=sys.stderr)
+            click.exit(2)
 
     template = '{0}commit {{commit.{1}}}{2}\n\n'.format(yellow, sha, reset)
     template += '{message}{errors}\n'
@@ -243,8 +269,9 @@ def files(commit='HEAD', repository='.', skip_merge_commits=False):
         else:
             errors = no_errors
 
-        print(template.format(commit=commit,
-                              message=message,
-                              errors='\n'.join(errors)))
+        click.echo(template.format(commit=commit,
+                                   message=message,
+                                   errors='\n'.join(errors)))
 
-    return min(count, 1)
+    if min(count, 1):
+        raise click.Abort

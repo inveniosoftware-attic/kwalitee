@@ -28,7 +28,7 @@ into (1) sections (e.g. Security fixes, detected from commit labels)
 and (2) modules (e.g. search, detected from commit log headlines).
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
+from __future__ import absolute_import, print_function
 
 import itertools
 import re
@@ -36,13 +36,17 @@ import sys
 import textwrap
 from collections import OrderedDict
 
-from flask import current_app
+import click
 
-from flask_script import Manager
+from .check import Repo, _git_commits, _pygit2_commits, pass_repo
 
-from .check import _git_commits, _pygit2_commits
 
-manager = Manager(usage=__doc__)
+@click.group()
+@click.option('-r', '--repository', envvar='KWALITEE_REPO', default='.')
+@click.pass_context
+def prepare(ctx, repository):
+    """Assist with release process."""
+    ctx.obj = Repo(repository=repository)
 
 
 def analyse_body_paragraph(body_paragraph, labels=None):
@@ -118,17 +122,15 @@ def enrich_git_log_dict(messages, labels):
         }
 
 
-@manager.option('repository', default='.', nargs='?', help='repository path')
-@manager.option('commit', metavar='<sha or branch>', nargs='?',
-                default='HEAD', help='an integer for the accumulator')
-@manager.option('-c', '--components', default=False, action="store_true",
-                help='group components', dest='group_components')
-def release(commit='HEAD', repository='.', group_components=False):
+@prepare.command()
+@click.argument('commit', metavar='<sha or branch>',
+                default='HEAD')  # , help='an integer for the accumulator')
+@click.option('-c', '--components', is_flag=True, help='group components')
+@pass_repo
+def release(obj, commit='HEAD', components=False):
     """Generate release notes."""
-    from ..kwalitee import get_options
-    from ..hooks import _read_local_kwalitee_configuration
-    options = get_options(current_app.config)
-    options.update(_read_local_kwalitee_configuration(directory=repository))
+    options = obj.options
+    repository = obj.repository
 
     try:
         sha = 'oid'
@@ -138,7 +140,7 @@ def release(commit='HEAD', repository='.', group_components=False):
             sha = 'hexsha'
             commits = _git_commits(commit, repository)
         except ImportError:
-            print('To use this feature, please install pygit2. GitPython will '
+            click.echo('To use this feature, please install pygit2. GitPython will '
                   'also work but is not recommended (python <= 2.7 only).',
                   file=sys.stderr)
             return 2
@@ -152,7 +154,7 @@ def release(commit='HEAD', repository='.', group_components=False):
     full_messages = list(
         enrich_git_log_dict(messages, options.get('commit_msg_labels'))
     )
-    indent = '  ' if group_components else ''
+    indent = '  ' if components else ''
     wrapper = textwrap.TextWrapper(
         width=70,
         initial_indent=indent + '- ',
@@ -170,10 +172,10 @@ def release(commit='HEAD', repository='.', group_components=False):
                 if lbl == label and bullet is not None
             ]
         if len(bullets) > 0:
-            print(section)
-            print('-' * len(section))
-            print()
-            if group_components:
+            click.echo(section)
+            click.echo('~' * len(section))
+            click.echo()
+            if components:
                 def key(cmt):
                     return cmt['component']
 
@@ -181,14 +183,14 @@ def release(commit='HEAD', repository='.', group_components=False):
                         sorted(bullets, key=key), key):
                     bullets = list(bullets)
                     if len(bullets) > 0:
-                        print('+ {}'.format(component))
-                        print()
+                        click.echo('+ {}'.format(component))
+                        click.echo()
                     for bullet in bullets:
-                        print(wrapper.fill(bullet['text']))
-                    print()
+                        click.echo(wrapper.fill(bullet['text']))
+                    click.echo()
             else:
                 for bullet in bullets:
-                    print(wrapper.fill(bullet['text']))
-            print()
+                    click.echo(wrapper.fill(bullet['text']))
+            click.echo()
 
     return 0

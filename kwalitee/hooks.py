@@ -23,17 +23,17 @@
 
 """Git hooks."""
 
-from __future__ import print_function, unicode_literals
+from __future__ import print_function
 
 import os
 import re
 import shutil
 import sys
-
 from codecs import open
 from subprocess import PIPE, Popen
 from tempfile import mkdtemp
 
+import click
 import yaml
 
 from .kwalitee import SUPPORTED_FILES, check_file, check_message, get_options
@@ -121,10 +121,8 @@ def _prepare_commit_msg(tmp_file, author, files_modified=None, template=None):
 def _check_message(message, options):
     """Checking the message and printing the errors."""
     options = options or dict()
-
-    from flask import current_app
-    with current_app.app_context():
-        options.update(get_options(current_app.config))
+    options.update(get_options())
+    options.update(_read_local_kwalitee_configuration())
 
     errors = check_message(message, **options)
 
@@ -136,12 +134,11 @@ def _check_message(message, options):
     return True
 
 
+@click.command()
+@click.argument('argv', nargs=-1, type=click.UNPROCESSED)
 def prepare_commit_msg_hook(argv):
     """Hook: prepare a commit message."""
-    from flask import current_app
-    with current_app.app_context():
-        options = get_options(current_app.config)
-
+    options = get_options()
     # Check if the repo has a configuration repo
     options.update(_read_local_kwalitee_configuration())
 
@@ -152,6 +149,8 @@ def prepare_commit_msg_hook(argv):
     return 0
 
 
+@click.command()
+@click.argument('argv', nargs=-1, type=click.UNPROCESSED)
 def commit_msg_hook(argv):
     """Hook: for checking commit message (prevent commit)."""
     with open(argv[1], "r", "utf-8") as fh:
@@ -160,22 +159,26 @@ def commit_msg_hook(argv):
     options = {"allow_empty": True}
 
     if not _check_message(message, options):
-        print("Aborting commit due to commit message errors (override with "
-              "'git commit --no-verify').", file=sys.stderr)
-        return 1
+        click.echo(
+            "Aborting commit due to commit message errors (override with "
+            "'git commit --no-verify').", file=sys.stderr)
+        raise click.Abort
     return 0
 
 
-def post_commit_hook(argv=None):
+@click.command()
+@click.argument('argv', nargs=-1, type=click.UNPROCESSED)
+def post_commit_hook(argv):
     """Hook: for checking commit message."""
     _, stdout, _ = run("git log -1 --format=%B HEAD")
     message = "\n".join(stdout)
     options = {"allow_empty": True}
 
     if not _check_message(message, options):
-        print("Commit message errors (fix with 'git commit --amend').",
-              file=sys.stderr)
-        return 1
+        click.echo(
+            "Commit message errors (fix with 'git commit --amend').",
+            file=sys.stderr)
+        return 1  # it should not fail with exit
     return 0
 
 
@@ -247,12 +250,11 @@ def _pre_commit(files, options):
     return errors
 
 
-def pre_commit_hook(argv=None):
+@click.command()
+@click.argument('argv', nargs=-1, type=click.UNPROCESSED)
+def pre_commit_hook(argv):
     """Hook: checking the staged files."""
-    from flask import current_app
-    with current_app.app_context():
-        options = get_options(current_app.config)
-
+    options = get_options()
     # Check if the repo has a configuration repo
     options.update(_read_local_kwalitee_configuration())
 
@@ -269,13 +271,14 @@ def pre_commit_hook(argv=None):
     for error in errors:
         if hasattr(error, "decode"):
             error = error.decode()
-        print(error, file=sys.stderr)
+        click.echo(error, file=sys.stderr)
 
     if errors:
-        print("Aborting commit due to kwalitee errors (override with "
-              "'git commit --no-verify').",
-              file=sys.stderr)
-        return 1
+        click.echo(
+            "Aborting commit due to kwalitee errors (override with "
+            "'git commit --no-verify').",
+            file=sys.stderr)
+        raise click.Abort
     return 0
 
 

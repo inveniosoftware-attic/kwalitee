@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee
-# Copyright (C) 2014, 2015 CERN.
+# Copyright (C) 2014, 2015, 2016 CERN.
 #
 # kwalitee is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -26,91 +26,94 @@
 import os
 import sys
 
-from setuptools import setup
-from setuptools.command.test import test as TestCommand
+from setuptools import find_packages, setup
 
+readme = open('README.rst').read()
+history = open('CHANGES.rst').read()
+
+tests_require = [
+    'check-manifest>=0.25',
+    'coverage>=4.0',
+    'isort>=4.2.2',
+    'pydocstyle>=1.0.0',
+    'pytest-cache>=1.0',
+    'pytest-cov>=1.8.0',
+    'pytest-pep8>=1.0.6',
+    'pytest>=2.8.0',
+    'httpretty>=0.8.14',
+    'mock>=2.0.0',
+    'pyhamcrest>=1.9.0'
+]
+
+extras_require = {
+    'docs': [
+        'Sphinx>=1.3',
+        'sphinxcontrib-issuetracker>=0.11',
+    ],
+    'gitpython': [
+        'GitPython>=0.3.2.RC1',
+    ],
+    'tests': tests_require,
+}
+
+extras_require['all'] = []
+for key, reqs in extras_require.items():
+    if key == 'gitpython':
+        continue
+    extras_require['all'].extend(reqs)
+
+setup_requires = [
+    'pytest-runner>=2.6.2',
+]
 
 install_requires = [
-    'alembic',
-    'colorama',
-    'Flask',
-    'Flask-Script',
-    'Flask-SQLAlchemy',
-    'pep8',
-    'pep8-naming',
-    'pep257>=0.5.0',
-    'pyflakes',
-    'flake8-import-order',
-    'flake8-blind-except',
-    'pytest',
-    'requests',
-    'rq>=0.4.6',
-    'PyYAML',
+    'colorama>=0.3.7',
+    'click>=5.0',
+    'pep8>=1.7.0',
+    'pep8-naming>=0.3.3',
+    'pydocstyle>=1.0.0',
+    'pyflakes>=1.0.0',
+    'flake8>=2.5.4',
+    'flake8-isort>=1.2',
+    'flake8-blind-except>=0.1.0',
+    'PyYAML>=3.11',
 ]
 
-if tuple(sys.version_info) < (3, 0):
-    # If pygit2 is not installed, grab GitPython instead.
-    try:
-        import pygit2
-    except ImportError:
-        install_requires.append('GitPython>=0.3.2.RC1')
-
-test_requires = [
-    'pytest-cov',
-    'httpretty',
-    'mock',
-    'pyhamcrest'
-]
+packages = find_packages()
 
 
-# Get the version string.  Cannot be done with import!
-version = {}
-with open(os.path.join('kwalitee', 'version.py'), 'r') as fp:
-    exec(fp.read(), version)
-
-
-class PyTest(TestCommand):
-
-    """PyTest test runner.
-
-    See: http://pytest.org/latest/goodpractises.html?highlight=setuptools
-    """
-
-    user_options = [('pytest-args=', 'a', 'Arguments to pass to py.test')]
-
-    def initialize_options(self):
-        """Initialize test options."""
-        TestCommand.initialize_options(self)
-        self.pytest_args = ["tests"]
-
-    def finalize_options(self):
-        """Finalize options."""
-        TestCommand.finalize_options(self)
-        self.test_args = []
-        self.test_suite = True
-
-    def run_tests(self):
-        """Run listed tests."""
-        import pytest
-        errno = pytest.main(self.pytest_args)
-        sys.exit(errno)
-
+# Get the version string. Cannot be done with import!
+g = {}
+with open(os.path.join('kwalitee', 'version.py'), 'rt') as fp:
+    exec(fp.read(), g)
+    version = g['__version__']
 
 setup(
     name='kwalitee',
-    version=version['__version__'],
-    url='https://github.com/inveniosoftware/kwalitee',
-    license='GPLv2',
-    author='Invenio collaboration',
-    author_email='info@invenio-software.org',
+    version=version,
     description=__doc__,
-    long_description=open('README.rst').read(),
-    packages=['kwalitee'],
+    long_description=readme + '\n\n' + history,
+    license='GPLv2',
+    author='CERN',
+    author_email='info@invenio-software.org',
+    url='https://github.com/inveniosoftware/kwalitee',
+    packages=packages,
     zip_safe=False,
     include_package_data=True,
     platforms='any',
+    entry_points={
+        'console_scripts': [
+            'kwalitee = kwalitee.cli:main',
+            'kwalitee-pre-commit = kwalitee.hooks:pre_commit_hook',
+            'kwalitee-prepare-commit-msg = kwalitee.hooks'
+            ':prepare_commit_msg_hook',
+            'kwalitee-post-commit = kwalitee.hooks:post_commit_hook',
+        ],
+    },
+    extras_require=extras_require,
     install_requires=install_requires,
-    tests_require=test_requires,
+    setup_requires=setup_requires,
+    tests_require=tests_require,
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',
@@ -122,16 +125,9 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules'
     ],
-    entry_points={
-        'console_scripts': [
-            'kwalitee = kwalitee.cli:main',
-        ],
-    },
-    cmdclass={
-        'test': PyTest
-    },
 )

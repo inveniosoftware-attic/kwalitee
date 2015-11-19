@@ -2,16 +2,45 @@
  Kwalitee
 ==========
 
-.. image:: https://travis-ci.org/inveniosoftware/kwalitee.svg?branch=master
-    :target: https://travis-ci.org/inveniosoftware/kwalitee
-.. image:: https://coveralls.io/repos/inveniosoftware/kwalitee/badge.svg?branch=master
-    :target: https://coveralls.io/r/inveniosoftware/kwalitee
+.. image:: https://img.shields.io/travis/inveniosoftware/kwalitee.svg
+        :target: https://travis-ci.org/inveniosoftware/kwalitee
+
+.. image:: https://img.shields.io/coveralls/inveniosoftware/kwalitee.svg
+        :target: https://coveralls.io/r/inveniosoftware/kwalitee
+
+.. image:: https://img.shields.io/github/tag/inveniosoftware/kwalitee.svg
+        :target: https://github.com/inveniosoftware/kwalitee/releases
+
+.. image:: https://img.shields.io/pypi/dm/kwalitee.svg
+        :target: https://pypi.python.org/pypi/kwalitee
+
+.. image:: https://img.shields.io/github/license/inveniosoftware/kwalitee.svg
+        :target: https://github.com/inveniosoftware/kwalitee/blob/master/LICENSE
 
 
-Installation
+Kwalitee is a tool that runs static analysis checks on Git repository.
+
+
+* Free software: GPLv2 license
+* Documentation: https://pythonhosted.org/kwalitee/
+
+Introduction
 ============
 
-.. seealso:: :ref:`_installation`
+Kwalitee is a tool that runs static analysis checks on invenio and
+invenio-related repositories. It can be used as a web service using the
+Github API or as a git hook from the command line.
+
+It aims at slowly, but steadily enforce good practices regarding commit
+message formatting, code layout (PEP8), documentation (PYDOCSTYLE) and help
+the integrators doing their job without having to worry about recurrent
+mistakes.
+
+It relies on and thanks the following softwares and libraries:
+
+ - `pyflakes <https://launchpad.net/pyflakes>`_,
+ - `PEP8 <http://legacy.python.org/dev/peps/pep-0008/>`_,
+ - `PEP257 <http://legacy.python.org/dev/peps/pep-0257/>`_,
 
 Git Hooks
 =========
@@ -52,17 +81,3 @@ Kwalitee checks
    * Body with detailed description of what this patch does, formatted as a
      bulletted list. (using present tense).
    * Required signatures: ``Signed-off-by`` and ``Reviewed-by``.
-
-
-License
-=======
-Copyright (C) 2014, 2015 CERN.
-
-kwalitee is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
-
-kwalitee is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with kwalitee; if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
-
-In applying this licence, CERN does not waive the privileges and immunities granted to it by virtue of its status as an Intergovernmental Organization or submit itself to any jurisdiction.
-

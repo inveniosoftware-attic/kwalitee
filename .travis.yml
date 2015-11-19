@@ -21,14 +21,12 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
+notifications:
+  email: false
+
 sudo: true
 
 language: python
-
-python:
-  - "2.7"
-  - "3.3"
-  - "3.4"
 
 cache:
   - pip
@@ -37,33 +35,41 @@ env:
   global:
     - LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
   matrix:
-    - WITH_PYGIT2=true
-    - WITH_PYGIT2=false
+    - WITH_PYGIT2=true REQUIREMENTS=lowest
+    - WITH_PYGIT2=true REQUIREMENTS=release
+    # - WITH_PYGIT=true REQUIREMENTS=devel
+
+python:
+  - "2.7"
+  - "3.3"
+  - "3.4"
+  - "3.5"
+
+before_install:
+  - "travis_retry pip install --upgrade pip setuptools py"
+  - "travis_retry pip install twine wheel coveralls requirements-builder"
+  - "requirements-builder --level=min setup.py > .travis-lowest-requirements.txt"
+  - "requirements-builder --level=pypi setup.py > .travis-release-requirements.txt"
+  - "requirements-builder --level=dev --req requirements-devel.txt setup.py > .travis-devel-requirements.txt"
 
 install:
   - sudo apt-get install -qy python-dev libffi-dev cmake
-  - pip install --upgrade pip
   # libgit2-dev isn't available from ubuntu, and ppa:dennis doesn't work with
   # the Ubuntu LTS version travis is using.
-  - $WITH_PYGIT2 && wget https://github.com/libgit2/libgit2/archive/v0.21.0.tar.gz || true
-  - $WITH_PYGIT2 && tar xzf v0.21.0.tar.gz || true
-  - $WITH_PYGIT2 && cd libgit2-0.21.0/ || true
+  - $WITH_PYGIT2 && wget https://github.com/libgit2/libgit2/archive/v0.24.1.tar.gz || true
+  - $WITH_PYGIT2 && tar xzf v0.24.1.tar.gz || true
+  - $WITH_PYGIT2 && cd libgit2-0.24.1/ || true
   - $WITH_PYGIT2 && cmake . && make && sudo make install || true
   - $WITH_PYGIT2 && cd .. || true
   - $WITH_PYGIT2 && pip install cffi pygit2 || true
-  - travis_retry pip install -r requirements.txt
-  - travis_retry pip install -r requirements-docs.txt
-  - travis_retry pip install coveralls pytest
+  - "travis_retry pip install -r .travis-${REQUIREMENTS}-requirements.txt"
+  - "travis_retry pip install -e .[all]"
 
 script:
-  - python setup.py test -a "tests --cov-config .coveragerc --cov kwalitee --cov-report term-missing"
-  - sphinx-build -vnNW docs _build
+  - "./run-tests.sh"
 
 after_success:
   - coveralls
-
-notifications:
-  email: false
 
 deploy:
   provider: pypi

@@ -23,96 +23,12 @@
 
 """Configuration for py.test."""
 
-from __future__ import unicode_literals
-
 import os
-import pytest
 import shutil
-import tempfile
 import subprocess
+import tempfile
 
-from kwalitee import create_app
-from kwalitee.models import db as _db, Account, Repository
-
-
-@pytest.fixture(scope="session")
-def app(request):
-    """Session-wide test Flask application."""
-    config = {
-        "TESTING": True,
-        "DATABASE_NAME": "testdb"
-    }
-    app = create_app("kwalitee", config)
-
-    ctx = app.app_context()
-    ctx.push()
-
-    def teardown():
-        ctx.pop()
-
-    request.addfinalizer(teardown)
-    return app
-
-
-@pytest.fixture(scope="session")
-def db(app, request):
-    """Session-wide test database."""
-    if os.path.exists(app.config["DATABASE"]):
-        os.unlink(app.config["DATABASE"])
-
-    def teardown():
-        _db.drop_all()
-        os.unlink(app.config["DATABASE"])
-
-    _db.app = app
-    _db.create_all()
-
-    request.addfinalizer(teardown)
-    return _db
-
-
-@pytest.fixture(scope="function")
-def session(db, request):
-    """Create a new database session for a test."""
-    connection = db.engine.connect()
-    transaction = connection.begin()
-
-    session = db.create_scoped_session()
-    db.session = session
-
-    def teardown():
-        transaction.rollback()
-        connection.close()
-        session.remove()
-
-    request.addfinalizer(teardown)
-    return session
-
-
-@pytest.fixture(scope="function")
-def owner(session, request):
-    """Create an account for a test."""
-    owner = Account.find_or_create("invenio", token="DEADBEEF")
-
-    def teardown():
-        session.delete(owner)
-        session.commit()
-
-    request.addfinalizer(teardown)
-    return owner
-
-
-@pytest.fixture(scope="function")
-def repository(owner, session, request):
-    """Create a repository for a test."""
-    repo = (Repository.find_or_create(owner, "test"))
-
-    def teardown():
-        session.delete(repo)
-        session.commit()
-
-    request.addfinalizer(teardown)
-    return repo
+import pytest
 
 
 @pytest.fixture(scope="function")
@@ -140,7 +56,10 @@ def git(request):
         assert 0 == status, " ".join(command)
 
     def teardown():
-        shutil.rmtree(repo)
+        try:
+            shutil.rmtree(repo)
+        except Exception:
+            pass
 
     request.addfinalizer(teardown)
     return repo

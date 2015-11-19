@@ -23,69 +23,72 @@
 
 """Command-line tools for the git hooks."""
 
-from __future__ import absolute_import, print_function, unicode_literals
+from __future__ import absolute_import, print_function
 
 import os
 import sys
 
-from flask import current_app as app
-from flask_script import Manager
+import click
 
-from ..hooks import (pre_commit_hook, prepare_commit_msg_hook, run,
-                     post_commit_hook)
+from ..hooks import run
 
 HOOKS = {
-    "pre-commit": pre_commit_hook.__name__,
-    "prepare-commit-msg": prepare_commit_msg_hook.__name__,
-    "post-commit": post_commit_hook.__name__,
+    "pre-commit",
+    "prepare-commit-msg",
+    "post-commit",
 }
 HOOK_PATH = os.path.join(".git", "hooks")
 
-manager = Manager(usage="install githooks for kwalitee checks")
+@click.group()
+def githooks():
+    """Install githooks for kwalitee checks."""
 
 
-@manager.option("-f", "--force",
-                help="Overwrite existing hooks", default=False,
-                action="store_true")
+@githooks.command()
+@click.option("-f", "--force", is_flag=True,
+              help="Overwrite existing hooks", default=False)
 def install(force=False):
     """Install git hooks."""
     ret, git_dir, _ = run("git rev-parse --show-toplevel")
     if ret != 0:
-        print("ERROR: Please run from within a GIT repository.",
-              file=sys.stderr)
-        return False
+        click.echo(
+            "ERROR: Please run from within a GIT repository.",
+            file=sys.stderr)
+        raise click.Abort
     git_dir = git_dir[0]
 
     hooks_dir = os.path.join(git_dir, HOOK_PATH)
 
-    tpl = app.config["HOOK_TEMPLATE"]
-
-    for hook, name in HOOKS.items():
+    for hook in HOOKS:
         hook_path = os.path.join(hooks_dir, hook)
-        if os.path.exists(hook_path) and not force:
-            print("Hook already exists. Skipping {0}".format(hook_path),
-                  file=sys.stderr)
-            continue
+        if os.path.exists(hook_path):
+            if not force:
+                click.echo(
+                    "Hook already exists. Skipping {0}".format(hook_path),
+                    file=sys.stderr)
+                continue
+            else:
+                os.unlink(hook_path)
 
-        with open(hook_path, "w") as fh:
-            fh.write(tpl.format(hook=name))
-        os.chmod(hook_path, 0o755)
+        source = os.path.join(sys.prefix, "bin", "kwalitee-" + hook)
+        os.symlink(os.path.normpath(source), hook_path)
     return True
 
 
-@manager.command
+@githooks.command()
 def uninstall():
     """Uninstall git hooks."""
     ret, git_dir, _ = run("git rev-parse --show-toplevel")
     if ret != 0:
-        print("ERROR: Please run from within a GIT repository.",
-              file=sys.stderr)
-        return False
+        click.echo(
+            "ERROR: Please run from within a GIT repository.",
+            file=sys.stderr)
+        raise click.Abort
     git_dir = git_dir[0]
 
     hooks_dir = os.path.join(git_dir, HOOK_PATH)
 
-    for hook, name in HOOKS.items():
+    for hook in HOOKS:
         hook_path = os.path.join(hooks_dir, hook)
         if os.path.exists(hook_path):
             os.remove(hook_path)

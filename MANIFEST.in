@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee
-# Copyright (C) 2014, 2015 CERN.
+# Copyright (C) 2014, 2015, 2016 CERN.
 #
 # kwalitee is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -24,14 +24,18 @@
 include *.cfg
 include *.ini
 include *.rst
+include *.sh
 include *.yml
 include .coveragerc
 include .dockerignore
+include .dockerignore
+include .editorconfig
+include .tx/config
 include Dockerfile
-include Procfile
 include LICENSE
-include requirements*.txt
+include Procfile
 include docs/*.rst docs/*.py
+include requirements*.txt
 
 recursive-include docs *.keep
 recursive-include docs *.rst
@@ -40,7 +44,7 @@ recursive-include docs/_themes *.py *.css *.css_t *.conf *.html
 recursive-include tests *.py
 recursive-include tests *.test
 
-recursive-include alembic *
 recursive-include kwalitee *
+recursive-include kwalitee *.po *.pot *.mo
 
 global-exclude *.pyc

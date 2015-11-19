@@ -21,24 +21,18 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-"""Kwalitee checks for PEP8, PEP257, PyFlakes and License."""
-
-from __future__ import unicode_literals
+"""Kwalitee checks for PEP8, PYDOCSTYLE, PyFlakes and License."""
 
 import codecs
 import os
 import re
 import tokenize
-
 from datetime import datetime
 
-import pep257
-
 import pep8
-
+import pydocstyle
 import pyflakes
 import pyflakes.checker
-
 
 SUPPORTED_FILES = '.py', '.html', '.tpl', '.js', '.jsx', '.css', '.less'
 """Supported file types."""
@@ -274,7 +268,6 @@ def check_message(message, **kwargs):
 
 
 class _PyFlakesChecker(pyflakes.checker.Checker):
-
     """PEP8 compatible checker for pyFlakes (inspired by flake8)."""
 
     name = "pyflakes"
@@ -289,7 +282,7 @@ class _PyFlakesChecker(pyflakes.checker.Checker):
 
 def _register_pyflakes_check():
     """Register the pyFlakes checker into PEP8 set of checks."""
-    from flake8_import_order.flake8_linter import Linter
+    from flake8_isort import Flake8Isort
     from flake8_blind_except import check_blind_except
 
     # Resolving conflicts between pep8 and pyflakes.
@@ -314,17 +307,15 @@ def _register_pyflakes_check():
     pep8.register_check(_PyFlakesChecker, codes=['F'])
     # FIXME parser hack
     parser = pep8.get_parser('', '')
-    Linter.add_options(parser)
+    Flake8Isort.add_options(parser)
     options, args = parser.parse_args([])
-    Linter.parse_options(options)
     # end of hack
-    pep8.register_check(Linter, codes=['I'])
+    pep8.register_check(Flake8Isort, codes=['I'])
     pep8.register_check(check_blind_except, codes=['B90'])
 _registered_pyflakes_check = False
 
 
 class _Report(pep8.BaseReport):
-
     """Custom reporter.
 
     It keeps a list of errors in a sortable list and never prints.
@@ -388,7 +379,7 @@ def check_pep8(filename, **kwargs):
     return errors
 
 
-def check_pep257(filename, **kwargs):
+def check_pydocstyle(filename, **kwargs):
     """Perform static analysis on the given file docstrings.
 
     :param filename: path of file to check.
@@ -402,7 +393,7 @@ def check_pep257(filename, **kwargs):
     :return: errors
     :rtype: `list`
 
-    .. seealso:: `GreenSteam/pep257 <https://github.com/GreenSteam/pep257/>`_
+    .. seealso:: `PyCQA/pydocstyle <https://github.com/GreenSteam/pydocstyle/>`_
 
     """
     ignore = kwargs.get("ignore")
@@ -424,7 +415,7 @@ def check_pep257(filename, **kwargs):
             if not re.match(match_dir, dirname):
                 return errors
 
-    checker = pep257.PEP257Checker()
+    checker = pydocstyle.PEP257Checker()
     with open(filename) as fp:
         try:
             for error in checker.check_source(fp.read(), filename):
@@ -436,7 +427,7 @@ def check_pep257(filename, **kwargs):
                     errors.append("{0}: {1}".format(error.line, message))
         except tokenize.TokenError as e:
             errors.append("{1}:{2} {0}".format(e.args[0], *e.args[1]))
-        except pep257.AllError as e:
+        except pydocstyle.AllError as e:
             errors.append(str(e))
 
     return errors
@@ -539,7 +530,7 @@ def check_file(filename, **kwargs):
 
         - :data:`.SUPPORTED_FILES`
         - :func:`.check_pep8`
-        - :func:`.check_pep257`
+        - :func:`.check_pydocstyle`
         - and :func:`.check_license`
 
     :param filename: path of file to check.
@@ -557,8 +548,8 @@ def check_file(filename, **kwargs):
     if filename.endswith(".py"):
         if kwargs.get("pep8", True):
             errors += check_pep8(filename, **kwargs)
-        if kwargs.get("pep257", True):
-            errors += check_pep257(filename, **kwargs)
+        if kwargs.get("pydocstyle", True):
+            errors += check_pydocstyle(filename, **kwargs)
         if kwargs.get("license", True):
             errors += check_license(filename, **kwargs)
     elif re.search("\.(tpl|html)$", filename):
@@ -575,8 +566,13 @@ def check_file(filename, **kwargs):
     return sorted(errors, key=try_to_int)
 
 
-def get_options(config):
-    """Build the options from the Flask config."""
+def get_options(config=None):
+    """Build the options from the config object."""
+    if config is None:
+        from . import config
+        from functools import partial
+        config.get = lambda key, default=None: getattr(config, key, default)
+
     base = {
         "components": config.get("COMPONENTS"),
         "signatures": config.get("SIGNATURES"),
@@ -585,13 +581,13 @@ def get_options(config):
         "alt_signatures": config.get("ALT_SIGNATURES"),
         "trusted": config.get("TRUSTED_DEVELOPERS"),
         "pep8": config.get("CHECK_PEP8", True),
-        "pep257": config.get("CHECK_PEP257", True),
+        "pydocstyle": config.get("CHECK_PYDOCSTYLE", True),
         "license": config.get("CHECK_LICENSE", True),
         "pyflakes": config.get("CHECK_PYFLAKES", True),
         "ignore": config.get("IGNORE"),
         "select": config.get("SELECT"),
-        "match": config.get("PEP257_MATCH"),
-        "match_dir": config.get("PEP257_MATCH_DIR"),
+        "match": config.get("PYDOCSTYLE_MATCH"),
+        "match_dir": config.get("PYDOCSTYLE_MATCH_DIR"),
         "min_reviewers": config.get("MIN_REVIEWERS"),
         "colors": config.get("COLORS", True),
         "excludes": config.get("EXCLUDES", [])

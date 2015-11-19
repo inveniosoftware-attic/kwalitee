@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee.
-# Copyright (C) 2015, 2016 CERN.
+# Copyright (C) 2016 CERN.
 #
 # kwalitee is free software; you can redistribute it
 # and/or modify it under the terms of the GNU General Public License as
@@ -23,31 +23,35 @@
 # as an Intergovernmental Organization or submit itself to any jurisdiction.
 
 
-[aliases]
-test=pytest
+root = true
 
-[build_sphinx]
-source-dir = docs/
-build-dir = docs/_build
-all_files = 1
+[*]
+indent_style = space
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+charset = utf-8
 
-[bdist_wheel]
-universal = 1
+# Python files
+[*.py]
+indent_size = 4
+# isort plugin configuration
+known_first_party = kwalitee
+multi_line_output = 2
+default_section = THIRDPARTY
 
-[compile_catalog]
-directory = kwalitee/translations/
+# RST files (used by sphinx)
+[*.rst]
+indent_size = 4
 
-[extract_messages]
-copyright_holder = CERN
-msgid_bugs_address = info@invenio-software.org
-mapping-file = babel.ini
-output-file = kwalitee/translations/messages.pot
-add-comments = NOTE
+# CSS, HTML, JS, JSON, YML
+[*.{css,html,js,json,yml}]
+indent_size = 2
 
-[init_catalog]
-input-file = kwalitee/translations/messages.pot
-output-dir = kwalitee/translations/
+# Matches the exact files either package.json or .travis.yml
+[{package.json,.travis.yml}]
+indent_size = 2
 
-[update_catalog]
-input-file = kwalitee/translations/messages.pot
-output-dir = kwalitee/translations/
+# Dockerfile
+[Dockerfile]
+indent_size = 4

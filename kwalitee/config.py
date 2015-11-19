@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee
-# Copyright (C) 2014, 2015 CERN.
+# Copyright (C) 2014, 2015, 2016 CERN.
 #
 # kwalitee is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -76,9 +76,9 @@ To change it, put a config.py into your instance.
 
     **Default:** ``True``
 
-.. py:data:: CHECK_PEP257
+.. py:data:: CHECK_PYDOCSTYLE
 
-    Enable the :func:`PEP257 checks <.kwalitee.check_pep257>`.
+    Enable the :func:`PYDOCSTYLE checks <.kwalitee.check_pydocstyle>`.
 
     **Default:** ``True``
 
@@ -142,67 +142,17 @@ To change it, put a config.py into your instance.
 """
 
 COMPONENTS = [
+    'api',
     'base',
-    'celery',
+    'cli',
+    'docs',
     'global',
-    'grunt',
+    'i18n',
     'installation',
+    'models',
+    'release',
     'utils',
-    # modules
-    'access',
-    'accounts',
-    'alerts',
-    'apikeys',
-    'authorlist',
-    'authors',
-    'baskets',
-    'bulletin',
-    'circulation',
-    'classifier',
-    'cloudconnector',
-    'comments',
-    'communities',
-    'converter',
-    'dashboard',
-    'deposit',
-    'documentation',
-    'documents',
-    'editor',
-    'encoder',
-    'export',
-    'exporter',
-    'formatter',
-    'groups',
-    'indexer',
-    'jsonalchemy',
-    'knowledge',
-    'linkbacks',
-    'matcher',
-    'merger',
-    'messages',
-    'oaiharvester',
-    'oairepository',
-    'pidstore',
-    'previewer',
-    'previews',
-    'ranker',
-    'record_editor',
-    'records',
-    'redirector',
-    'refextract',
-    'scheduler',
-    'search',
-    'sequencegenerator',
-    'sorter',
-    'statistics',
-    'submit',
-    'sword',
-    'tags',
-    'textminer',
-    'tickets',
-    'upgrader',
-    'uploader',
-    'workflows',
+    'version',
 ]
 
 CONTEXT = "kwalitee"
@@ -225,19 +175,19 @@ GITHUB_REPO = GITHUB + "{account}/{repository}/"
 # CHECK_WIP = False
 # CHECK_LICENSE = True
 # CHECK_PEP8 = True
-# CHECK_PEP257 = True
+# CHECK_PYDOCSTYLE = True
 # CHECK_PYFLAKES = True # PyFlakes requires PEP8
 
-# You may ignore some codes from PEP8, PEP257 and
+# You may ignore some codes from PEP8, PYDOCSTYLE and
 # the license checks as well.
 IGNORE = ['E123', 'E226', 'E24', 'E501', 'E265']
 # SELECT = []
 
 # Apply the tests only to the files matching those criteria.
-PEP257_MATCH = "(?!test_).*\.py"
-"""Files checked for PEP257 conformance."""
-PEP257_MATCH_DIR = "[^\.].*"
-"""Directories checkes for PEP257 conformance."""
+PYDOCSTYLE_MATCH = "(?!test_).*\.py"
+"""Files checked for PYDOCSTYLE conformance."""
+PYDOCSTYLE_MATCH_DIR = "[^\.].*"
+"""Directories checkes for PYDOCSTYLE conformance."""
 
 # Minimal number of reviewers needed to accept a commit.
 #
@@ -277,19 +227,6 @@ COMMIT_MSG_TEMPLATE = """{component}: description (max 50 chars, using nouns)
 Signed-off-by: {author}
 {extra}"""
 """Template used to generate the commit message from the git hook."""
-
-
-HOOK_TEMPLATE = """#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-import sys
-from kwalitee import create_app
-from kwalitee.hooks import {hook}
-
-if __name__ == "__main__":
-    with create_app().app_context():
-        sys.exit({hook}(sys.argv))
-"""
-"""Template used to generate the git hooks, customize at will."""
 
 
 COMMIT_MSG_LABELS = (

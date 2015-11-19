@@ -23,7 +23,6 @@
 
 """Mocks and mixins for the tests."""
 
-from __future__ import unicode_literals
 
 
 GPL = """

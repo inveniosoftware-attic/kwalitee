@@ -23,13 +23,10 @@
 
 """Test excludes option."""
 
-from __future__ import unicode_literals
-
 import os
-
-from kwalitee.kwalitee import check_file, is_file_excluded, get_options
-
 from unittest import TestCase
+
+from kwalitee.kwalitee import check_file, get_options, is_file_excluded
 
 
 class TestExcludesOption(TestCase):

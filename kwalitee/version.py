@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee
-# Copyright (C) 2014, 2015 CERN.
+# Copyright (C) 2014, 2015, 2016 CERN.
 #
 # kwalitee is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -23,4 +23,4 @@
 
 """kwalitee version number."""
 
-__version__ = "0.2.0rc8"
+__version__ = "1.0.0.dev20160426"

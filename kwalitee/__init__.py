@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee
-# Copyright (C) 2014, 2015 CERN.
+# Copyright (C) 2014, 2015, 2016 CERN.
 #
 # kwalitee is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -21,13 +21,9 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-"""kwalitee Flask application and git hooks."""
+"""Tool for checking commit kwalitee."""
 
-from __future__ import unicode_literals
-
-from .factory import create_app
 from .version import __version__
 
-
 __docformat__ = "restructuredtext en"
-__all__ = ("__version__", "create_app")
+__all__ = ("__version__", )

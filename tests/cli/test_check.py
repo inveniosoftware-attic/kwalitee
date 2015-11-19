@@ -21,13 +21,15 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-from __future__ import unicode_literals
-
 import sys
+
+import click
 import pytest
+import yaml
+from click.testing import CliRunner
 from hamcrest import assert_that, equal_to, has_item, has_items
 
-from kwalitee.cli.check import message
+from kwalitee.cli.check import Repo, check
 
 try:
     import pygit2  # noqa
@@ -40,36 +42,43 @@ skip = pytest.mark.skipif(sys.version_info > (3, 0) and not pygit,
 
 
 @skip
-def test_check_head(capsys, session, app, git):
-    app.config['COLORS'] = False
+def test_check_head(capsys, git):
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        with open('test.yml', 'w') as f:
+            yaml.dump({
+                'colors': False,
+            }, stream=f)
+        result = runner.invoke(check, ['-r', git, '-c', 'test.yml',
+                                       'message', 'HEAD'])
 
-    assert_that(message("HEAD", repository=git), equal_to(1))
-
-    out, _ = capsys.readouterr()
-    assert_that(out.split("\n"),
-                has_items("1: M110 missing component name",
-                          "1: M101 signature is missing",
-                          "1: M100 needs more reviewers"))
-
-
-@skip
-def test_check_branch(capsys, session, app, git):
-    app.config['TRUSTED_DEVELOPERS'] = ('a@b.org',)
-    app.config['SIGNATURES'] = ('By',)
-    app.config['COMPONENTS'] = ('global',)
-    app.config['COLORS'] = False
-
-    assert_that(message("master..testbranch", repository=git), equal_to(0))
-
-    out, _ = capsys.readouterr()
-    assert_that(out.split("\n"), has_item("Everything is OK."))
+        assert_that(result.exit_code != 0)
+        assert_that(result.output.split("\n"),
+                    has_items("1: M110 missing component name",
+                              "1: M101 signature is missing",
+                              "1: M100 needs more reviewers"))
 
 
 @skip
-def test_check_branch_wrong_side(capsys, session, app, git):
-    app.config['COLORS'] = False
+def test_check_branch(capsys, git):
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        with open('test.yml', 'w') as f:
+            yaml.dump({
+                'trusted': ('a@b.org', ),
+                'signatures': ('By', ),
+                'components': ('global', ),
+                'colors': False,
+            }, stream=f)
+        result = runner.invoke(check, ['-r', git, '-c', 'test.yml',
+                                       'message', 'master..testbranch'])
+        assert_that(result.exit_code, equal_to(0))
+        assert_that(result.output.split("\n"), has_item("Everything is OK."))
 
-    assert_that(message("testbranch..master", repository=git), equal_to(0))
 
-    out, _ = capsys.readouterr()
-    assert_that(out.strip(), equal_to(""))
+@skip
+def test_check_branch_wrong_side(capsys, git):
+    runner = CliRunner()
+    result = runner.invoke(check, ['-r', git, 'message', 'testbranch..master'])
+    assert_that(result.exit_code, equal_to(0))
+    assert_that(result.output.split("\n"), equal_to([""]))

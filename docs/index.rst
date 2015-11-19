@@ -1,6 +1,6 @@
 ..
     This file is part of kwalitee
-    Copyright (C) 2014, 2015 CERN.
+    Copyright (C) 2014, 2015, 2016 CERN.
 
     kwalitee is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -21,32 +21,43 @@
     or submit itself to any jurisdiction.
 
 
-:orphan:
+.. include:: ../README.rst
 
-.. kwalitee documentation master file, created by
-   sphinx-quickstart on Tue Jun  3 08:27:01 2014.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+User's Guide
+============
 
-Welcome to kwalitee's documentation!
-============================================
-
-Contents:
+This part of the documentation will show you how to get started in using
+Kwalitee.
 
 .. toctree::
    :maxdepth: 2
 
-   introduction
    installation
    cli
    testing
-   changelog
+
+
+API Reference
+=============
+
+If you are looking for information on a specific function, class or method,
+this part of the documentation is for you.
+
+.. toctree::
+   :maxdepth: 2
+
    api/modules
+
+Additional Notes
+================
+
+Notes on how to contribute, legal information and changes are here for the
+interested.
+
+.. toctree::
+   :maxdepth: 1
+
+   contributing
+   changes
+   license
    authors
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

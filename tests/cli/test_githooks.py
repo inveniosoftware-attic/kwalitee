@@ -21,29 +21,30 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-from __future__ import unicode_literals
-
 import os
-import sys
-import pytest
 import shutil
-import tempfile
 import subprocess
+import sys
+import tempfile
 from io import StringIO
 from unittest import TestCase
+
+import pytest
+from click.testing import CliRunner
 from hamcrest import assert_that, has_length, is_not
-from kwalitee.cli.githooks import install, uninstall, HOOK_PATH
+
+from kwalitee.cli.githooks import HOOK_PATH, install, uninstall
 
 
-@pytest.mark.usefixtures("session")
 class GithookCliTest(TestCase):
 
     def setUp(self):
+        self.runner = CliRunner()
         self.hooks = ('pre-commit', 'prepare-commit-msg', 'post-commit')
         self.path = tempfile.mkdtemp()
         self.cwd = os.getcwd()
         self.stderr = sys.stderr
-        sys.stderr = StringIO("")
+        sys.stderr = StringIO()
         os.chdir(self.path)
 
     def tearDown(self):
@@ -64,7 +65,8 @@ class GithookCliTest(TestCase):
         self.call("git", "init")
         self.call("touch", precommit)
 
-        assert_that(install())
+        result = self.runner.invoke(install)
+        assert_that(result.exit_code == 0)
 
         for hook in self.hooks:
             filename = os.path.join(self.path, HOOK_PATH, hook)
@@ -74,27 +76,31 @@ class GithookCliTest(TestCase):
             assert_that(f.read(), has_length(0),
                         "precommit should be have been left as is")
 
-        assert_that(uninstall())
+        result = self.runner.invoke(uninstall)
+        assert_that(result.exit_code == 0)
 
         for hook in self.hooks:
             filename = os.path.join(self.path, HOOK_PATH, hook)
             assert_that(not os.path.exists(filename), filename)
 
     def test_dont_install_in_non_git(self):
-        assert_that(not install())
+        result = self.runner.invoke(install)
+        assert_that(result.exit_code != 0)
 
         for hook in self.hooks:
             filename = os.path.join(self.path, HOOK_PATH, hook)
             assert_that(not os.path.exists(filename), filename)
 
-        assert_that(not uninstall())
+        result = self.runner.invoke(uninstall)
+        assert_that(result.exit_code != 0)
 
     def test_install_hooks_and_overrides(self):
         precommit = os.path.join(HOOK_PATH, "pre-commit")
         self.call("git", "init")
         self.call("touch", precommit)
 
-        assert_that(install(force=True))
+        result = self.runner.invoke(install, ['--force'])
+        assert_that(result.exit_code == 0)
 
         for hook in self.hooks:
             filename = os.path.join(self.path, HOOK_PATH, hook)
@@ -104,7 +110,8 @@ class GithookCliTest(TestCase):
             assert_that(f.read(), is_not(has_length(0)),
                         "precommit should have been overridden")
 
-        assert_that(uninstall())
+        result = self.runner.invoke(uninstall)
+        assert_that(result.exit_code == 0)
 
         for hook in self.hooks:
             filename = os.path.join(self.path, HOOK_PATH, hook)

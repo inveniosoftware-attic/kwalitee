@@ -22,7 +22,7 @@
 
 
 Release 0.2.0: *The next big thing®*
-====================================
+------------------------------------
 
 This version uses a database (SQLite, PostgreSQL) for persistence.
 
@@ -41,7 +41,7 @@ This version uses a database (SQLite, PostgreSQL) for persistence.
 - Fixes double commenting bug.
 
 Incompatibilities
------------------
+~~~~~~~~~~~~~~~~~
 
 - The commit statuses are still accessible but are not migrated to the
   database.
@@ -50,7 +50,7 @@ Incompatibilities
 
 
 Release 0.1.0: *The playground*
-===============================
+-------------------------------
 
 Initial version. It supports ``pull request`` events on one repository and
 will perform checks on the commit message and files.
@@ -58,7 +58,7 @@ will perform checks on the commit message and files.
 - Commit message checks.
 - Git hooks.
 - PEP8 checks.
-- PEP257 checks.
+- PYDOCSTYLE checks.
 - PyFlakes checks.
 - License checks.
 - Asynchronous checks using RQ.

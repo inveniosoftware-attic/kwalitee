@@ -23,18 +23,15 @@
 
 """Test of merge commit detection."""
 
-from __future__ import unicode_literals
-
 import os
 import shutil
 import subprocess
 import tempfile
 
-from hamcrest import (assert_that, equal_to)
+import pytest
+from hamcrest import assert_that, equal_to
 
 from kwalitee.cli.check import _git_commits, _is_merge_commit, _pygit2_commits
-
-import pytest
 
 
 @pytest.fixture
@@ -62,7 +59,7 @@ def repository_with_merge_commits():
     cwd = os.getcwd()
     os.chdir(path)
     for command in cmds:
-        proc = subprocess.Popen(command.encode("utf-8"),
+        proc = subprocess.Popen(command,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
                                 shell=True,
@@ -83,31 +80,34 @@ def test_merge_commit_detection_pygit2(repository_with_merge_commits):
     pytest.importorskip("pygit2")
     commits = _pygit2_commits('HEAD^..', repository_with_merge_commits)
     first_commit, second_commit = commits
-    assert _is_merge_commit(commits[0])
-    assert not _is_merge_commit(commits[1])
+    assert _is_merge_commit(first_commit)
+    assert not _is_merge_commit(second_commit)
 
 
 def test_merge_commit_detection_git(repository_with_merge_commits):
     """Test detection of merge and non-merge commits with GitPython."""
     pytest.importorskip("git")
     commits = _git_commits('HEAD^..', repository_with_merge_commits)
-    assert _is_merge_commit(commits[0])
-    assert not _is_merge_commit(commits[1])
+    first_commit, second_commit = commits
+    assert _is_merge_commit(first_commit)
+    assert not _is_merge_commit(second_commit)
 
 
 def test_commit_log_history_pygit2(repository_with_merge_commits):
     """Test detection of commit log messages with PyGit2."""
     pytest.importorskip("pygit2")
     commits = _pygit2_commits('HEAD^^..HEAD', repository_with_merge_commits)
-    assert commits.message == "Merge branch 'test'\n"
-    assert commits.message == "master2\n"
-    assert commits.message == "test\n"
+    first_commit, second_commit, third_commit = commits
+    assert first_commit.message == "Merge branch 'test'\n"
+    assert second_commit.message == "test\n"
+    assert third_commit.message == "master2\n"
 
 
 def test_commit_log_history_git(repository_with_merge_commits):
     """Test detection of commit log messages with GitPython."""
     pytest.importorskip("git")
     commits = _git_commits('HEAD^^..HEAD', repository_with_merge_commits)
-    assert commits[0].message == "Merge branch 'test'\n"
-    assert commits[1].message == "master2\n"
-    assert commits[2].message == "test\n"
+    first_commit, second_commit, third_commit = commits
+    assert first_commit.message == "Merge branch 'test'\n"
+    assert second_commit.message == "master2\n"
+    assert third_commit.message == "test\n"

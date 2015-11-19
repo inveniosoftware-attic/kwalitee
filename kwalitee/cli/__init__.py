@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee
-# Copyright (C) 2014, 2015 CERN.
+# Copyright (C) 2014, 2015, 2016 CERN.
 #
 # kwalitee is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -23,23 +23,19 @@
 
 """Command line interfaces entrypoints."""
 
+import click
 
-from flask_script import Manager
-
-from . import account, check, githooks, prepare, repository
-
-
-manager = Manager()
-
-manager.add_command("account", account.manager)
-manager.add_command("githooks", githooks.manager)
-manager.add_command("prepare", prepare.manager)
-manager.add_command("repository", repository.manager)
-manager.add_command("check", check.manager)
+from . import check, githooks, prepare
 
 
+@click.group()
 def main():  # pragma: no cover
-    """Running the manager."""
-    from .. import create_app
-    manager.app = create_app()
-    manager.run()
+    """Perform various checks on a Git repository.
+
+    It eases developers life by automatizing boring stuff like commit message
+    checks or release notes generations.
+    """
+
+main.add_command(githooks.githooks)
+main.add_command(prepare.prepare)
+main.add_command(check.check)

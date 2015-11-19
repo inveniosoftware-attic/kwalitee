@@ -21,15 +21,14 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-from __future__ import unicode_literals
-
 import os
 import tempfile
-
-from hamcrest import (assert_that, has_length, has_item, has_items, is_not,
-                      contains_string)
-from kwalitee.kwalitee import check_pep8, check_pep257, check_license
 from unittest import TestCase
+
+from hamcrest import assert_that, contains_string, has_item, has_items, \
+    has_length, is_not
+
+from kwalitee.kwalitee import check_license, check_pep8, check_pydocstyle
 
 
 class TestCheckFile(TestCase):
@@ -90,48 +89,48 @@ class TestCheckPep8(TestCheckFile):
 
 
 class TestCheckPep257(TestCheckFile):
-    """Unit tests of the PEP257 checks."""
+    """Unit tests of the PYDOCSTYLE checks."""
 
     def test_valid(self):
-        """valid.py is correctly formatted (according to pep257)"""
-        errors = check_pep257(self.valid)
+        """valid.py is correctly formatted (according to pydocstyle)"""
+        errors = check_pydocstyle(self.valid)
         assert_that(errors, has_length(0))
 
     def test_invalid_whitespaces(self):
         """invalid_whitespaces.py is incorrectly formatted."""
-        errors = check_pep257(self.invalid_whitespaces)
+        errors = check_pydocstyle(self.invalid_whitespaces)
         assert_that(errors, has_length(5))
 
     def test_missing(self):
         """invalid.py has no docstring"""
-        errors = check_pep257(self.invalid)
+        errors = check_pydocstyle(self.invalid)
         assert_that(errors, has_item("1: D100 Missing docstring in public module"))
 
     def test_invalid_token(self):
         """invalid_token.py has a tokenization error"""
-        errors = check_pep257(self.invalid_token)
+        errors = check_pydocstyle(self.invalid_token)
         assert_that(errors, has_item("6:0 EOF in multi-line string"))
 
     def test_invalid_all(self):
         """invalid_all.py has a mutable all"""
-        errors = check_pep257(self.invalid_all)
+        errors = check_pydocstyle(self.invalid_all)
         assert_that(errors, has_length(1))
         assert_that(errors[0], contains_string("Could not evaluate contents of"
-                                               " __all__. That means pep257"))
+                                               " __all__. That means pydocstyle"))
 
     def test_ignore(self):
-        """ignored PEP257 codes are ignored"""
-        errors = check_pep257(self.invalid, ignore=('D100'))
+        """ignored PYDOCSTYLE codes are ignored"""
+        errors = check_pydocstyle(self.invalid, ignore=('D100'))
         assert_that(errors, has_length(0))
 
     def test_match(self):
         """test only the file that are matched by the regex"""
-        errors = check_pep257("test_bar.py", match="(?!test_).*\.py")
+        errors = check_pydocstyle("test_bar.py", match="(?!test_).*\.py")
         assert_that(errors, has_length(0))
 
     def test_match_dir(self):
         """test only the directories that are matched by the regex"""
-        errors = check_pep257("foo/.hidden/spam/eggs/bar.py",
+        errors = check_pydocstyle("foo/.hidden/spam/eggs/bar.py",
                               match_dir="[^\.].*")
         assert_that(errors, has_length(0))
 
@@ -140,7 +139,7 @@ class TestCheckPep257(TestCheckFile):
         os.write(fp, "# -*- coding: utf-8 -*-\n".encode("ascii"))
         os.close(fp)
 
-        errors = check_pep257(path, match_dir="[^\.].*")
+        errors = check_pydocstyle(path, match_dir="[^\.].*")
         assert_that(errors, has_length(1))
 
         os.unlink(path)
@@ -157,7 +156,7 @@ class TestCheckLicense(TestCheckFile):
 
     def test_missing(self):
         """missing_license has only the copyright"""
-        errors = check_license(self.missing_license)
+        errors = check_license(self.missing_license, year=2015)
         assert_that(errors, has_item("13: L100 license is missing"))
 
     def test_license_jinja(self):

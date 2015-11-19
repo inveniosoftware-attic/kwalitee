@@ -20,91 +20,39 @@
     or submit itself to any jurisdiction.
 
 
-kwalitee package
-========================
+Kwalitee package
+================
 
-Subpackages
------------
+Command line interface
+----------------------
 
 .. toctree::
 
     kwalitee.cli
 
-Submodules
-----------
-
-kwalitee.config module
-------------------------------
+Configuration
+-------------
 
 .. automodule:: kwalitee.config
     :members:
     :undoc-members:
     :show-inheritance:
 
-kwalitee.factory module
--------------------------------
-
-.. automodule:: kwalitee.factory
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-kwalitee.hooks module
------------------------------
+Hooks
+-----
 
 .. automodule:: kwalitee.hooks
     :members:
     :undoc-members:
     :show-inheritance:
 
-kwalitee.kwalitee module
---------------------------------
+Checks
+------
 
 .. automodule:: kwalitee.kwalitee
     :members:
     :undoc-members:
     :show-inheritance:
-
-kwalitee.models module
-------------------------------
-
-.. automodule:: kwalitee.models
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-kwalitee.tasks module
------------------------------
-
-.. automodule:: kwalitee.tasks
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-kwalitee.views module
------------------------------
-
-.. automodule:: kwalitee.views
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-kwalitee.worker module
-------------------------------
-
-.. automodule:: kwalitee.worker
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-kwalitee.wsgi module
-----------------------------
-
-.. automodule:: kwalitee.wsgi
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------
