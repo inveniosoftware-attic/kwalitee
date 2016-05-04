@@ -24,7 +24,6 @@
 """Kwalitee is a tool that runs static analysis checks on Git repository."""
 
 import os
-import sys
 
 from setuptools import find_packages, setup
 
@@ -72,7 +71,7 @@ install_requires = [
     'pep8>=1.7.0',
     'pep8-naming>=0.3.3',
     'pydocstyle>=1.0.0',
-    'pyflakes>=1.0.0',
+    'pyflakes>=1.0.0,<1.1.0',
     'flake8>=2.5.4',
     'flake8-isort>=1.2',
     'flake8-blind-except>=0.1.0',
