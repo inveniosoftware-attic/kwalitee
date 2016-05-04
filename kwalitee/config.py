@@ -139,6 +139,17 @@ To change it, put a config.py into your instance.
 
     **Default:** ``[]``
 
+.. py:data:: AUTHORS
+
+    List of filenames containing authors and contributors.
+
+    **Default:** ``['AUTHORS.rst',]``
+
+.. py:data:: EXCLUDE_AUTHOR_NAMES
+
+    List of author names to be excluded from checking (e.g. known second email addresses).
+
+    **Default:** ``[]``
 """
 
 COMPONENTS = [
@@ -238,3 +249,9 @@ COMMIT_MSG_LABELS = (
     ('NOTE', 'Notes'),
     ('AMENDS', None),
 )
+
+AUTHORS = [
+    'AUTHORS.rst',
+]
+
+EXCLUDE_AUTHOR_NAMES = []

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee
-# Copyright (C) 2014, 2015 CERN.
+# Copyright (C) 2014, 2015, 2016 CERN.
 #
 # kwalitee is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -26,6 +26,7 @@
 import codecs
 import os
 import re
+import subprocess
 import tokenize
 from datetime import datetime
 
@@ -77,6 +78,12 @@ _licenses_codes = {
     "L102": "copyright year is outdated, expected {0} but got {1}",
     "L103": "license is not GNU GPLv2",
     "L190": "file cannot be decoded as {0}"
+}
+
+_author_codes = {
+    "A100": "AUTHORS files are not defined",
+    "A101": "AUTHORS file {0} does not exist",
+    "A102": "{0} missing in AUTHORS file",
 }
 
 
@@ -566,11 +573,58 @@ def check_file(filename, **kwargs):
     return sorted(errors, key=try_to_int)
 
 
+def check_author(author, **kwargs):
+    """Check the presence of the author in the AUTHORS/THANKS files.
+
+    Rules:
+
+    - the author full name and email must appear in AUTHORS file
+
+    :param authors: name of AUTHORS files
+    :type authors: `list`
+    :param path: path to the repository home
+    :type path: str
+    :return: errors
+    :rtype: `list`
+    """
+    errors = []
+
+    authors = kwargs.get("authors")
+    if not authors:
+        errors.append('1:A100: ' + _author_codes['A100'])
+        return errors
+
+    exclude_author_names = kwargs.get("exclude_author_names")
+    if exclude_author_names and author in exclude_author_names:
+        return []
+
+    path = kwargs.get("path")
+    if not path:
+        path = os.getcwd()
+
+    for afile in authors:
+        if not os.path.exists(path + os.sep + afile):
+            errors.append('1:A101: ' + _author_codes['A101'].format(afile))
+
+    if errors:
+        return errors
+
+
+    status = subprocess.Popen(['grep', '-q', author] +
+                              [path + os.sep + afile for afile in authors],
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE,
+                              cwd=path).wait()
+    if status:
+        errors.append('1:A102: ' + _author_codes['A102'].format(author))
+
+    return errors
+
+
 def get_options(config=None):
     """Build the options from the config object."""
     if config is None:
         from . import config
-        from functools import partial
         config.get = lambda key, default=None: getattr(config, key, default)
 
     base = {
@@ -590,7 +644,9 @@ def get_options(config=None):
         "match_dir": config.get("PYDOCSTYLE_MATCH_DIR"),
         "min_reviewers": config.get("MIN_REVIEWERS"),
         "colors": config.get("COLORS", True),
-        "excludes": config.get("EXCLUDES", [])
+        "excludes": config.get("EXCLUDES", []),
+        "authors": config.get("AUTHORS"),
+        "exclude_author_names": config.get("EXCLUDE_AUTHOR_NAMES"),
     }
     options = {}
     for k, v in base.items():

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee
-# Copyright (C) 2014, 2015 CERN.
+# Copyright (C) 2014, 2015, 2016 CERN.
 #
 # kwalitee is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -29,7 +29,6 @@ import os
 import re
 import shutil
 import sys
-from collections import namedtuple
 from tempfile import mkdtemp
 
 import click
@@ -108,11 +107,12 @@ def _is_merge_commit(commit):
         return True
     return False
 
+
 @check.command()
 @click.argument('commit', metavar='<sha or branch>',
                 default='HEAD')  # , help='an integer for the accumulator')
 @click.option('-s', '--skip-merge-commits', is_flag=True,
-                help='skip merge commits')
+              help='skip merge commits')
 @pass_repo
 def message(obj, commit='HEAD', skip_merge_commits=False):
     """Check the messages of the commits."""
@@ -137,9 +137,10 @@ def message(obj, commit='HEAD', skip_merge_commits=False):
             sha = 'hexsha'
             commits = _git_commits(commit, repository)
         except ImportError:
-            click.echo('To use this feature, please install pygit2. GitPython will '
-                  'also work but is not recommended (python <= 2.7 only).',
-                  file=sys.stderr)
+            click.echo('To use this feature, please install pygit2. '
+                       'GitPython will also work but is not recommended '
+                       '(python <= 2.7 only).',
+                       file=sys.stderr)
             return 2
 
     template = '{0}commit {{commit.{1}}}{2}\n\n'.format(yellow, sha, reset)
@@ -173,7 +174,7 @@ def message(obj, commit='HEAD', skip_merge_commits=False):
 @click.argument('commit', metavar='<sha or branch>',
                 default='HEAD')  # , help='an integer for the accumulator')
 @click.option('-s', '--skip-merge-commits', is_flag=True,
-                help='skip merge commits')
+              help='skip merge commits')
 @pass_repo
 def files(obj, commit='HEAD', skip_merge_commits=False):
     """Check the files of the commits."""
@@ -268,6 +269,69 @@ def files(obj, commit='HEAD', skip_merge_commits=False):
             errors = map(_format_errors, errors.items())
         else:
             errors = no_errors
+
+        click.echo(template.format(commit=commit,
+                                   message=message,
+                                   errors='\n'.join(errors)))
+
+    if min(count, 1):
+        raise click.Abort
+
+
+@check.command()
+@click.argument('commit', metavar='<sha or branch>',
+                default='HEAD')  # , help='an integer for the accumulator')
+@click.option('-s', '--skip-merge-commits', is_flag=True,
+              help='skip merge commits')
+@pass_repo
+def authors(obj, commit='HEAD', skip_merge_commits=False):
+    """Check the authors of the commits."""
+    from ..kwalitee import check_author
+    options = obj.options
+    repository = obj.repository
+
+    if options.get('colors') is not False:
+        colorama.init(autoreset=True)
+        reset = colorama.Style.RESET_ALL
+        yellow = colorama.Fore.YELLOW
+        green = colorama.Fore.GREEN
+        red = colorama.Fore.RED
+    else:
+        reset = yellow = green = red = ''
+
+    try:
+        sha = 'oid'
+        commits = _pygit2_commits(commit, repository)
+    except ImportError:
+        try:
+            sha = 'hexsha'
+            commits = _git_commits(commit, repository)
+        except ImportError:
+            click.echo('To use this feature, please install pygit2. '
+                       'GitPython will also work but is not recommended '
+                       '(python <= 2.7 only).',
+                       file=sys.stderr)
+            return 2
+
+    template = '{0}commit {{commit.{1}}}{2}\n\n'.format(yellow, sha, reset)
+    template += '{message}{errors}'
+
+    count = 0
+    ident = '    '
+    re_line = re.compile('^', re.MULTILINE)
+    for commit in commits:
+        if skip_merge_commits and _is_merge_commit(commit):
+            continue
+        message = commit.message
+        author = str(commit.author) + ' <' + commit.author.email + '>'
+        errors = check_author(author, **options)
+        message = re.sub(re_line, ident, message)
+        if errors:
+            count += 1
+            errors.insert(0, red)
+        else:
+            errors = [green, 'Everything is OK.']
+        errors.append(reset)
 
         click.echo(template.format(commit=commit,
                                    message=message,
