@@ -10,3 +10,7 @@ components:
 - tests
 - travis
 - views
+exclude_author_names:
+- Jiri Kuncar <jiri.kuncar@gmail.com>
+- Mateusz Susik <mateusz.susik@cern.ch>
+- Yoan Blanc <yoan.blanc@cern.ch>

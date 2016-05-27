@@ -323,7 +323,7 @@ def authors(obj, commit='HEAD', skip_merge_commits=False):
         if skip_merge_commits and _is_merge_commit(commit):
             continue
         message = commit.message
-        author = str(commit.author) + ' <' + commit.author.email + '>'
+        author = u'{0.author} <{0.author.email}>'.format(commit).encode('utf-8')
         errors = check_author(author, **options)
         message = re.sub(re_line, ident, message)
         if errors:
@@ -334,7 +334,7 @@ def authors(obj, commit='HEAD', skip_merge_commits=False):
         errors.append(reset)
 
         click.echo(template.format(commit=commit,
-                                   message=message,
+                                   message=message.encode('utf-8'),
                                    errors='\n'.join(errors)))
 
     if min(count, 1):
