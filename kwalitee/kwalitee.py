@@ -366,8 +366,7 @@ def check_pep8(filename, **kwargs):
     :return: errors
     :rtype: `list`
 
-    .. seealso:: :py:class:`pep8.Checker`
-
+    .. seealso:: :py:class:`pycodestyle.Checker`
     """
     options = {
         "ignore": kwargs.get("ignore"),
