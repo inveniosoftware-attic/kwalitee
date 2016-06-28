@@ -25,9 +25,9 @@ Authors
 -------
 
 kwalitee is developed to support developers of
-`Invenio <http://invenio-software.org>`_ digital library software.
+`Invenio <http://inveniosoftware.org>`_ digital library software.
 
-Contact us at `info@invenio-software.org <mailto:info@invenio-software.org>`_.
+Contact us at `info@inveniosoftware.org <mailto:info@inveniosoftware.org>`_.
 
 Contributors
 ^^^^^^^^^^^^
