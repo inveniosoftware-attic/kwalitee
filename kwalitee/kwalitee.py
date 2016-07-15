@@ -399,7 +399,8 @@ def check_pydocstyle(filename, **kwargs):
     :return: errors
     :rtype: `list`
 
-    .. seealso:: `PyCQA/pydocstyle <https://github.com/GreenSteam/pydocstyle/>`_
+    .. seealso::
+        `PyCQA/pydocstyle <https://github.com/GreenSteam/pydocstyle/>`_
 
     """
     ignore = kwargs.get("ignore")
@@ -607,7 +608,6 @@ def check_author(author, **kwargs):
 
     if errors:
         return errors
-
 
     status = subprocess.Popen(['grep', '-q', author] +
                               [path + os.sep + afile for afile in authors],

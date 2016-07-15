@@ -12,7 +12,7 @@
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-#g
+#
 # You should have received a copy of the GNU General Public License
 # along with kwalitee; if not, write to the Free Software Foundation,
 # Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
@@ -38,6 +38,7 @@ HOOKS = {
     "post-commit",
 }
 HOOK_PATH = os.path.join(".git", "hooks")
+
 
 @click.group()
 def githooks():

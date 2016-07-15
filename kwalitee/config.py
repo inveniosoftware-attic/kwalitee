@@ -147,7 +147,8 @@ To change it, put a config.py into your instance.
 
 .. py:data:: EXCLUDE_AUTHOR_NAMES
 
-    List of author names to be excluded from checking (e.g. known second email addresses).
+    List of author names to be excluded from checking (e.g. known second
+    email addresses).
 
     **Default:** ``[]``
 """

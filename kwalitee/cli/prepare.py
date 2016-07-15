@@ -140,9 +140,9 @@ def release(obj, commit='HEAD', components=False):
             sha = 'hexsha'
             commits = _git_commits(commit, repository)
         except ImportError:
-            click.echo('To use this feature, please install pygit2. GitPython will '
-                  'also work but is not recommended (python <= 2.7 only).',
-                  file=sys.stderr)
+            click.echo('To use this feature, please install pygit2. '
+                       'GitPython will also work but is not recommended '
+                       '(python <= 2.7 only).', file=sys.stderr)
             return 2
 
     messages = OrderedDict([(getattr(c, sha), c.message) for c in commits])

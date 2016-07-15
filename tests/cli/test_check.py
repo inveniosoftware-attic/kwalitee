@@ -23,13 +23,12 @@
 
 import sys
 
-import click
 import pytest
 import yaml
 from click.testing import CliRunner
 from hamcrest import assert_that, equal_to, has_item, has_items
 
-from kwalitee.cli.check import Repo, check
+from kwalitee.cli.check import check
 
 try:
     import pygit2  # noqa

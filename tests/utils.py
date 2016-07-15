@@ -24,7 +24,6 @@
 """Mocks and mixins for the tests."""
 
 
-
 GPL = """
 {1} This file is part of kwalitee
 {1} Copyright (C) {0} CERN.

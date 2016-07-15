@@ -84,7 +84,9 @@ def test_check_authors_author_present_pygit2(repository_with_author_commits):
     assert_that(errors, has_length(0))
 
 
-def test_check_authors_author_present_gitpython(repository_with_author_commits):
+def test_check_authors_author_present_gitpython(
+    repository_with_author_commits
+):
     """Test checking present authors, with GitPython."""
     pytest.importorskip("git")
     options = dict(authors=["AUTHORS.rst", ],
@@ -105,7 +107,9 @@ def test_check_authors_author_missing_pygit2(repository_with_author_commits):
     assert_that(errors[0], contains_string('A102'))
 
 
-def test_check_authors_author_missing_gitpython(repository_with_author_commits):
+def test_check_authors_author_missing_gitpython(
+    repository_with_author_commits
+):
     """Test checking missing authors, with GitPython."""
     pytest.importorskip("git")
     options = dict(authors=["AUTHORS.rst", ],
@@ -128,7 +132,9 @@ def test_check_authors_author_excluded_pygit2(repository_with_author_commits):
     assert_that(errors[0], contains_string('A102'))
 
 
-def test_check_authors_author_excluded_gitpython(repository_with_author_commits):
+def test_check_authors_author_excluded_gitpython(
+    repository_with_author_commits
+):
     """Test checking missing authors, with GitPython."""
     pytest.importorskip("git")
     options = dict(authors=["AUTHORS.rst", ],

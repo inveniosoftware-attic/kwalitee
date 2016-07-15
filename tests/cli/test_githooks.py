@@ -29,7 +29,6 @@ import tempfile
 from io import StringIO
 from unittest import TestCase
 
-import pytest
 from click.testing import CliRunner
 from hamcrest import assert_that, has_length, is_not
 

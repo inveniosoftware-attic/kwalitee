@@ -104,7 +104,8 @@ class TestCheckPep257(TestCheckFile):
     def test_missing(self):
         """invalid.py has no docstring"""
         errors = check_pydocstyle(self.invalid)
-        assert_that(errors, has_item("1: D100 Missing docstring in public module"))
+        assert_that(errors,
+                    has_item("1: D100 Missing docstring in public module"))
 
     def test_invalid_token(self):
         """invalid_token.py has a tokenization error"""
@@ -115,8 +116,9 @@ class TestCheckPep257(TestCheckFile):
         """invalid_all.py has a mutable all"""
         errors = check_pydocstyle(self.invalid_all)
         assert_that(errors, has_length(1))
-        assert_that(errors[0], contains_string("Could not evaluate contents of"
-                                               " __all__. That means pydocstyle"))
+        assert_that(errors[0], contains_string("Could not evaluate contents "
+                                               "of __all__. That means "
+                                               "pydocstyle"))
 
     def test_ignore(self):
         """ignored PYDOCSTYLE codes are ignored"""
@@ -131,7 +133,7 @@ class TestCheckPep257(TestCheckFile):
     def test_match_dir(self):
         """test only the directories that are matched by the regex"""
         errors = check_pydocstyle("foo/.hidden/spam/eggs/bar.py",
-                              match_dir="[^\.].*")
+                                  match_dir="[^\.].*")
         assert_that(errors, has_length(0))
 
     def test_match_absolute_dir(self):
