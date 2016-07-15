@@ -35,6 +35,7 @@ import pydocstyle
 import pyflakes
 import pyflakes.checker
 
+
 SUPPORTED_FILES = '.py', '.html', '.tpl', '.js', '.jsx', '.css', '.less'
 """Supported file types."""
 
@@ -65,6 +66,7 @@ _messages_codes = {
     "M120": "missing empty line before bullet",
     "M121": "indentation of two spaces expected",
     "M122": "unrecognized bullet label: {0}",
+    "M123": "no dot at the end of the sentence",
     # Signatures
     "M130": "no bullets are allowed after signatures",
     # Generic
@@ -142,16 +144,22 @@ def _check_bullets(lines, **kwargs):
     max_length = kwargs.get("max_length", 72)
     labels = {l for l, _ in kwargs.get("commit_msg_labels", tuple())}
 
+    def _strip_ticket_directives(line):
+        return re.sub(r'( \([^)]*\)){1,}$', '', line)
+
     errors = []
     missed_lines = []
     skipped = []
 
     for (i, line) in enumerate(lines[1:]):
         if line.startswith('*'):
+            dot_found = False
             if len(missed_lines) > 0:
                 errors.append(("M130", i + 2))
             if lines[i].strip() != '':
                 errors.append(("M120", i + 2))
+            if _strip_ticket_directives(line).endswith('.'):
+                dot_found = True
 
             label = _re_bullet_label.search(line)
             if label and label.group('label') not in labels:
@@ -164,6 +172,15 @@ def _check_bullets(lines, **kwargs):
                     errors.append(("M121", i + j + 3))
                 else:
                     skipped.append(i + j + 1)
+                    stripped_line = _strip_ticket_directives(indented)
+                    if stripped_line.endswith('.'):
+                        dot_found = True
+                    elif stripped_line.strip():
+                        dot_found = False
+
+            if not dot_found:
+                errors.append(("M123", i + 2))
+
         elif i not in skipped and line.strip():
             missed_lines.append((i + 2, line))
 

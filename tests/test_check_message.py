@@ -102,9 +102,9 @@ class TestCheckMessage(TestCase):
 
     def test_valid_bullets(self):
         errors = check_message("search: hello\r\n\r\n"
-                               "* bullet 1\r\n\r\n"
-                               "* bullet 2\r\n\r\n"
-                               "* bullet 3\r\n\r\n"
+                               "* bullet 1.\r\n\r\n"
+                               "* bullet 2.\r\n\r\n"
+                               "* bullet 3.\r\n\r\n"
                                "Signed-off-by: a a <john.doe@example.org>",
                                **self.options)
         assert_that(errors, has_length(0))
@@ -112,9 +112,9 @@ class TestCheckMessage(TestCase):
     def test_valid_multiline_bullets(self):
         errors = check_message("search: hello\r\n\r\n"
                                "* bullet 1\r\n"
-                               "  lorem ipsum\r\n\r\n"
+                               "  lorem ipsum.\r\n\r\n"
                                "* bullet 2\r\n"
-                               "  dolor sit amet\r\n\r\n"
+                               "  dolor sit amet.\r\n\r\n"
                                "Signed-off-by: a a <john.doe@example.org>",
                                **self.options)
         assert_that(errors, has_length(0))
@@ -123,20 +123,21 @@ class TestCheckMessage(TestCase):
         # max is 72 total including the identation
         too_long = "".join(list(repeat("M", 70)))
         errors = check_message("search: hello\r\n\r\n"
-                               "* {0}\r\n\r\n"
-                               "* M{0}\r\n\r\n"
+                               "* {0}.\r\n\r\n"
+                               "* M{0}.\r\n\r\n"
                                "Signed-off-by: a a <john.doe@example.org>"
                                .format(too_long),
                                **self.options)
-        assert_that(errors, has_length(1))
+        assert_that(errors, has_length(2))
         assert_that(errors,
-                    has_item("5: M190 line is too long (73 > 72)"))
+                    has_items("3: M190 line is too long (73 > 72)",
+                              "5: M190 line is too long (74 > 72)"))
 
     def test_missing_empty_line_before_bullet(self):
         errors = check_message("search: hello\r\n"
-                               "* bullet 1\r\n\r\n"
-                               "* bullet 2\r\n"
-                               "* bullet 3\r\n\r\n"
+                               "* bullet 1.\r\n\r\n"
+                               "* bullet 2.\r\n"
+                               "* bullet 3.\r\n\r\n"
                                "Signed-off-by: a a <john.doe@example.org>",
                                **self.options)
         assert_that(errors, has_length(3))
@@ -194,3 +195,24 @@ class TestCheckMessage(TestCase):
                                **self.options)
         assert_that(errors, has_items(
             "8: M122 unrecognized bullet label: DEADBEEF"))
+
+    def test_missing_dots_in_bullets(self):
+        errors = check_message("search: hello\r\n\r\n"
+                               "* NEW bullet 1\r\n  line 2.\r\n\r\n"
+                               "* NEW bullet 1\r\n  line 2\r\n\r\n"
+                               "* bullet 1\r\n\r\n"
+                               "* bullet 2.\r\n\r\n"
+                               "* bullet 2. (closes #123)\r\n\r\n"
+                               "* bullet 2 (closes #123)\r\n\r\n"
+                               "* bullet 2. (addresses #543) (closes #123)\r\n\r\n"
+                               "* bullet 2 (addresses #543) (closes #123)\r\n\r\n"
+                               "* NEW bullet 1.\r\n  (closes #234)\r\n\r\n"
+                               "* NEW bullet 1\r\n  (closes #234)\r\n\r\n",
+                               **self.options)
+        assert_that(errors, has_items(
+            "6: M123 no dot at the end of the sentence",
+            "9: M123 no dot at the end of the sentence",
+            "15: M123 no dot at the end of the sentence",
+            "19: M123 no dot at the end of the sentence",
+            "24: M123 no dot at the end of the sentence",
+        ))
