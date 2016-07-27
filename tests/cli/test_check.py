@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee
-# Copyright (C) 2014 CERN.
+# Copyright (C) 2014, 2016 CERN.
 #
 # kwalitee is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -81,3 +81,14 @@ def test_check_branch_wrong_side(capsys, git):
     result = runner.invoke(check, ['-r', git, 'message', 'testbranch..master'])
     assert_that(result.exit_code, equal_to(0))
     assert_that(result.output.split("\n"), equal_to([""]))
+
+
+@skip
+def test_check_branch_utf8(capsys, git):
+    """Test correct output of 'kwalitee check message' on UTF8 in commit
+    message, signature and file name. These are in the utf8 branch in the
+    fixture"""
+    runner = CliRunner()
+    result = runner.invoke(check, ['-r', git, 'message', 'master..utf8'])
+    assert_that(result.exit_code, equal_to(0))
+    assert_that(result.output.split("\n"), has_item("Everything is OK."))

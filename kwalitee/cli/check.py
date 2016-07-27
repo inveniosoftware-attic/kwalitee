@@ -163,7 +163,7 @@ def message(obj, commit='HEAD', skip_merge_commits=False):
         errors.append(reset)
 
         click.echo(template.format(commit=commit,
-                                   message=message,
+                                   message=message.encode('utf-8'),
                                    errors='\n'.join(errors)))
 
     if min(count, 1):
@@ -271,7 +271,7 @@ def files(obj, commit='HEAD', skip_merge_commits=False):
             errors = no_errors
 
         click.echo(template.format(commit=commit,
-                                   message=message,
+                                   message=message.encode('utf-8'),
                                    errors='\n'.join(errors)))
 
     if min(count, 1):

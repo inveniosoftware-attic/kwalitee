@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee
-# Copyright (C) 2014, 2015 CERN.
+# Copyright (C) 2014, 2015, 2016 CERN.
 #
 # kwalitee is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -216,3 +216,10 @@ class TestCheckMessage(TestCase):
             "19: M123 no dot at the end of the sentence",
             "24: M123 no dot at the end of the sentence",
         ))
+
+    def test_allow_utf8_in_message(self):
+        errors = check_message("search: hello\r\n\r\n"
+                               "* Líščí.\r\n\r\n"
+                               "Signed-off-by: a a <john.doe@example.org>",
+                               **self.options)
+        assert_that(errors, has_length(0))

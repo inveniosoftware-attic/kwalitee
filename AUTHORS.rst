@@ -40,3 +40,4 @@ Contributors
 * Leonardo Rossi <leonardo.r@cern.ch>
 * Tibor Simko <tibor.simko@cern.ch>
 * David Caro <david@dcaro.es>
+* Ivan Masár <helix84@centrum.sk>

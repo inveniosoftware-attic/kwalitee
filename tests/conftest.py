@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of kwalitee
-# Copyright (C) 2014 CERN.
+# Copyright (C) 2014, 2016 CERN.
 #
 # kwalitee is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -23,7 +23,6 @@
 
 """Configuration for py.test."""
 
-import os
 import shutil
 import subprocess
 import tempfile
@@ -46,6 +45,12 @@ def git(request):
                 ("touch", "TODO"),
                 ("git", "add", "TODO"),
                 ("git", "commit", "-m", "global: kikoo\n\nBy: bob <a@b.org>"),
+                ("git", "checkout", "master"),
+                ("git", "checkout", "-b", "utf8"),
+                ("touch", "líščí.txt"),
+                ("git", "add", "líščí.txt"),
+                ("git", "commit", "-m", "global: líščí\n\n"
+                    "* Příliš žluťoučký kůň úpěl ďábelské ódy.\n\nSigned-off-by: Motörhead <a@b.org>"),
                 ("git", "checkout", "master"))
 
     for command in commands:
