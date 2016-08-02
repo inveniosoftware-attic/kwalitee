@@ -14,9 +14,11 @@
 .. image:: https://img.shields.io/pypi/dm/kwalitee.svg
         :target: https://pypi.python.org/pypi/kwalitee
 
+.. image:: https://badge.waffle.io/inveniosoftware/kwalitee.svg?label=Status%3A%20ready%20for%20work&title=Issues%20ready%20for%20work
+        :target: https://waffle.io/inveniosoftware/kwalitee
+
 .. image:: https://img.shields.io/github/license/inveniosoftware/kwalitee.svg
         :target: https://github.com/inveniosoftware/kwalitee/blob/master/LICENSE
-
 
 Kwalitee is a tool that runs static analysis checks on Git repository.
 
