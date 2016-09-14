@@ -33,6 +33,7 @@ include .editorconfig
 include .tx/config
 include Dockerfile
 include LICENSE
+include MAINTAINERS
 include Procfile
 include docs/*.rst docs/*.py
 include requirements*.txt
