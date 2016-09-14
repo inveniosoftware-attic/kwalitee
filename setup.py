@@ -73,7 +73,7 @@ install_requires = [
     'pydocstyle>=1.0.0',
     'pyflakes>=1.0.0,<1.1.0',
     'flake8>=2.5.4',
-    'flake8-isort>=1.2',
+    'flake8-isort>=1.2,<2.0',
     'flake8-blind-except>=0.1.0',
     'PyYAML>=3.11',
 ]
