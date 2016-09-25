@@ -79,4 +79,4 @@ that was written in it without having to create temporary files with
 :py:mod:`tempfile`.
 
 
-.. _PyHamcrest: http://pythonhosted.org//PyHamcrest/
+.. _PyHamcrest: https://pyhamcrest.readthedocs.io/

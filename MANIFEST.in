@@ -31,6 +31,7 @@ include .dockerignore
 include .dockerignore
 include .editorconfig
 include .tx/config
+include docs/requirements.txt
 include Dockerfile
 include LICENSE
 include MAINTAINERS

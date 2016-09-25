@@ -51,7 +51,7 @@ Installation
 Documentation
 -------------
 
-   http://kwalitee.readthedocs.org/en/v0.2.0
+   https://kwalitee.readthedocs.io/en/v0.2.0
 
 Homepage
 --------
@@ -63,6 +63,6 @@ Happy hacking and thanks for flying kwalitee.
 | Invenio Development Team
 |   Email: info@inveniosoftware.org
 |   IRC: #invenio on irc.freenode.net
-|   Twitter: http://twitter.com/inveniosoftware
-|   GitHub: http://github.com/inveniosoftware
+|   Twitter: https://twitter.com/inveniosoftware
+|   GitHub: https://github.com/inveniosoftware
 |   URL: http://inveniosoftware.org

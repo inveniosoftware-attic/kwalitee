@@ -24,7 +24,7 @@ Kwalitee is a tool that runs static analysis checks on Git repository.
 
 
 * Free software: GPLv2 license
-* Documentation: https://pythonhosted.org/kwalitee/
+* Documentation: https://kwalitee.readthedocs.io/
 
 Introduction
 ============
