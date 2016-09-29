@@ -28,13 +28,13 @@ from __future__ import absolute_import, print_function
 import os
 import re
 import shutil
-import sys
 from tempfile import mkdtemp
 
 import click
 import colorama
 import yaml
 
+from . import utils
 from ..hooks import _read_local_kwalitee_configuration
 from ..kwalitee import get_options
 
@@ -52,174 +52,156 @@ class Repo(object):
             self.options.update(
                 yaml.load(config.read())
             )
+        self._template = None
 
+        if self.options.get('colors') is not False:
+            colorama.init(autoreset=True)
+            self.colors = {
+                'reset': colorama.Style.RESET_ALL,
+                'yellow': colorama.Fore.YELLOW,
+                'green': colorama.Fore.GREEN,
+                'red': colorama.Fore.RED,
+            }
+        else:
+            self.colors = {'reset': '', 'yellow': '', 'green': '', 'red': ''}
+
+    def iter_commits(self, commit, skip_merge_commits=True):
+        """Yield git commits from current repository."""
+        try:
+            self.sha = 'oid'
+            commits = utils._pygit2_commits(commit, self.repository)
+        except ImportError:
+            try:
+                self.sha = 'hexsha'
+                commits = utils._git_commits(commit, self.repository)
+            except ImportError:
+                raise click.ClickException(
+                    'To use this feature, please install pygit2. '
+                    'GitPython will also work but is not recommended '
+                    '(python <= 2.7 only).'
+                )
+        for commit in commits:
+            if skip_merge_commits and utils._is_merge_commit(commit):
+                continue
+            yield commit
+
+    @property
+    def template(self):
+        """Return preformatted message template."""
+        if self._template:
+            return self._template
+
+        self._template = (
+            '{yellow}commit {{commit.{sha}}}{reset}\n\n'
+            '{{message}}{{errors}}'.format(
+                sha=self.sha, **self.colors
+            )
+        )
+        return self._template
 
 pass_repo = click.make_pass_decorator(Repo)
+processors = []
 
 
-@click.group()
+def validate_processors(ctx, param, value):
+    """Validate processor names."""
+    names = set(value.split(',')) if value else {}
+
+    def _processors():
+        """Yield valid processors."""
+        for processor in processors:
+            if names and processor.__name__ not in names:
+                raise click.BadParameter(
+                    'Invalid processor "{0}"'.format(processor.__name__),
+                    ctx=ctx, param=param
+                )
+            yield processor
+
+    return list(_processors())
+
+
+@click.command()
 @click.option('-r', '--repository', envvar='KWALITEE_REPO', default='.')
 @click.option('-c', '--config', type=click.File('rb'), default=None)
-@click.pass_context
-def check(ctx, repository, config):
-    """Check commits."""
-    ctx.obj = Repo(repository=repository, config=config)
-
-
-def _git_commits(commit, repository):
-    import git
-    cwd = os.getcwd()
-    os.chdir(repository)
-    g = git.Repo('.')
-    kwargs = {'with_keep_cwd': True}
-    if '..' not in commit:
-        kwargs['max_count'] = 1
-    commits = list(g.iter_commits(commit, **kwargs))
-
-    os.chdir(cwd)
-    return commits
-
-
-def _pygit2_commits(commit, repository):
-    from pygit2 import Repository, GIT_SORT_TOPOLOGICAL
-    g = Repository(repository)
-
-    if '..' in commit:
-        tail, head = commit.split('..', 2)
-        head = head or 'HEAD'
-    else:
-        head = commit
-        tail = commit + '^'
-
-    walker = g.walk(g.revparse_single(head).oid, GIT_SORT_TOPOLOGICAL)
-
-    try:
-        walker.hide(g.revparse_single(tail).oid)
-    except KeyError:
-        pass
-
-    return walker
-
-
-def _is_merge_commit(commit):
-    """Test whether the commit is a merge commit or not."""
-    if len(commit.parents) > 1:
-        return True
-    return False
-
-
-@check.command()
-@click.argument('commit', metavar='<sha or branch>',
-                default='HEAD')  # , help='an integer for the accumulator')
 @click.option('-s', '--skip-merge-commits', is_flag=True,
               help='skip merge commits')
-@pass_repo
-def message(obj, commit='HEAD', skip_merge_commits=False):
-    """Check the messages of the commits."""
-    from ..kwalitee import check_message
-    options = obj.options
-    repository = obj.repository
-
-    if options.get('colors') is not False:
-        colorama.init(autoreset=True)
-        reset = colorama.Style.RESET_ALL
-        yellow = colorama.Fore.YELLOW
-        green = colorama.Fore.GREEN
-        red = colorama.Fore.RED
-    else:
-        reset = yellow = green = red = ''
-
-    try:
-        sha = 'oid'
-        commits = _pygit2_commits(commit, repository)
-    except ImportError:
-        try:
-            sha = 'hexsha'
-            commits = _git_commits(commit, repository)
-        except ImportError:
-            click.echo('To use this feature, please install pygit2. '
-                       'GitPython will also work but is not recommended '
-                       '(python <= 2.7 only).',
-                       file=sys.stderr)
-            return 2
-
-    template = '{0}commit {{commit.{1}}}{2}\n\n'.format(yellow, sha, reset)
-    template += '{message}{errors}'
+@click.option('--select', metavar='<rule>', callback=validate_processors)
+@click.argument(
+    'commit_range', metavar='<sha or branch>',
+    default=lambda: utils.travis_commit_range() or utils.local_commit_range(),
+)
+def check(repository, config, skip_merge_commits, select, commit_range):
+    """Check commits."""
+    obj = Repo(repository=repository, config=config)
 
     count = 0
     ident = '    '
     re_line = re.compile('^', re.MULTILINE)
-    for commit in commits:
-        if skip_merge_commits and _is_merge_commit(commit):
-            continue
-        message = commit.message
-        errors = check_message(message, **options)
-        message = re.sub(re_line, ident, message)
+    for commit in obj.iter_commits(commit_range, skip_merge_commits):
+        errors = []
+        for processor in select:
+            errors += processor(obj, commit)
+
+        message = re.sub(re_line, ident, commit.message).encode('utf-8')
+
         if errors:
             count += 1
-            errors.insert(0, red)
+            errors.insert(0, obj.colors['red'])
         else:
-            errors = [green, 'Everything is OK.']
-        errors.append(reset)
+            errors = [obj.colors['green'], 'Everything is OK.']
+        errors.append(obj.colors['reset'])
 
-        click.echo(template.format(commit=commit,
-                                   message=message.encode('utf-8'),
-                                   errors='\n'.join(errors)))
+        click.echo(obj.template.format(
+            commit=commit,
+            message=message,
+            errors='\n'.join(errors),
+        ))
 
     if min(count, 1):
         raise click.Abort
 
 
-@check.command()
-@click.argument('commit', metavar='<sha or branch>',
-                default='HEAD')  # , help='an integer for the accumulator')
-@click.option('-s', '--skip-merge-commits', is_flag=True,
-              help='skip merge commits')
-@pass_repo
-def files(obj, commit='HEAD', skip_merge_commits=False):
+@processors.append
+def message(repo, commit):
+    """Check the messages of the commits."""
+    from ..kwalitee import check_message
+
+    return check_message(commit.message, **repo.options)
+
+
+@processors.append
+def authors(repo, commit):
+    """Check the authors of the commits."""
+    from ..kwalitee import check_author
+
+    author = u'{0.author.name} <{0.author.email}>'.format(
+        commit).encode('utf-8')
+    return check_author(author, **repo.options)
+
+
+@processors.append
+def files(repo, commit):
     """Check the files of the commits."""
     from ..kwalitee import check_file, SUPPORTED_FILES
     from ..hooks import run
-    options = obj.options
-    repository = obj.repository
 
-    if options.get('colors') is not False:
-        colorama.init(autoreset=True)
-        reset = colorama.Style.RESET_ALL
-        yellow = colorama.Fore.YELLOW
-        green = colorama.Fore.GREEN
-        red = colorama.Fore.RED
-    else:
-        reset = yellow = green = red = ''
+    obj = repo
+    options = repo.options
 
-    try:
-        sha = 'oid'
-        commits = _pygit2_commits(commit, repository)
-    except ImportError:
-        try:
-            sha = 'hexsha'
-            commits = _git_commits(commit, repository)
-        except ImportError:
-            click.echo(
-                'To use this feature, please install pygit2. GitPython will '
-                'also work but is not recommended (python <= 2.7 only).',
-                file=sys.stderr)
-            click.exit(2)
-
-    template = '{0}commit {{commit.{1}}}{2}\n\n'.format(yellow, sha, reset)
-    template += '{message}{errors}\n'
-
-    error_template = '\n{0}{{filename}}\n{1}{{errors}}{0}'.format(reset, red)
-    no_errors = ['\n{0}Everything is OK.{1}'.format(green, reset)]
-    msg_file_excluded = '\n{0}{{filename}} excluded.{1}'.format(yellow, reset)
+    error_template = '\n{reset}{{filename}}\n{red}{{errors}}{reset}'.format(
+        **obj.colors)
+    no_errors = ['{green}Everything is OK.{reset}'.format(**obj.colors)]
+    msg_file_excluded = '\n{yellow}{{filename}} excluded.{reset}'.format(
+        **obj.colors)
 
     def _get_files_modified(commit):
         """Get the list of modified files that are Python or Jinja2."""
         cmd = "git show --no-commit-id --name-only --diff-filter=ACMRTUXB {0}"
         _, files_modified, _ = run(cmd.format(commit))
 
-        extensions = [re.escape(ext)
-                      for ext in list(SUPPORTED_FILES) + [".rst"]]
+        extensions = [
+            re.escape(ext) for ext in list(SUPPORTED_FILES) + [".rst"]
+        ]
         test = "(?:{0})$".format("|".join(extensions))
         return list(filter(lambda f: re.search(test, f), files_modified))
 
@@ -236,107 +218,27 @@ def files(obj, commit='HEAD', skip_merge_commits=False):
             return error_template.format(filename=filename, errors='\n'.join(
                 errors if len(errors) else no_errors))
 
-    count = 0
-    ident = '    '
-    re_line = re.compile('^', re.MULTILINE)
-    for commit in commits:
-        if skip_merge_commits and _is_merge_commit(commit):
-            continue
-        message = commit.message
-        commit_sha = getattr(commit, sha)
-        tmpdir = mkdtemp()
-        errors = {}
-        try:
-            for filename in _get_files_modified(commit):
-                cmd = "git show {commit_sha}:{filename}"
-                _, out, _ = run(cmd.format(commit_sha=commit_sha,
-                                           filename=filename),
-                                raw_output=True)
-
-                destination = os.path.join(tmpdir, filename)
-                _ensure_directory(destination)
-
-                with open(destination, 'w+') as f:
-                    f.write(out)
-
-                errors[filename] = check_file(destination, **options)
-        finally:
-            shutil.rmtree(tmpdir, ignore_errors=True)
-
-        message = re.sub(re_line, ident, message)
-        if len(errors):
-            count += 1
-            errors = map(_format_errors, errors.items())
-        else:
-            errors = no_errors
-
-        click.echo(template.format(commit=commit,
-                                   message=message.encode('utf-8'),
-                                   errors='\n'.join(errors)))
-
-    if min(count, 1):
-        raise click.Abort
-
-
-@check.command()
-@click.argument('commit', metavar='<sha or branch>',
-                default='HEAD')  # , help='an integer for the accumulator')
-@click.option('-s', '--skip-merge-commits', is_flag=True,
-              help='skip merge commits')
-@pass_repo
-def authors(obj, commit='HEAD', skip_merge_commits=False):
-    """Check the authors of the commits."""
-    from ..kwalitee import check_author
-    options = obj.options
-    repository = obj.repository
-
-    if options.get('colors') is not False:
-        colorama.init(autoreset=True)
-        reset = colorama.Style.RESET_ALL
-        yellow = colorama.Fore.YELLOW
-        green = colorama.Fore.GREEN
-        red = colorama.Fore.RED
-    else:
-        reset = yellow = green = red = ''
-
+    commit_sha = getattr(commit, obj.sha)
+    tmpdir = mkdtemp()
+    errors = {}
     try:
-        sha = 'oid'
-        commits = _pygit2_commits(commit, repository)
-    except ImportError:
-        try:
-            sha = 'hexsha'
-            commits = _git_commits(commit, repository)
-        except ImportError:
-            click.echo('To use this feature, please install pygit2. '
-                       'GitPython will also work but is not recommended '
-                       '(python <= 2.7 only).',
-                       file=sys.stderr)
-            return 2
+        for filename in _get_files_modified(commit):
+            cmd = "git show {commit_sha}:{filename}"
+            _, out, _ = run(cmd.format(commit_sha=commit_sha,
+                                       filename=filename),
+                            raw_output=True)
 
-    template = '{0}commit {{commit.{1}}}{2}\n\n'.format(yellow, sha, reset)
-    template += '{message}{errors}'
+            destination = os.path.join(tmpdir, filename)
+            _ensure_directory(destination)
 
-    count = 0
-    ident = '    '
-    re_line = re.compile('^', re.MULTILINE)
-    for commit in commits:
-        if skip_merge_commits and _is_merge_commit(commit):
-            continue
-        message = commit.message
-        author = u'{0.author.name} <{0.author.email}>'.format(
-            commit).encode('utf-8')
-        errors = check_author(author, **options)
-        message = re.sub(re_line, ident, message)
-        if errors:
-            count += 1
-            errors.insert(0, red)
-        else:
-            errors = [green, 'Everything is OK.']
-        errors.append(reset)
+            with open(destination, 'w+') as f:
+                f.write(out)
 
-        click.echo(template.format(commit=commit,
-                                   message=message.encode('utf-8'),
-                                   errors='\n'.join(errors)))
+            errors[filename] = check_file(destination, **options)
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
-    if min(count, 1):
-        raise click.Abort
+    if len(errors):
+        errors = map(_format_errors, errors.items())
+
+    return errors

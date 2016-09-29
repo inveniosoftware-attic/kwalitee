@@ -192,7 +192,7 @@ GITHUB_REPO = GITHUB + "{account}/{repository}/"
 
 # You may ignore some codes from PEP8, PYDOCSTYLE and
 # the license checks as well.
-IGNORE = ['E123', 'E226', 'E24', 'E501', 'E265']
+IGNORE = ['D203', 'E123', 'E226', 'E24', 'E501', 'E265']
 # SELECT = []
 
 # Apply the tests only to the files matching those criteria.

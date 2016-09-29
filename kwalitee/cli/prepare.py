@@ -38,7 +38,7 @@ from collections import OrderedDict
 
 import click
 
-from .check import Repo, _git_commits, _pygit2_commits, pass_repo
+from .check import Repo, pass_repo
 
 
 @click.group()
@@ -131,19 +131,8 @@ def release(obj, commit='HEAD', components=False):
     """Generate release notes."""
     options = obj.options
     repository = obj.repository
-
-    try:
-        sha = 'oid'
-        commits = _pygit2_commits(commit, repository)
-    except ImportError:
-        try:
-            sha = 'hexsha'
-            commits = _git_commits(commit, repository)
-        except ImportError:
-            click.echo('To use this feature, please install pygit2. '
-                       'GitPython will also work but is not recommended '
-                       '(python <= 2.7 only).', file=sys.stderr)
-            return 2
+    commits = list(obj.iter_commits(commit))
+    sha = obj.sha
 
     messages = OrderedDict([(getattr(c, sha), c.message) for c in commits])
 
