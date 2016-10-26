@@ -84,7 +84,10 @@ def _pygit2_commits(commit, repository):
     from pygit2 import Repository, GIT_SORT_TOPOLOGICAL
     g = Repository(repository)
 
-    if '..' in commit:
+    if '...' in commit:
+        tail, head = commit.split('...', 2)
+        head = head or 'HEAD'
+    elif '..' in commit:
         tail, head = commit.split('..', 2)
         head = head or 'HEAD'
     else:
